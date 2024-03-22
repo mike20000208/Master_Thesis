@@ -1,3 +1,0 @@
-[submodule "capra_ros_msgs"]
-	path = capra_ros_msgs
-	url = https://bitbucket.org/CapraRobotics/capra_ros_msgs.git
