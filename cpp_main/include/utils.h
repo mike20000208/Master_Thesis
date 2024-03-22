@@ -318,6 +318,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points);
 void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 
 
-
+void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path);
 
 

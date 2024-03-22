@@ -452,7 +452,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // depth info logging. 
         depth_suffix = "/depth_" + to_string(ImgLog.number) +".csv";
         depth_path = depth_folder + depth_suffix;
-        depth_log(depth_path, cloud_filtered);
+        // depth_log(depth_path, cloud_filtered);
+        PCL2PLY(cloud_filtered, depth_path);
 
         // visualization. 
         pc_layers.push_back(cloud_filtered);

@@ -302,3 +302,11 @@ void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 
     f.close();
 }
+
+
+void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path)
+{
+	pcl::PLYWriter writer;
+	writer.write(path, *cloud);
+	printf("\n\nThe *.ply file of 3D point cloud is saved! \n\n");
+}
