@@ -19,10 +19,38 @@
 */
 int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
+    // prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    string img_folder = node->log_path + "/Images";
+    string traj_folder = node->log_path + "/Trajectories";
+    string depth_folder = node->log_path + "/Depth";
+    string map_folder = node->log_path + "/Map";
+    string info_path = node->log_path + "/Info.txt";
+    string bag_path = node->log_path + "/record.bag";
+    string time_path = node->log_path + "/TimeLog.csv";
+    string traj_final_path = node->log_path + "/Trajectory_final.png";
+    string map_final_path = node->log_path + "/Map_final.png";
+    string record_path = node->log_path + "/record.bag";
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+    
     // initialize rs2 objects. 
     rs2::pipeline p;
     rs2::frame color_frame, depth_frame;
-    // rs2::config cfg;
+    rs2::frameset frames;
+    rs2::config cfg;
+    int stream_width = 1280;
+    int stream_height = 720;
+    int frame_rate = 30;
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_record_to_file(bag_path);
     // cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     // cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_XYZ32F);
 
@@ -41,18 +69,12 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     std::mutex mut;
     std::ofstream f;
 
-    // document the map info.
-    string map_info = node->log_path + "/MapInfo.txt";
-    f.open(map_info, ios::app | ios::out);
-    f << "Map Information" << "\n";
-    f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n";
-    f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n";
-    f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n";
-    f.close();
+    // initialize some variables. 
+    Img ImgLog;
 
     // start the pipeline. 
     // auto profile = p.start(cfg);
-    auto profile = p.start();
+    auto profile = p.start(cfg);
     // rs2::device device = profile.get_device();
     // string device_name = device.get_info(RS2_CAMERA_INFO_NAME);
     // printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
@@ -67,11 +89,6 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     //     printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
     // }
 
-    // prepare folder for saved images. 
-    int count = 0;
-    string img_path = node->log_path + "/Images";
-    string traj_path = node->log_path + "/Trajectories";
-
     if (create_directories(img_path) && create_directories(traj_path))
     {
         printf("\n\nDirectories [%s] and [%s] are created. \n\n", img_path.c_str(), traj_path.c_str());
@@ -85,7 +102,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     while(1)
     {
         // get frame. 
-        rs2::frameset frames = p.wait_for_frames();
+        frames = p.wait_for_frames();
         // depth_frame = frames.get_depth_frame();
         color_frame = frames.get_color_frame();
 
@@ -98,17 +115,15 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
         // save the image. 
-        string suffix = "/img_" + to_string(count) + ".png";
-        string full_path = img_path + suffix;
-        cv::imwrite(full_path, image);
+        img_suffix = "/img_" + to_string(count) + ".png";
+        img_path = img_folder + img_suffix;
+        cv::imwrite(img_path, image);
 
-        // log the image and timestamp.
-        Img ImgLog;
+        // image number and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color_frame.get_timestamp() / 1000;
         count ++;
-        string path = node->log_path + "/TimeLog.csv";
-        f.open(path, ios::app | ios::out);
+        f.open(time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -168,9 +183,9 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         mut.unlock();
 
         // save the trajectory.
-        suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
-        full_path = traj_path + suffix;
-        cv::imwrite(full_path, m.map);
+        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        traj_path = traj_folder + traj_suffix;
+        cv::imwrite(traj_path, m.map);
 
         // show the current scene. 
         mut.lock();
@@ -188,11 +203,19 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
-            full_path = node->log_path + "/trajectory.png";
-            cv::imwrite(full_path, m.map);
+            cv::imwrite(traj_final_path, m.map);
             break;
         }
     }
+
+    // document the general info.
+    f.open(info_path, ios::app | ios::out);
+    f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
+    f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n\n";
+    f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n\n";
+    f << "Size of color image (width x height): " << to_string(image.cols) << " x " << to_string(image.rows) << "\n\n";
+    f << "Size of depth image (width x height): " << to_string(stream_width) << " x " << to_string(stream_height) << "\n\n";
+    f.close();
     
     return 0;
 }
@@ -317,6 +340,26 @@ int replay(string folder_name)
 */
 int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
+    // prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    string img_folder = node->log_path + "/Images";
+    string traj_folder = node->log_path + "/Trajectories";
+    string depth_folder = node->log_path + "/Depth";
+    string map_folder = node->log_path + "/Map";
+    string info_path = node->log_path + "/Info.txt";
+    string bag_path = node->log_path + "/record.bag";
+    string time_path = node->log_path + "/TimeLog.csv";
+    string traj_final_path = node->log_path + "/Trajectory_final.png";
+    string map_final_path = node->log_path + "/Map_final.png";
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+    
     // initialize rs2 objects. 
     rs2::pipeline p;
     rs2::frameset frames;
@@ -327,10 +370,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     int stream_width = 1280;
     int stream_height = 720;
     int frame_rate = 30;
-    string record = node->log_path + "/record.bag";
     cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
-    cfg.enable_record_to_file(record);
+    cfg.enable_record_to_file(bag_path);
 
     // initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -359,26 +401,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_ath;
-
     if (create_directories(img_folder) && 
     create_directories(traj_folder) && 
     create_directories(depth_folder) && 
@@ -402,7 +424,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         color = frames.get_color_frame();
         depth = frames.get_depth_frame();
 
-        // create color image. 
+        // create color image and save it. 
         const int w = color.as<rs2::video_frame>().get_width();
         const int h = color.as<rs2::video_frame>().get_height();
         image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
