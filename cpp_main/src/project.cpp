@@ -11,7 +11,8 @@ int main(int argc, char * argv[])
         {"trajectory", 1}, 
         {"map", 2}, 
         {"stream_test", 3},
-        {"None", 4}};
+        {"None", 4},
+        {"test", 5}};
     
     if (argc > 1)
     {
@@ -29,7 +30,7 @@ int main(int argc, char * argv[])
             //// test replay. 
             if (argc > 2)
             {
-                replay(argv[3]);
+                replay(argv[2]);
             }
             else
             {
@@ -47,7 +48,7 @@ int main(int argc, char * argv[])
                 rclcpp::init(argc, argv);
                 std::shared_ptr<Mike> node = std::make_shared<Mike>();
                 thread thread1 (Communication, node);
-                thread thread2 (stream_test, node, stoi(argv[3]), stoi(argv[4]), stoi(argv[5]));
+                thread thread2 (stream_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
                 thread1.join();
                 thread2.join();
             }
@@ -73,7 +74,7 @@ int main(int argc, char * argv[])
             if (argc > 2)
             {
                 thread thread1 (Communication, node);
-                thread thread2 (stream_map_test, node, stoi(argv[3]), stoi(argv[4]), stoi(argv[5]));
+                thread thread2 (stream_map_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
                 thread1.join();
                 thread2.join();
             }
@@ -107,6 +108,13 @@ int main(int argc, char * argv[])
             break;
         }
 
+        case 5:
+        {
+            for (int i = 0; i < argc; i++)
+            {
+                printf("No. %d argument = %s. \n\n", i, argv[i]);
+            }
+        }
 
         default:
         {

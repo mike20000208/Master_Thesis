@@ -89,9 +89,9 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     //     printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
     // }
 
-    if (create_directories(img_path) && create_directories(traj_path))
+    if (create_directories(img_folder) && create_directories(traj_folder))
     {
-        printf("\n\nDirectories [%s] and [%s] are created. \n\n", img_path.c_str(), traj_path.c_str());
+        printf("\n\nDirectories are created. \n\n");
     }
     else
     {
