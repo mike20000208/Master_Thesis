@@ -31,6 +31,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     string traj_final_path = node->log_path + "/Trajectory_final.png";
     string map_final_path = node->log_path + "/Map_final.png";
     string record_path = node->log_path + "/record.bag";
+    string coordinate_path = node->log_paht + "/CoordinateLog.csv";
     string traj_suffix;
     string img_suffix;
     string depth_suffix;
@@ -171,18 +172,17 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
                 2);
         }
 
-        // // only for debug.
-        // string path2 = node->log_path + "/CoordLog.csv";
-        // f.open(path2, ios::app | ios::out);
-        // f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << ", " \
-        // << to_string(m.startPoint.x_meter) << ", " << to_string(m.startPoint.y_meter) << ", " \
-        // << to_string(m.currentPoint.x_meter) << ", " << to_string(m.currentPoint.y_meter) << ", " \
-        // << to_string(m.currentPoint.x_pixel_map) << ", " << to_string(m.currentPoint.y_pixel_map) << "\n";
-        // f.close();
+        // coordinate logging.
+        f.open(coordinate_path, ios::app | ios::out);
+        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << ", " \
+        << to_string(m.currentPoint.x_meter) << ", " << to_string(m.currentPoint.y_meter) << ", " \
+        << to_string(m.currentPoint.x_pixel_img) << ", " << to_string(m.currentPoint.y_pixel_img) << ", ";
+        << to_string(m.currentPoint.x_pixel_map) << ", " << to_string(m.currentPoint.y_pixel_map) << "\n";
+        f.close();
 
         mut.unlock();
 
-        // save the trajectory.
+        // save the trajectory as an image.
         traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         traj_path = traj_folder + traj_suffix;
         cv::imwrite(traj_path, m.map);
