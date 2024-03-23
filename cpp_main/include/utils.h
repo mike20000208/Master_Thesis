@@ -50,8 +50,8 @@ using namespace std::filesystem;
 
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
 #define DEVICE "Intel RealSense D455"
-#define LOG_PATH "/home/mike/RobotLog/"
-#define REPLAY_PATH "2024-03-17-18:26:07/"
+#define REPLAY_FOLDER "/home/mike/DatatoAnalyze/"
+#define REPLAY_DATE "2024-03-17-18:26:07/"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define ODO_TOPIC "/my_odo"

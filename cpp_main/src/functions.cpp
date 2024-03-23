@@ -257,7 +257,7 @@ int replay(string folder_name)
     int count = 0;
 
     // initialize directories.
-    string folder_path = LOG_PATH + folder_name;
+    string folder_path = REPLAY_FOLDER + folder_name;
     string img_folder = folder_path + "Images/";
     string traj_folder = folder_path + "Trajectories/";
     string img_suffix, traj_suffix, full_img_path, full_traj_path;

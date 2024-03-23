@@ -34,7 +34,7 @@ int main(int argc, char * argv[])
             }
             else
             {
-                replay(REPLAY_PATH);
+                replay(REPLAY_DATE);
             }
 
             break;
