@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
@@ -53,11 +54,11 @@ using namespace std::filesystem;
 #define REPLAY_PATH "2024-03-17-18:26:07/"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
-// #define ODO_TOPIC "/my_odo"
-// #define GPS_TOPIC "/fix"
+#define ODO_TOPIC "/my_odo"
+#define GPS_TOPIC "/fix"
 #define VEL_TOPIC "/capra/remote/direct_velocity"
-#define ODO_TOPIC "/mike/odo"
-#define GPS_TOPIC "/mike/gps"
+// #define ODO_TOPIC "/mike/odo"
+// #define GPS_TOPIC "/mike/gps"
 
 
 extern bool TERMINATE;
