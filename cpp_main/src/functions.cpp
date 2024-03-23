@@ -53,19 +53,19 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // start the pipeline. 
     // auto profile = p.start(cfg);
     auto profile = p.start();
-    rs2::device device = profile.get_device();
-    string device_name = device.get_info(RS2_CAMERA_INFO_NAME);
+    // rs2::device device = profile.get_device();
+    // string device_name = device.get_info(RS2_CAMERA_INFO_NAME);
     // printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
 
-    if (device_name != DEVICE)
-    {
-        cerr << "\n\n\nCamera connection failed! \n\n\n";
-        return 0;
-    }
-    else
-    {
-        printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
-    }
+    // if (device_name != DEVICE)
+    // {
+    //     cerr << "\n\n\nCamera connection failed! \n\n\n";
+    //     return 0;
+    // }
+    // else
+    // {
+    //     printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
+    // }
 
     // prepare folder for saved images. 
     int count = 0;
