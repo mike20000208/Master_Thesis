@@ -131,46 +131,53 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // draw the trajectory.
         mut.lock();
 
-        if (ImgLog.number == 0)
-        {
-            m.startPoint.x_meter = node->odo_data.px;
-            m.startPoint.y_meter = node->odo_data.py;
-            m.startPoint.x_pixel_img = m.width_pixel / 2;
-            m.startPoint.y_pixel_img = m.height_pixel / 2;
-            m.startPoint.x_pixel_map = 0;
-            m.startPoint.y_pixel_map = 0;
-            m.previousPoint = m.startPoint;
-            m.currentPoint = m.startPoint;
-            // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
-            // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
-            // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
-            cv::circle(
-                m.map,
-                cv::Point(m.startPoint.x_pixel_img, m.startPoint.y_pixel_img),
-                2,
-                cv::Scalar(255, 255, 255),
-                FILLED);
-            cv::putText(
-                m.map, 
-                "Start Point", 
-                cv::Point(m.startPoint.x_pixel_img, 
-                m.startPoint.y_pixel_img), 
-                cv::FONT_HERSHEY_PLAIN, 
-                0.5, 
-                cv::Scalar(255, 255, 255), 
-                1);
-        }
-        else
-        {
-            m.previousPoint = m.currentPoint;
-            m.currentPoint = m.map2img(node->odo_data.px, node->odo_data.py);
-            cv::line(
-                m.map, 
-                cv::Point(m.currentPoint.x_pixel_img, m.currentPoint.y_pixel_img), 
-                cv::Point(m.previousPoint.x_pixel_img, m.previousPoint.y_pixel_img), 
-                cv::Scalar(0, 255, 0), 
-                2);
-        }
+        m.poseUpdate(
+            ImgLog.number, 
+            node->odo_data.px, 
+            node->odo_data.py);
+
+        // if (ImgLog.number == 0)
+        // {
+        //     m.startPoint.x_meter = node->odo_data.px;
+        //     m.startPoint.y_meter = node->odo_data.py;
+        //     m.startPoint.x_pixel_img = m.width_pixel / 2;
+        //     m.startPoint.y_pixel_img = m.height_pixel / 2;
+        //     m.startPoint.x_pixel_map = 0;
+        //     m.startPoint.y_pixel_map = 0;
+        //     m.previousPoint = m.startPoint;
+        //     m.currentPoint = m.startPoint;
+        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
+        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
+        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
+        //     cv::circle(
+        //         m.map,
+        //         cv::Point(m.startPoint.x_pixel_img, m.startPoint.y_pixel_img),
+        //         2,
+        //         cv::Scalar(255, 255, 255),
+        //         FILLED);
+        //     cv::putText(
+        //         m.map, 
+        //         "Start Point", 
+        //         cv::Point(m.startPoint.x_pixel_img, 
+        //         m.startPoint.y_pixel_img), 
+        //         cv::FONT_HERSHEY_PLAIN, 
+        //         0.5, 
+        //         cv::Scalar(255, 255, 255), 
+        //         1);
+        // }
+        // else
+        // {
+        //     m.previousPoint = m.currentPoint;
+        //     m.currentPoint = m.map2img(node->odo_data.px, node->odo_data.py);
+        //     cv::line(
+        //         m.map, 
+        //         cv::Point(m.currentPoint.x_pixel_img, m.currentPoint.y_pixel_img), 
+        //         cv::Point(m.previousPoint.x_pixel_img, m.previousPoint.y_pixel_img), 
+        //         cv::Scalar(0, 255, 0), 
+        //         2);
+        // }
+
+        mut.unlock();
 
         // coordinate logging.
         f.open(coordinate_path, ios::app | ios::out);
@@ -180,21 +187,19 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         << to_string(m.currentPoint.x_pixel_map) << ", " << to_string(m.currentPoint.y_pixel_map) << "\n";
         f.close();
 
-        mut.unlock();
-
         // save the trajectory as an image.
         traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         traj_path = traj_folder + traj_suffix;
-        cv::imwrite(traj_path, m.map);
+        cv::imwrite(traj_path, m.map_);
 
         // show the current scene. 
-        mut.lock();
-        string time = to_string(node->gps_data.timestamp);
-        mut.unlock();
-        cv::putText(image, time, cv::Point(80, 80), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 255), 2);
+        // mut.lock();
+        // string time = to_string(node->gps_data.timestamp);
+        // mut.unlock();
+        // cv::putText(image, time, cv::Point(80, 80), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 0, 255), 2);
         cv::resizeWindow(win1, w, h);
         cv::imshow(win1, image);
-        cv::cvtColor(m.map, trajectory, cv::COLOR_RGB2BGR);
+        cv::cvtColor(m.map_, trajectory, cv::COLOR_RGB2BGR);
         cv::resizeWindow(win2, m.width_pixel, m.height_pixel);
         cv::imshow(win2, trajectory);
         char c = (char)cv::waitKey(10);
@@ -203,7 +208,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
-            cv::imwrite(traj_final_path, m.map);
+            cv::imwrite(traj_final_path, m.map_);
             break;
         }
     }
@@ -491,11 +496,11 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         }
 
         cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
-        cv::resizeWindow(win2, cv::Size(m.map.cols, m.map.rows));
+        cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
         cv::moveWindow(win1, 0, 0);
         cv::moveWindow(win2, (image.cols + 70), 0);
         cv::imshow(win1, image);
-        cv::imshow(win2, m.map);
+        cv::imshow(win2, m.map_);
         char c = cv::waitKey(10);
         viewer->spinOnce(10);
 

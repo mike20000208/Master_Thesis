@@ -199,7 +199,7 @@ My_Map::My_Map()
     res = 5;
     width_pixel = width_meter * res;
     height_pixel = height_meter * res;
-    My_Map::map = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
+    My_Map::map_ = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
 }
 
 
@@ -216,14 +216,14 @@ My_Map::My_Map(int w, int h, int r)
     res = r;
     width_pixel = width_meter * res;
     height_pixel = height_meter * res;
-    My_Map::map = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
+    My_Map::map_ = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
 }
 
 
 /**
  * @brief Transform the odometry data into 2D position.
- * @param x x data from odometry.
- * @param y y data from odometry.
+ * @param x x data from odometry in meter.
+ * @param y y data from odometry in meter.
  * @return current the current pose.
 */
 Pose My_Map::map2img(double x, double y)
@@ -255,6 +255,57 @@ Pose My_Map::map2img(double x, double y)
     current.x_pixel_img = -current.y_pixel_map + My_Map::width_pixel / 2;
     current.y_pixel_img = -current.x_pixel_map + My_Map::height_pixel / 2;
     return current;
+}
+
+
+/**
+ * @brief Update the pose of the robot based on the odometry. 
+ * @param number serial number of scene. 
+ * @param x x data from odometry in meter. 
+ * @param y y data from odometry in meter. 
+*/
+void My_Map::poseUpdate(int number, double x, double y)
+{
+    if (number == 0)
+    {
+        startPoint.x_meter = x;
+        startPoint.y_meter = y;
+        startPoint.x_pixel_img = width_pixel / 2;
+        startPoint.y_pixel_img = height_pixel / 2;
+        startPoint.x_pixel_map = 0;
+        startPoint.y_pixel_map = 0;
+        previousPoint = startPoint;
+        currentPoint = startPoint;
+        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
+        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
+        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
+        cv::circle(
+            My_Map::map_,
+            cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
+            2,
+            cv::Scalar(255, 255, 255),
+            FILLED);
+        cv::putText(
+            My_Map::map_, 
+            "Start Point", 
+            cv::Point(startPoint.x_pixel_img, 
+            startPoint.y_pixel_img), 
+            cv::FONT_HERSHEY_PLAIN, 
+            0.5, 
+            cv::Scalar(255, 255, 255), 
+            1);
+    }
+    else
+    {
+        previousPoint = currentPoint;
+        currentPoint = My_Map::map2img(x, y);
+        cv::line(
+            map_, 
+            cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img), 
+            cv::Point(previousPoint.x_pixel_img, previousPoint.y_pixel_img), 
+            cv::Scalar(0, 255, 0), 
+            2);
+    }
 }
 
 

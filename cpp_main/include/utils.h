@@ -219,7 +219,7 @@ public:
     int res;
 
     // map itself. 
-    cv::Mat map;
+    cv::Mat map_;
 
     // pose.
     Pose startPoint;
@@ -232,6 +232,9 @@ public:
 
     // coordinate transformation method.
     Pose map2img(double x, double y);
+
+    // pose update method. 
+    void poseUpdate(int number, double x, double y);
 
 };
 
