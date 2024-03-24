@@ -325,3 +325,7 @@ void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path);
 
 
+pcl::visualization::PCLVisualizer::Ptr
+Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
+	Scalar color,
+	string window = "3D viewer");

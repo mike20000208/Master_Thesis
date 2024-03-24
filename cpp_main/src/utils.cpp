@@ -355,9 +355,45 @@ void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 }
 
 
+/**
+ * @brief Save the pointcloud in ply format. 
+ * @param cloud
+ * @param path
+*/
 void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path)
 {
 	pcl::PLYWriter writer;
 	writer.write(path, *cloud);
 	printf("\n\nThe *.ply file of 3D point cloud is saved! \n\n");
+}
+
+
+/**
+ * @brief Create a simple pointcloud viewer.
+ * @param layers multiple pointcloud layers you want to display.
+ * @param color color of the viewer's background. 
+ * @param window name of the window.
+ * @return viewer pointcloud viewer
+*/
+pcl::visualization::PCLVisualizer::Ptr
+Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
+	Scalar color,
+	string window)
+{
+	pcl::visualization::PCLVisualizer::Ptr
+		viewer(new pcl::visualization::PCLVisualizer(window));
+	viewer->setBackgroundColor(color[0], color[1], color[2]);
+	viewer->setPosition(50, 70);
+	//viewer->addCoordinateSystem(max(cloud->width, cloud->height), "global");
+	//viewer->addCoordinateSystem(10000, "global");
+	viewer->addCoordinateSystem(5, "global");
+	for (int i = 0; i < layers.size(); i++)
+	{
+		viewer->addPointCloud(layers[i], to_string(i));
+		viewer->setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
+			4, to_string(i));
+	}
+
+	viewer->initCameraParameters();
+	return viewer;
 }

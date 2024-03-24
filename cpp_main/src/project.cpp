@@ -10,7 +10,7 @@ int main(int argc, char * argv[])
         {"replay", 1}, 
         {"trajectory", 2}, 
         {"stream_map", 3},
-        {"singal_frame_map", 4}, 
+        {"single_frame_map", 4}, 
         {"None", 5},
         {"test", 6}};
     
@@ -34,7 +34,17 @@ int main(int argc, char * argv[])
             }
             else
             {
-                replay(REPLAY_DATE);
+                // replay(REPLAY_DATE);
+                printf("\n\nPlease specify which folder you want to replay! \n\n");
+                printf("The available folder names are shown below: \n\n");
+                int cnt = 1;
+                std::filesystem::path P {REPLAY_FOLDER };
+
+                for (auto& p : std::filesystem::directory_iterator(P))
+                {
+                    printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
+                    cnt ++;
+                }
             }
 
             break;
@@ -81,7 +91,7 @@ int main(int argc, char * argv[])
             else
             {
                 thread thread1 (Communication, node);
-                thread thread2 (stream_map_test, node, 100, 100, 5);
+                thread thread2 (stream_map_test, node, 100, 100, 10);
                 thread1.join();
                 thread2.join();
             }
@@ -105,7 +115,7 @@ int main(int argc, char * argv[])
             else
             {
                 thread thread1 (Communication, node);
-                thread thread2 (single_frame_map_test, node, 100, 100, 5);
+                thread thread2 (single_frame_map_test, node, 100, 100, 10);
                 thread1.join();
                 thread2.join();
             }
@@ -138,7 +148,7 @@ int main(int argc, char * argv[])
         {
             // incorrect command is detected. . 
             printf("\n\nPlease enter the correct command! \n\n");
-            printf("\n\nAvalibale commands are shown below, please choose one of them: \n\n");
+            printf("Avalibale commands are shown below, please choose one of them: \n\n");
 
             for (auto c : commands)
             {

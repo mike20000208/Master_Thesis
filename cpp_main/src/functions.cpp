@@ -403,9 +403,11 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     std::ofstream f;
 
     // initialize other variables.
+    Img ImgLog;
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
+    // create the log folders. 
     if (create_directories(img_folder) && 
     create_directories(traj_folder) && 
     create_directories(depth_folder) && 
@@ -436,11 +438,10 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
         // image and timestamp logging. 
-        Img ImgLog;
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
         count ++;
-        img_suffix = "/img_" + to_string(count) + ".png";
+        img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
         img_path = img_folder + img_suffix;
         cv::imwrite(img_path, image);
         f.open(time_path, ios::app | ios::out);
@@ -495,6 +496,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
                 to_string(i));
         }
 
+        viewer->spinOnce(10);
+
         cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
         cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
         cv::moveWindow(win1, 0, 0);
@@ -502,12 +505,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imshow(win1, image);
         cv::imshow(win2, m.map_);
         char c = cv::waitKey(10);
-        viewer->spinOnce(10);
-
-        // reset. 
-        inliers.clear();
-        pc_layers.clear();
-		viewer->removeAllPointClouds();
 
         // check whether to terminate the programme. 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -516,6 +513,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             TERMINATE = true;
             break;
         }
+
+        // reset. 
+        inliers.clear();
+        pc_layers.clear();
+		viewer->removeAllPointClouds();
+
+
     }
 
     // document the general info.
@@ -534,5 +538,156 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
 int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
+    // prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    string img_folder = node->log_path + "/Images";
+    string traj_folder = node->log_path + "/Trajectories";
+    string depth_folder = node->log_path + "/Depth";
+    string map_folder = node->log_path + "/Map";
+    string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    string time_path = node->log_path + "/TimeLog.csv";
+    string traj_final_path = node->log_path + "/Trajectory_final.png";
+    string map_final_path = node->log_path + "/Map_final.png";
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+
+    // initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frameset frames;
+    rs2::frame color, depth;
+    rs2::config cfg;
+    rs2::pointcloud pointcloud;
+    rs2::points points;
+    int stream_width = 1280;
+    int stream_height = 720;
+    int frame_rate = 30;
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+    // cfg.enable_record_to_file(bag_path);
+
+    // initialize pcl objects.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    pcl::PassThrough<pcl::PointXYZRGB> filter;
+    // viewer->setBackgroundColor(0, 0, 0);
+	// viewer->setPosition(50, 70);
+	// viewer->addCoordinateSystem(5, "global");
+	// viewer->initCameraParameters();
+
+    // initialize cv objects. 
+    const string win1 = "Color Image";
+    const string win2 = "Map";
+    cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::Mat image;
+    // cv::Mat map;
+
+    // initialize other objects.
+    My_Map m(width, height, res);
+    My_Map t(width, height, res);
+    std::mutex mut;
+    std::ofstream f;
+
+    // initialize other variables.
+    Img ImgLog;
+    vector<int> inliers;
+    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
+
+    // create the log folders. 
+    if (create_directories(img_folder) && 
+    create_directories(traj_folder) && 
+    create_directories(depth_folder) && 
+    create_directories(map_folder))
+    {
+        printf("\n\nDirectories are created. \n\n");
+    }
+    else
+    {
+        printf("\n\nDirectory creation is failed. \n\n");
+    }
+
+    // start the pipeline, and there will be no infinite loop since we only want a single frame. 
+    p.start(cfg);
+
+    // get color and depth frame. 
+    frames = p.wait_for_frames();
+    color = frames.get_color_frame();
+    depth = frames.get_depth_frame();
+
+    // create color image and save it. 
+    const int w = color.as<rs2::video_frame>().get_width();
+    const int h = color.as<rs2::video_frame>().get_height();
+    image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+    // image and timestamp logging. 
+    ImgLog.number = count;
+    ImgLog.timestamp = color.get_timestamp() / 1000;
+    count ++;
+    img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+    img_path = img_folder + img_suffix;
+    cv::imwrite(img_path, image);
+    f.open(time_path, ios::app | ios::out);
+    f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+    f.close();
+
+    // calculate realsense pointcloud and convert it into PCL format.
+    points = pointcloud.calculate(depth);
+    cloud = Points2PCL(points);
+
+    // filter the depth map with z-value. 
+    filter.setInputCloud(cloud);
+    filter.setFilterFieldName("z");
+    filter.setFilterLimits(0, 5);
+    filter.filter(*cloud_filtered);
+
+    // depth info logging. 
+    depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
+    depth_path = depth_folder + depth_suffix;
+    PCL2PLY(cloud_filtered, depth_path);
+
+    // visualization. 
+    pc_layers.push_back(cloud_filtered);
+    cv::Scalar bg_color(0, 0, 0);
+    pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
+        pc_layers, 
+        bg_color);
+
+    while (!viewer->wasStopped())
+	{
+        cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
+        cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
+        cv::moveWindow(win1, 0, 0);
+        cv::moveWindow(win2, (image.cols + 70), 0);
+        cv::imshow(win1, image);
+        cv::imshow(win2, m.map_);
+        int c = cv::waitKey(1000);
+		viewer->spinOnce(1000);
+		std::this_thread::sleep_for(100ms);
+
+        // check whether to terminate the programme. 
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+	}
+
+    // reset. 
+    cv::destroyAllWindows();
+    inliers.clear();
+    pc_layers.clear();
+    viewer->removeAllPointClouds();
+    p.stop();
+    
     return 0;
 }
