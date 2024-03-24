@@ -646,7 +646,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // filter the depth map with z-value. 
     filter.setInputCloud(cloud);
     filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 5);
+    filter.setFilterLimits(0, 10);
     filter.filter(*cloud_filtered);
 
     // depth info logging. 
