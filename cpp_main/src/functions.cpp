@@ -532,3 +532,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 }
 
 
+int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
+{
+    return 0;
+}

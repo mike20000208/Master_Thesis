@@ -7,12 +7,12 @@ int main(int argc, char * argv[])
     string command;
     // vector<string> commands{"replay", "trajectory", "map", "stream_test"};
     map<string, int> commands = {
-        {"replay", 0}, 
-        {"trajectory", 1}, 
-        {"map", 2}, 
-        {"stream_test", 3},
-        {"None", 4},
-        {"test", 5}};
+        {"replay", 1}, 
+        {"trajectory", 2}, 
+        {"stream_map", 3},
+        {"singal_frame_map", 4}, 
+        {"None", 5},
+        {"test", 6}};
     
     if (argc > 1)
     {
@@ -25,7 +25,7 @@ int main(int argc, char * argv[])
     
     switch (commands[command])
     {
-        case 0:
+        case 1:
         {
             //// test replay. 
             if (argc > 2)
@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
             break;
         }
 
-        case 1:
+        case 2:
         {
             // test trajectory building. 
             if (argc > 2)
@@ -65,9 +65,9 @@ int main(int argc, char * argv[])
             break;
         }
 
-        case 2:
+        case 3:
         {
-            // test map building. 
+            // test map building in streaming. 
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
 
@@ -89,15 +89,32 @@ int main(int argc, char * argv[])
             break;
         }
 
-        // case 3:
-        // {
-        //     // test Intel camera streaming. 
-        //     stream_test();
-        //     break;
-        // }
-
         case 4:
         {
+            // test map building in single frame. 
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+
+            if (argc > 2)
+            {
+                thread thread1 (Communication, node);
+                thread thread2 (single_frame_map_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
+                thread1.join();
+                thread2.join();
+            }
+            else
+            {
+                thread thread1 (Communication, node);
+                thread thread2 (single_frame_map_test, node, 100, 100, 5);
+                thread1.join();
+                thread2.join();
+            }
+            break;
+        }
+
+        case 5:
+        {
+            // No command is typed.
             printf("\n\nPlease enter one of below commands: \n\n");
 
             for (auto c : commands)
@@ -108,8 +125,9 @@ int main(int argc, char * argv[])
             break;
         }
 
-        case 5:
+        case 6:
         {
+            // test how the auguments from the terminal are received. 
             for (int i = 0; i < argc; i++)
             {
                 printf("No. %d argument = %s. \n\n", i, argv[i]);
@@ -118,7 +136,15 @@ int main(int argc, char * argv[])
 
         default:
         {
+            // incorrect command is detected. . 
             printf("\n\nPlease enter the correct command! \n\n");
+            printf("\n\nAvalibale commands are shown below, please choose one of them: \n\n");
+
+            for (auto c : commands)
+            {
+                cout << "  =>  " << c.first << "\n";
+            }
+
             break;
         }
 
