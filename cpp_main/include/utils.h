@@ -51,7 +51,7 @@ using namespace std::filesystem;
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
 #define DEVICE "Intel RealSense D455"
 #define REPLAY_FOLDER "/home/mike/DatatoAnalyze/"
-#define REPLAY_DATE "2024-03-17-18:26:07/"
+#define REPLAY_DATE "2024-03-17-18:26:07"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define ODO_TOPIC "/my_odo"
@@ -329,3 +329,7 @@ pcl::visualization::PCLVisualizer::Ptr
 Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
 	Scalar color,
 	string window = "3D viewer");
+
+
+int getFilesNum(string folder);
+

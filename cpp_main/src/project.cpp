@@ -12,7 +12,8 @@ int main(int argc, char * argv[])
         {"stream_map", 3},
         {"single_frame_map", 4}, 
         {"None", 5},
-        {"test", 6}};
+        {"test", 6},
+        {"log_replay", 7}};
     
     if (argc > 1)
     {
@@ -142,6 +143,31 @@ int main(int argc, char * argv[])
             {
                 printf("No. %d argument = %s. \n\n", i, argv[i]);
             }
+        }
+
+        case 7:
+        {
+            //// test replay from csv log. 
+            if (argc > 2)
+            {
+                log_replay(argv[2]);
+            }
+            else
+            {
+                // replay(REPLAY_DATE);
+                printf("\n\nPlease specify which folder you want to replay! \n\n");
+                printf("The available folder names are shown below: \n\n");
+                int cnt = 1;
+                std::filesystem::path P {REPLAY_FOLDER};
+
+                for (auto& p : std::filesystem::directory_iterator(P))
+                {
+                    printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
+                    cnt ++;
+                }
+            }
+
+            break;
         }
 
         default:

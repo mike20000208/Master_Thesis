@@ -263,8 +263,8 @@ int replay(string folder_name)
 
     // initialize directories.
     string folder_path = REPLAY_FOLDER + folder_name;
-    string img_folder = folder_path + "Images/";
-    string traj_folder = folder_path + "Trajectories/";
+    string img_folder = folder_path + "/Images/";
+    string traj_folder = folder_path + "/Trajectories/";
     string img_suffix, traj_suffix, full_img_path, full_traj_path;
 
     // initialize cv objects.
@@ -689,5 +689,161 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     viewer->removeAllPointClouds();
     p.stop();
     
+    return 0;
+}
+
+
+/**
+ * @brief Replay the trajectory and scene based on the save images and log file in csv format. 
+ * @param folder_name the name of the recording folder. 
+*/
+int log_replay(string folder_name)
+{
+    // initialize loading path. 
+    string folder = REPLAY_FOLDER + folder_name;
+    string img_folder = folder + "/Images/";
+    string time_path = folder + "/TimeLog.csv";
+    string odo_path = folder + "/OdoLog.csv";
+    string info_path = folder + "/info.csv";
+    string img_suffix;
+    string img_path;
+
+    // initialize counter. 
+    int count = 0;
+    int num_files = getFilesNum(img_folder);
+
+    // initialize cv objects. 
+    const string win1 = "Color Image";
+    const string win2 = "Trajectory";
+	cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::Mat scene;
+    cv::Mat trajectory;
+
+    // initialize some objects and variables. 
+    fstream f;
+    map<double, Odo> odoLog;
+    map<string, int> infoLog;
+    vector<double> timeLog;
+    vector<string> row;
+    string line, word, temp;
+    Odo tempOdo;
+    double currentTime = 0.0; // sec
+    double timeRange = 0.1; // sec
+    vector<Odo> currentOdo;
+
+    // read TimeLog.csv. 
+    f.open(time_path, ios::in);
+
+    while (getline(f, line))
+    {
+        row.clear();
+        stringstream linestream(line);
+
+        while(getline(linestream, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        timeLog.push_back(stod(row[0]));
+    }
+
+    f.close();
+
+    // read OdoLog.csv. 
+    f.open(odo_path, ios::in);
+
+    while (getline(f, line))
+    {
+        row.clear();
+        stringstream linestream(line);
+
+        while(getline(linestream, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        tempOdo.timestamp = stod(row[0]);
+        tempOdo.px = stod(row[1]);
+        tempOdo.py = stod(row[2]);
+        tempOdo.pz = stod(row[3]);
+        tempOdo.ox = stod(row[4]);
+        tempOdo.oy = stod(row[5]);
+        tempOdo.oz = stod(row[6]);
+        tempOdo.ow = stod(row[7]);
+
+        odoLog[stod(row[0])] = tempOdo;
+    }
+
+    f.close();
+
+    // read info.csv. 
+    f.open(info_path, ios::in);
+
+    while (getline(f, line))
+    {
+        row.clear();
+        stringstream linestream(line);
+
+        while(getline(linestream, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        infoLog["map_width_meter"] = stoi(row[0]);
+        infoLog["map_height_meter"] = stoi(row[1]);
+        infoLog["resolution"] = stoi(row[2]);
+        infoLog["map_width_pixel"] = stoi(row[3]);
+        infoLog["map_width_pixel"] = stoi(row[4]);
+        infoLog["image_width"] = stoi(row[5]);
+        infoLog["image_height"] = stoi(row[6]);
+        infoLog["depth_width"] = stoi(row[7]);
+        infoLog["depth_height"] = stoi(row[8]);
+    }
+
+    f.close();
+
+    // start replaying. 
+    trajectory = cv::Mat(infoLog["image_width"], infoLog["image_height"], CV_8UC3, cv::Scalar(0, 0, 0));
+    
+    for (; count < num_files; count++)
+    {
+        // prepare the color image. 
+        img_suffix = "img_" + to_string(count) + ".png";
+        img_path = img_folder + img_suffix;
+        scene = cv::imread(img_path, cv::IMREAD_COLOR);
+
+        // check whether the reading is successful or not. 
+        if (scene.empty())
+        {
+            printf("\n\nReading Error!  \n\n");
+            printf("\n\nCannot read images from directories [%s]. \n\n", 
+            img_path.c_str());
+            break;
+        }
+        
+        // show the map and scene. 
+        cv::resizeWindow(win1, scene.cols, scene.rows);
+        cv::resizeWindow(win2, trajectory.cols, trajectory.rows);
+        cv::moveWindow(win1, 0, 0);
+	    cv::moveWindow(win2, scene.cols + 70, 0);
+        cv::imshow(win1, scene);
+        cv::imshow(win2, trajectory);
+        char c = (char)cv::waitKey(100);
+
+        // check the timestamp of the current scene.
+        currentTime = timeLog[count];
+
+        // find the corresponding odometry data. 
+
+
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+    }
+
     return 0;
 }

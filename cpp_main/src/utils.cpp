@@ -397,3 +397,24 @@ Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
 	viewer->initCameraParameters();
 	return viewer;
 }
+
+
+/**
+ * @brief Count the numebr of files in the given folder. 
+ * @param folder the path to the folder that you want to count how many files there are. 
+ * @return the numebr of files in the given folder. 
+*/
+int getFilesNum(string folder)
+{
+    int num_files = 0;
+    std::filesystem::path P {folder};
+
+    for (auto& p : std::filesystem::directory_iterator(P))
+    {
+        num_files++;
+    }
+
+    return num_files;
+}
+
+
