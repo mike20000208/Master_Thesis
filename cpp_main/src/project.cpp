@@ -147,14 +147,42 @@ int main(int argc, char * argv[])
 
         case 7:
         {
-            //// test replay from csv log. 
+            //// test replay from csv logs. 
+            bool isWrong = true;
             if (argc > 2)
             {
-                log_replay(argv[2]);
+                std::filesystem::path P {REPLAY_FOLDER};
+
+                for (auto& p : std::filesystem::directory_iterator(P))
+                {
+                    if (argv[2] == p.path().filename())
+                    {
+                        isWrong = false;
+                        break;
+                    }
+                }
+                
+                if (isWrong)
+                {
+                    printf("\n\nPlease type the correct folder name you want to replay! \n\n");
+                    printf("The available folder names are shown below: \n\n");
+                    int cnt = 1;
+                    std::filesystem::path P {REPLAY_FOLDER};
+
+                    for (auto& p : std::filesystem::directory_iterator(P))
+                    {
+                        printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
+                        cnt ++;
+                    }
+                }
+                else
+                {
+                    log_replay(argv[2]);
+                }
+
             }
             else
             {
-                // replay(REPLAY_DATE);
                 printf("\n\nPlease specify which folder you want to replay! \n\n");
                 printf("The available folder names are shown below: \n\n");
                 int cnt = 1;
