@@ -131,10 +131,16 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // draw the trajectory.
         mut.lock();
 
+        Quaternion_ q;
+        q.w = node->odo_data.ow;
+        q.x = node->odo_data.ox;
+        q.y = node->odo_data.oy;
+        q.z = node->odo_data.oz;
         m.poseUpdate(
             ImgLog.number, 
             node->odo_data.px, 
-            node->odo_data.py);
+            node->odo_data.py,
+            q);
 
         // if (ImgLog.number == 0)
         // {
@@ -683,7 +689,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // calculate the best path. 
 	Score S(cloud_filtered); 
-	S.setSearchRange(4.0);
+	S.setSearchRange(3.0);
 	S.setSearchStep(0.70);
 	S.setSize(0.80);
 	S.setStride(0.5 * S.size);
@@ -714,6 +720,27 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
     depth_path = depth_folder + depth_suffix;
     PCL2PLY(cloud_filtered, depth_path);
+
+    // draw the map. 
+    mut.lock();
+
+    Quaternion_ q;
+    q.w = node->odo_data.ow;
+    q.x = node->odo_data.ox;
+    q.y = node->odo_data.oy;
+    q.z = node->odo_data.oz;
+    m.poseUpdate(
+        ImgLog.number, 
+        node->odo_data.px, 
+        node->odo_data.py,
+        q);
+
+    mut.unlock();
+
+    // only for debug
+    printf("\n\nThe current yaw = %f. [degree]\n\n", rad2deg(m.currentPoint.yaw));
+    printf("\n\nThe current roll = %f. [degree]\n\n", rad2deg(m.currentPoint.roll));
+    printf("\n\nThe current pitch = %f. [degree]\n\n", rad2deg(m.currentPoint.pitch));
 
     // visualization. 
     pc_layers.push_back(cloud_filtered);
@@ -922,7 +949,12 @@ int log_replay(string folder_name)
         }
 
         // update the pose of the robot. 
-        t.poseUpdate(imgNum, currentOdo.px, currentOdo.py);
+        Quaternion_ q;
+        q.w = currentOdo.ow;
+        q.x = currentOdo.ox;
+        q.y = currentOdo.oy;
+        q.z = currentOdo.oz;
+        t.poseUpdate(imgNum, currentOdo.px, currentOdo.py, q);
 
         // show the map and scene. 
         cv::resizeWindow(win1, scene.cols, scene.rows);

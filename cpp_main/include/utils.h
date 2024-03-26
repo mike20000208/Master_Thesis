@@ -105,6 +105,23 @@ struct Img
 };
 
 
+struct EulerAngle_
+{
+    double roll = 0.0;  // about x-axis.
+    double yaw = 0.0;  // about z-axis. 
+    double pitch = 0.0;  // about y-axis. 
+};
+
+
+struct Quaternion_
+{
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+    double w = 0.0;
+};
+
+
 struct Pose
 {
     int x_pixel_img = 0;
@@ -113,6 +130,9 @@ struct Pose
     int y_pixel_map = 0;
     double x_meter = 0.0;
     double y_meter = 0.0;
+    double roll = 0.0;  // about x-axis.
+    double yaw = 0.0;  // about z-axis. 
+    double pitch = 0.0;  // about y-axis. 
 };
 
 
@@ -230,11 +250,14 @@ public:
     My_Map();
     My_Map(int w, int h, int r);
 
+    // 
+    EulerAngle_ Quater2Euler(Quaternion_ q);
+
     // coordinate transformation method.
-    Pose map2img(double x, double y);
+    Pose map2img(double x, double y, EulerAngle_ e);
 
     // pose update method. 
-    void poseUpdate(int number, double x, double y);
+    void poseUpdate(int number, double x, double y, Quaternion_ q);
 
     // map info update method. 
     void mapUpdate();

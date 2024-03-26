@@ -221,16 +221,44 @@ My_Map::My_Map(int w, int h, int r)
 
 
 /**
- * @brief Transform the odometry data into 2D position.
+ * @brief Convert the orientation in quaternion representation to Euler angle. 
+ * @param q orientation in quaternion format. 
+ * @return the Euler angle converted from the quaternion representation. 
+*/
+EulerAngle_ My_Map::Quater2Euler(Quaternion_ q)
+{
+    EulerAngle_ e;
+
+    // calculate rotation matrix elements;
+    double r11 = 1 - 2 * (pow(q.y, 2) + pow(q.z, 2));
+    double r21 = 2 * (q.x * q.y + q.w * q.z);
+    double r31 = 2 * (q.x * q.z + q.w * q.y);
+    double r32 = 2 * (q.w * q.x + q.y * q.z);
+    double r33 = 1 - 2 * (pow(q.x, 2) + pow(q.y, 2));
+
+    // get the Euler angle. 
+    e.yaw = atan2(r21, r11);
+    e.roll = atan2(r32, r33);
+    e.pitch = -asin(r31);
+
+    return e;
+}
+
+
+/**
+ * @brief Get the current pose and transform the odometry data into 2D position.
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
  * @return current the current pose.
 */
-Pose My_Map::map2img(double x, double y)
+Pose My_Map::map2img(double x, double y, EulerAngle_ e)
 {
     Pose current;
     current.x_meter = x;
     current.y_meter = y;
+    current.roll = e.roll;
+    current.pitch = e.pitch;
+    current.yaw = e.yaw;
     double dx = x - My_Map::startPoint.x_meter;
     double dy = y - My_Map::startPoint.y_meter;
 
@@ -266,8 +294,11 @@ Pose My_Map::map2img(double x, double y)
  * @param x x data from odometry in meter. 
  * @param y y data from odometry in meter. 
 */
-void My_Map::poseUpdate(int number, double x, double y)
+void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 {
+    // get the current heading. 
+    EulerAngle_ e = My_Map::Quater2Euler(q);
+
     if (number == 0)
     {
         startPoint.x_meter = x;
@@ -276,6 +307,9 @@ void My_Map::poseUpdate(int number, double x, double y)
         startPoint.y_pixel_img = height_pixel / 2;
         startPoint.x_pixel_map = 0;
         startPoint.y_pixel_map = 0;
+        startPoint.roll = e.roll;
+        startPoint.pitch = e.pitch;
+        startPoint.yaw = e.yaw;
         previousPoint = startPoint;
         currentPoint = startPoint;
         // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
@@ -300,7 +334,7 @@ void My_Map::poseUpdate(int number, double x, double y)
     else
     {
         previousPoint = currentPoint;
-        currentPoint = My_Map::map2img(x, y);
+        currentPoint = My_Map::map2img(x, y, e);
         cv::line(
             map_, 
             cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img), 
@@ -308,6 +342,21 @@ void My_Map::poseUpdate(int number, double x, double y)
             cv::Scalar(0, 255, 0), 
             2);
     }
+
+    // draw the heading as an arrow. 
+    double dvx = cos(currentPoint.yaw);  // the x component of direction vector;
+    double dvy = sin(currentPoint.yaw);  // the y component of direction vector;
+    double dv_norm = sqrt(pow(dvx, 2), pow(dvy, 2));
+    dvx /= dv_norm;
+    dvy /= dv_norm;
+
+
+    cv::arrowedLine(
+        My_Map::map_,
+        cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
+        cv::Point(),
+        cv::Scalar(255, 0, 0)
+    );
 }
 
 
