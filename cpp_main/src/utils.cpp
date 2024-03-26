@@ -246,7 +246,7 @@ EulerAngle_ My_Map::Quater2Euler(Quaternion_ q)
 
 
 /**
- * @brief Get the current pose and transform the odometry data into 2D position.
+ * @brief Get the current pose and heading and transform the odometry data into 2D position.
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
  * @return current the current pose.
@@ -259,6 +259,7 @@ Pose My_Map::map2img(double x, double y, EulerAngle_ e)
     current.roll = e.roll;
     current.pitch = e.pitch;
     current.yaw = e.yaw;
+	current.heading = My_Map::getHeading(e);
     double dx = x - My_Map::startPoint.x_meter;
     double dy = y - My_Map::startPoint.y_meter;
 
@@ -280,11 +281,26 @@ Pose My_Map::map2img(double x, double y, EulerAngle_ e)
         current.y_pixel_map = floor(dy * My_Map::res);
     }
 
-    current.x_pixel_img = -(current.y_pixel_map * 1) + My_Map::width_pixel / 2;
-    current.y_pixel_img = -(current.x_pixel_map * 1) + My_Map::height_pixel / 2;
-    // current.x_pixel_img = -(current.y_pixel_map * My_Map::res) + My_Map::width_pixel / 2;
-    // current.y_pixel_img = -(current.x_pixel_map * My_Map::res) + My_Map::height_pixel / 2;
+    current.x_pixel_img = -current.y_pixel_map + My_Map::width_pixel / 2;
+    current.y_pixel_img = -current.x_pixel_map + My_Map::height_pixel / 2;
     return current;
+}
+
+
+/**
+ * @brief Extract the heading of the robot from the Euler angles. 
+ * @param e Euler angles converted form the orientation in quaternion format. 
+ * @return the heading of the robot based on the given Euler angles. 
+*/
+Heading My_Map::getHeading(EulerAngle_ e)
+{
+	Heading h;
+	h.x = cos(e.yaw);  // the x component of direction vector;
+    h.y = sin(e.yaw);  // the y component of direction vector;
+    h.norm = sqrt(pow(h.x, 2), pow(h.y, 2));
+    h.x /= h.norm;
+    h.y /= h.norm;
+	return h;
 }
 
 
@@ -296,8 +312,16 @@ Pose My_Map::map2img(double x, double y, EulerAngle_ e)
 */
 void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 {
-    // get the current heading. 
+    // get the current Euler angles 
     EulerAngle_ e = My_Map::Quater2Euler(q);
+
+	// get the corresponding heading. 
+	Heading h = My_Map::getHeading(e);
+    // h.x = cos(currentPoint.yaw);  // the x component of direction vector;
+    // h.y = sin(currentPoint.yaw);  // the y component of direction vector;
+    // h.norm = sqrt(pow(h.x, 2), pow(h.y, 2));
+    // h.x /= h.norm;
+    // h.y /= h.norm;
 
     if (number == 0)
     {
@@ -310,6 +334,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
         startPoint.roll = e.roll;
         startPoint.pitch = e.pitch;
         startPoint.yaw = e.yaw;
+		startPoint.heading = h;
         previousPoint = startPoint;
         currentPoint = startPoint;
         // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
@@ -343,14 +368,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
             2);
     }
 
-    // draw the heading as an arrow. 
-    double dvx = cos(currentPoint.yaw);  // the x component of direction vector;
-    double dvy = sin(currentPoint.yaw);  // the y component of direction vector;
-    double dv_norm = sqrt(pow(dvx, 2), pow(dvy, 2));
-    dvx /= dv_norm;
-    dvy /= dv_norm;
-
-
+	// draw the heading as an arrow. 
     cv::arrowedLine(
         My_Map::map_,
         cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),

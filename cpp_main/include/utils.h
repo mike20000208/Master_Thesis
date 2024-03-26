@@ -122,6 +122,14 @@ struct Quaternion_
 };
 
 
+struct Heading
+{
+    double x = 0.0;
+    double y = 0.0;
+    double norm = 0.0;
+};
+
+
 struct Pose
 {
     int x_pixel_img = 0;
@@ -133,6 +141,7 @@ struct Pose
     double roll = 0.0;  // about x-axis.
     double yaw = 0.0;  // about z-axis. 
     double pitch = 0.0;  // about y-axis. 
+    Heading heading;
 };
 
 
@@ -240,6 +249,9 @@ public:
 
     // map itself. 
     cv::Mat map_;
+
+    // temporary map for drawing an arrow indicating the heading. 
+    cv::Mat tempMap;
 
     // pose.
     Pose startPoint;
