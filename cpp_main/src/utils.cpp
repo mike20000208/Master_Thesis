@@ -252,8 +252,10 @@ Pose My_Map::map2img(double x, double y)
         current.y_pixel_map = floor(y - My_Map::startPoint.y_meter);
     }
 
-    current.x_pixel_img = -current.y_pixel_map + My_Map::width_pixel / 2;
-    current.y_pixel_img = -current.x_pixel_map + My_Map::height_pixel / 2;
+    current.x_pixel_img = -(current.y_pixel_map * 1) + My_Map::width_pixel / 2;
+    current.y_pixel_img = -(current.x_pixel_map * 1) + My_Map::height_pixel / 2;
+    // current.x_pixel_img = -(current.y_pixel_map * My_Map::res) + My_Map::width_pixel / 2;
+    // current.y_pixel_img = -(current.x_pixel_map * My_Map::res) + My_Map::height_pixel / 2;
     return current;
 }
 

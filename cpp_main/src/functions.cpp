@@ -709,8 +709,11 @@ int log_replay(string folder_name)
     string img_path;
 
     // initialize counter. 
-    int count = 0;
+    int imgNum = 0;
     int num_files = getFilesNum(img_folder);
+    int i = 0;
+    int mark = 0;
+    int dataCnt = 0;
 
     // initialize cv objects. 
     const string win1 = "Color Image";
@@ -720,17 +723,20 @@ int log_replay(string folder_name)
     cv::Mat scene;
     cv::Mat trajectory;
 
-    // initialize some objects and variables. 
-    fstream f;
-    map<double, Odo> odoLog;
+    // initialize log containers. 
+    vector<Odo> odoLog;
     map<string, int> infoLog;
     vector<double> timeLog;
+
+    // initialize object and variables for file reading. 
+    fstream f;
     vector<string> row;
     string line, word, temp;
     Odo tempOdo;
+
+    // initialize variables for data matching based on timestamp. 
     double currentTime = 0.0; // sec
     double timeRange = 0.1; // sec
-    vector<Odo> currentOdo;
 
     // read TimeLog.csv. 
     f.open(time_path, ios::in);
@@ -772,7 +778,8 @@ int log_replay(string folder_name)
         tempOdo.oz = stod(row[6]);
         tempOdo.ow = stod(row[7]);
 
-        odoLog[stod(row[0])] = tempOdo;
+        // odoLog[stod(row[0])] = tempOdo;
+        odoLog.push_back(tempOdo);
     }
 
     f.close();
@@ -803,13 +810,17 @@ int log_replay(string folder_name)
 
     f.close();
 
+    // initialize map drawing.
+    My_Map t(
+        infoLog["map_width_meter"], 
+        infoLog["map_height_meter"], 
+        infoLog["resolution"]);
+
     // start replaying. 
-    trajectory = cv::Mat(infoLog["image_width"], infoLog["image_height"], CV_8UC3, cv::Scalar(0, 0, 0));
-    
-    for (; count < num_files; count++)
+    for (; imgNum < num_files; imgNum++)
     {
         // prepare the color image. 
-        img_suffix = "img_" + to_string(count) + ".png";
+        img_suffix = "img_" + to_string(imgNum) + ".png";
         img_path = img_folder + img_suffix;
         scene = cv::imread(img_path, cv::IMREAD_COLOR);
 
@@ -821,21 +832,36 @@ int log_replay(string folder_name)
             img_path.c_str());
             break;
         }
-        
+
+        // check the timestamp of the current scene.
+        currentTime = timeLog[imgNum];
+
+        // find the corresponding odometry data. 
+        i = mark;
+        Odo currentOdo;
+
+        for (; i < odoLog.size(); i++)
+        {
+            if (odoLog[i].timestamp >= (currentTime - timeRange) && 
+            odoLog[i].timestamp <= (currentTime + timeRange))
+            {
+                currentOdo = odoLog[i];
+                mark = i;
+                break;
+            }
+        }
+
+        // update the pose of the robot. 
+        t.poseUpdate(imgNum, currentOdo.px, currentOdo.py);
+
         // show the map and scene. 
         cv::resizeWindow(win1, scene.cols, scene.rows);
-        cv::resizeWindow(win2, trajectory.cols, trajectory.rows);
+        cv::resizeWindow(win2, t.map_.cols, t.map_.rows);
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);
-        cv::imshow(win2, trajectory);
+        cv::imshow(win2, t.map_);
         char c = (char)cv::waitKey(100);
-
-        // check the timestamp of the current scene.
-        currentTime = timeLog[count];
-
-        // find the corresponding odometry data. 
-
 
         if (c == 32 || c == 13 || TERMINATE == true)
         {
