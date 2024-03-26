@@ -694,7 +694,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
 
 /**
- * @brief Replay the trajectory and scene based on the save images and log file in csv format. 
+ * @brief Replay the trajectory and scene based on the save images and log file in csv format. (more robust than "replay")
  * @param folder_name the name of the recording folder. 
 */
 int log_replay(string folder_name)
@@ -811,10 +811,19 @@ int log_replay(string folder_name)
     f.close();
 
     // initialize map drawing.
-    My_Map t(
-        infoLog["map_width_meter"], 
-        infoLog["map_height_meter"], 
-        infoLog["resolution"]);
+    // My_Map t(
+    //     infoLog["map_width_meter"], 
+    //     infoLog["map_height_meter"], 
+    //     infoLog["resolution"]);
+
+    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+    int map_width_meter, map_height_meter, map_res;
+    cin >> map_width_meter >> map_height_meter >> map_res; 
+    My_Map t(map_width_meter, map_height_meter, map_res);
+
+    // My_Map t(20, 20, 5);
+
+    // My_Map t(200, 200, 5);
 
     // start replaying. 
     for (; imgNum < num_files; imgNum++)
@@ -856,7 +865,7 @@ int log_replay(string folder_name)
 
         // show the map and scene. 
         cv::resizeWindow(win1, scene.cols, scene.rows);
-        cv::resizeWindow(win2, t.map_.cols, t.map_.rows);
+        cv::resizeWindow(win2, t.map_.cols / 2, t.map_.rows / 2);
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);

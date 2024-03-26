@@ -236,20 +236,20 @@ Pose My_Map::map2img(double x, double y)
 
     if (dx >= 0)
     {
-        current.x_pixel_map = ceil(x - My_Map::startPoint.x_meter);
+        current.x_pixel_map = ceil(dx * My_Map::res);
     }
     else
     {
-        current.x_pixel_map = floor(x - My_Map::startPoint.x_meter);
+        current.x_pixel_map = floor(dx * My_Map::res);
     }
 
     if (dy >= 0)
     {
-        current.y_pixel_map = ceil(y - My_Map::startPoint.y_meter);
+        current.y_pixel_map = ceil(dy * My_Map::res);
     }
     else
     {
-        current.y_pixel_map = floor(y - My_Map::startPoint.y_meter);
+        current.y_pixel_map = floor(dy * My_Map::res);
     }
 
     current.x_pixel_img = -(current.y_pixel_map * 1) + My_Map::width_pixel / 2;
@@ -293,7 +293,7 @@ void My_Map::poseUpdate(int number, double x, double y)
             cv::Point(startPoint.x_pixel_img, 
             startPoint.y_pixel_img), 
             cv::FONT_HERSHEY_PLAIN, 
-            0.5, 
+            1.0, 
             cv::Scalar(255, 255, 255), 
             1);
     }
