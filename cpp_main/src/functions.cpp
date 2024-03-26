@@ -673,6 +673,43 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	Roughness R(*coef);
 	R.get_Roughness(*cloud_filtered);
 
+    // show the roughness on the pointcloud in red gradient. 
+	for (int i = 0; i < R.outliers.size(); i++)
+	{
+		(*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
+		(*cloud_filtered).points[R.outliers[i]].g = 0;
+		(*cloud_filtered).points[R.outliers[i]].b = 0;
+	}
+
+    // calculate the best path. 
+	Score S(cloud_filtered); 
+	S.setSearchRange(4.0);
+	S.setSearchStep(0.70);
+	S.setSize(0.80);
+	S.setStride(0.5 * S.size);
+	S.setInlierWeight(0.40);
+	S.setOutlierWeight(1.65);
+	S.setDisWeight(1.70);
+	S.setAngleWeight(1.1);
+
+    for (double z = 0.0; z < S.search_range; z += S.search_step)
+	{
+		S.get_boundary(z);
+		S.get_slices_3(z);
+		S.get_score(z);
+		S.find_best_path();
+	}
+
+	// show the best path in the point cloud. 
+	for (int k = 0; k < S.best_paths.size(); k++)
+	{
+		for (int n = 0; n < S.best_paths[k].indices.size(); n++)
+		{
+			(*cloud_filtered).points[S.best_paths[k].indices[n]].r = 0;
+			(*cloud_filtered).points[S.best_paths[k].indices[n]].g = 255;
+		}
+	}
+
     // depth info logging. 
     depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
     depth_path = depth_folder + depth_suffix;
