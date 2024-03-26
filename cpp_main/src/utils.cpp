@@ -312,6 +312,77 @@ void My_Map::poseUpdate(int number, double x, double y)
 
 
 /**
+ * @brief Update the map with info from camera. 
+*/
+void My_Map::mapUpdate()
+{
+    ;
+}
+
+
+/**
+ * @brief Constructor of class Roughness.
+*/
+Roughness::Roughness()
+{
+	a = 0;
+	b = 0;
+	c = 0;
+	d = 0;
+}
+
+
+/**
+ * @brief Constructor of class Roughness.
+ * @param coefficients plane model coefficients. 
+*/
+Roughness::Roughness(Eigen::VectorXf& coefficients)
+{
+	a = coefficients[0];
+	b = coefficients[1];
+	c = coefficients[2];
+	d = coefficients[3];
+}
+
+
+/**
+ * @brief Calculate the distance between point and plane.
+ * @param point one point from outliers. 
+ * @return distance distance between point and plane.
+*/
+double Roughness::get_distance(pcl::PointXYZRGB point)
+{
+	double distance = 0;
+	distance = (abs(a * point.x + b * point.y + c * point.z + d)) / (sqrt(pow(a, 2.0) + pow(b, 2.0) + pow(c, 2.0)));
+	return distance;
+}
+
+
+/**
+ * @brief Calculate the roughness of outliers of single frame. 
+ * @param cloud pointcloud with inliers in green. 
+*/
+void Roughness::get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud)
+{
+	vector<double> temp;
+	outliers.clear();
+	rough.clear();
+	double d = 0;
+
+	for (int i = 0; i < cloud.points.size(); i++)
+	{
+		if (cloud.points[i].r == 255 && cloud.points[i].b == 255)  // outliers
+		{
+			d = get_distance(cloud.points[i]);
+			temp.push_back(d);
+			outliers.push_back(i);
+		}
+	}
+	normalize(temp, rough, 0, 255, cv::NORM_MINMAX, CV_64F);
+}
+
+
+/**
  * @brief Convert realsense pointcloud to pcl pointcloud.
  * @param points pointcloud in realsense format.
  * @return cloud pointcloud in pcl format.

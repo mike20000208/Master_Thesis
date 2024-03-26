@@ -236,6 +236,9 @@ public:
     // pose update method. 
     void poseUpdate(int number, double x, double y);
 
+    // map info update method. 
+    void mapUpdate();
+
 };
 
 

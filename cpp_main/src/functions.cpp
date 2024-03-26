@@ -592,7 +592,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // initialize other objects.
     My_Map m(width, height, res);
-    My_Map t(width, height, res);
+    // My_Map t(width, height, res);
     std::mutex mut;
     std::ofstream f;
 
@@ -646,8 +646,32 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // filter the depth map with z-value. 
     filter.setInputCloud(cloud);
     filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 10);
+    filter.setFilterLimits(0, 3);
     filter.filter(*cloud_filtered);
+
+    // create RANSAC object and compute. 
+    Eigen::VectorXf* coef = new Eigen::VectorXf;
+    pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
+    pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
+    ransac.setDistanceThreshold(.10);
+	ransac.setMaxIterations(3000);
+	ransac.setProbability(.65);  // default value is 0.99. 
+	// ransac.setProbability(.80);  // default value is 0.99. 
+	ransac.computeModel();
+	ransac.getInliers(inliers);
+	ransac.getModelCoefficients(*coef);
+
+    // show the plane in dark green. 
+	for (int n = 0; n < inliers.size(); n++)
+	{
+		cloud_filtered->points[inliers[n]].r = 0;
+		cloud_filtered->points[inliers[n]].g = 127;
+		cloud_filtered->points[inliers[n]].b = 0;
+	}
+
+    // calculate the roughness. 
+	Roughness R(*coef);
+	R.get_Roughness(*cloud_filtered);
 
     // depth info logging. 
     depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
