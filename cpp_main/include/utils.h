@@ -262,19 +262,23 @@ public:
     My_Map();
     My_Map(int w, int h, int r);
 
-    // get the orientation. 
+    // Get the orientation. 
     EulerAngle_ Quater2Euler(Quaternion_ q);
 
-    // extract the heading. 
+    // Extract the heading. 
     Heading getHeading(EulerAngle_ e);
 
-    // coordinate transformation method.
-    Pose map2img(double x, double y, EulerAngle_ e);
+    // Coordinate transformation method.
+    void map2img(Pose& p);
+    // Pose map2img(double x, double y, EulerAngle_ e);
 
-    // pose update method. 
+    // Get the current pose of the robot
+    Pose getCurrent(double x, double y, EulerAngle_ e);
+
+    // Pose update method. 
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
-    // map info update method. 
+    // Map info update method. 
     void mapUpdate();
 
 };
