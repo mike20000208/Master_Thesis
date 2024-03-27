@@ -645,6 +645,22 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
     f.close();
 
+    // draw the map. 
+    mut.lock();
+
+    Quaternion_ q;
+    q.w = node->odo_data.ow;
+    q.x = node->odo_data.ox;
+    q.y = node->odo_data.oy;
+    q.z = node->odo_data.oz;
+    m.poseUpdate(
+        ImgLog.number, 
+        node->odo_data.px, 
+        node->odo_data.py,
+        q);
+
+    mut.unlock();
+
     // calculate realsense pointcloud and convert it into PCL format.
     points = pointcloud.calculate(depth);
     cloud = Points2PCL(points);
@@ -691,20 +707,23 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	Score S(cloud_filtered); 
 	S.setSearchRange(3.0);
 	S.setSearchStep(0.70);
-	S.setSize(0.80);
+	S.setSize(0.60);
 	S.setStride(0.5 * S.size);
-	S.setInlierWeight(0.50);
+	S.setInlierWeight(0.70);
 	S.setOutlierWeight(1.80);
-	S.setDisWeight(1.50);
-	S.setAngleWeight(0.2);
+	S.setDisWeight(1.80);
+	S.setAngleWeight(0.1);
 
     for (double z = 0.0; z < S.search_range; z += S.search_step)
 	{
 		S.get_boundary(z);
 		S.get_slices_3(z);
 		S.get_score(z);
+        m.mapUpdate(S);
 		S.find_best_path();
 	}
+
+    m.headingShow();
 
 	// show the best path in the point cloud. 
 	for (int k = 0; k < S.best_paths.size(); k++)
@@ -720,27 +739,6 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
     depth_path = depth_folder + depth_suffix;
     PCL2PLY(cloud_filtered, depth_path);
-
-    // draw the map. 
-    mut.lock();
-
-    Quaternion_ q;
-    q.w = node->odo_data.ow;
-    q.x = node->odo_data.ox;
-    q.y = node->odo_data.oy;
-    q.z = node->odo_data.oz;
-    m.poseUpdate(
-        ImgLog.number, 
-        node->odo_data.px, 
-        node->odo_data.py,
-        q);
-
-    mut.unlock();
-
-    // only for debug
-    printf("\n\nThe current yaw = %f. [degree]\n\n", rad2deg(m.currentPoint.yaw));
-    printf("\n\nThe current roll = %f. [degree]\n\n", rad2deg(m.currentPoint.roll));
-    printf("\n\nThe current pitch = %f. [degree]\n\n", rad2deg(m.currentPoint.pitch));
 
     // visualization. 
     pc_layers.push_back(cloud_filtered);
@@ -801,7 +799,6 @@ int log_replay(string folder_name)
     int num_files = getFilesNum(img_folder);
     int i = 0;
     int mark = 0;
-    int dataCnt = 0;
 
     // initialize cv objects. 
     const string win1 = "Color Image";

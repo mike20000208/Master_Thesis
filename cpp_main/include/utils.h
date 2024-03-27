@@ -150,6 +150,14 @@ struct Point2D
     double y = 0.0;
 };
 
+struct Point3D
+{
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+};
+
+
 
 struct Slice
 {
@@ -238,6 +246,91 @@ private:
 };
 
 
+class Score
+{
+public:
+    // Pointcloud to score. 
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+
+    // X border. 
+	double maxX = 0, minX = 0;  
+
+    // Length of X
+	double x_len = 0;  
+
+    // Stride along x-direction, window size
+	double stride = 0.3, size = 0.6;  
+
+    // Step along z-direction
+	double search_step = 1.0;  
+
+    // Search range within z-direction
+	double search_range = 5.0;  
+
+    // Number of slice along x-direction
+	double num_slices = 0;  
+
+    // Flag to check whether the prerequisitions are fulfilled. 
+	bool found_boundary = false, found_roi = false;
+	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr roi;
+
+    // Slices within specific z range
+	vector<Slice> slices;  
+
+    // vector pointing the the destination
+	cv::Vec3d dir = cv::Vec3d(-1.0, 0.0, 1.0);  
+
+    // best slice in each z range
+	vector<Slice> best_paths;  
+
+    // Constructor. 
+	Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
+
+    // Methods to setup scoring parameters. 
+	void setSearchRange(double z);
+	void setSearchStep(double step);
+	void setStride(double instride);
+	void setSize(double insize);
+	void setInlierWeight(double iw);
+	void setOutlierWeight(double ow);
+	void setDisWeight(double dw);
+	void setDir(cv::Vec3d newDir);
+	void setAngleWeight(double aw);
+
+    // 
+	void get_boundary(double z);
+
+    //
+	void get_roi(double z);
+
+    //
+	void get_slices_1(double z);
+
+    //
+	void get_slices_2();
+
+    //
+	void get_slices_3(double z);
+
+    //
+	double get_angle(cv::Vec3d v);
+
+    // 
+	static double get_distance(cv::Vec3d v1, cv::Vec3d v2);
+
+    //
+	bool get_score(double z, bool have_dst = true);
+
+    //
+	bool find_best_path();
+
+    //
+	void visualization(pcl::visualization::PCLVisualizer::Ptr viewer, 
+		Slice slice);
+};
+
+
 class My_Map
 {
 public:
@@ -253,16 +346,23 @@ public:
     // resolution of map. [pixel/meter]
     int res;
 
-    // map itself. 
+    // Map itself. 
     cv::Mat map_;
 
-    // temporary map for drawing an arrow indicating the heading. 
+    // Temporary map for drawing an arrow indicating the heading. 
     cv::Mat tempMap;
 
-    // pose.
+    // Poses. 
     Pose startPoint;
     Pose previousPoint;
     Pose currentPoint;
+
+    // Corners of projection area. Will be in camera frame first, then converted to map frame. follewed by being converted to image frame. 
+    cv::Vec3d bottom_right;
+    cv::Vec3d top_left;
+
+    // Flag to check whether the area is already transformed to map frame.
+    bool isTransformed = false;
 
     // Constructor. 
     My_Map();
@@ -274,9 +374,16 @@ public:
     // Extract the heading. 
     Heading getHeading(EulerAngle_ e);
 
-    // Coordinate transformation method.
+    // Coordinate transformation method (map to image).
     void map2img(Pose& p);
     Point2D map2img(Point2D p);
+
+    // Coordinate transformation method (camera to map).
+    void cam2map();
+    cv::Vec3d cam2map(cv::Vec3d p);
+
+    //Project the slice area on the map. 
+    void project();
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -285,7 +392,10 @@ public:
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
     // Map info update method. 
-    void mapUpdate();
+    void mapUpdate(Score S);
+
+    // Show the heading. 
+    void headingShow();
 
 };
 
@@ -311,55 +421,11 @@ public:
     // Constructor with plane model coefficients. 
 	Roughness(pcl::ModelCoefficients& coefficients);
 
-    //
+    // Calculate the distance between a given point and the found plane. 
 	double get_distance(pcl::PointXYZRGB point);
 
-    //
+    // Calculate the roughness regarding to the outliers. 
 	void get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud);
-};
-
-
-class Score
-{
-public:
-
-	// attributes. 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
-	double maxX = 0, minX = 0;  // X board
-	double x_len = 0;  // length of X
-	double stride = 0.3, size = 0.6;  // stride along x-direction, window size
-	double search_step = 1.0;  // step along z-direction
-	double search_range = 5.0;  // search range within z-direction
-	double num_slices = 0;  // number of slice along x-direction
-	bool found_boundary = false, found_roi = false;
-	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr roi;
-	vector<Slice> slices;  // slices within specific z range
-	cv::Vec3d dir = cv::Vec3d(-1.0, 0.0, 1.0);  // vector pointing the the destination
-	vector<Slice> best_paths;  // best slice in each z range
-
-	// methods
-	Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
-	void setSearchRange(double z);
-	void setSearchStep(double step);
-	void setStride(double instride);
-	void setSize(double insize);
-	void setInlierWeight(double iw);
-	void setOutlierWeight(double ow);
-	void setDisWeight(double dw);
-	void setDir(cv::Vec3d newDir);
-	void setAngleWeight(double aw);
-	void get_boundary(double z);
-	void get_roi(double z);
-	void get_slices_1(double z);
-	void get_slices_2();
-	void get_slices_3(double z);
-	double get_angle(cv::Vec3d v);
-	static double get_distance(cv::Vec3d v1, cv::Vec3d v2);
-	bool get_score(double z, bool have_dst = true);
-	bool find_best_path();
-	void visualization(pcl::visualization::PCLVisualizer::Ptr viewer, 
-		Slice slice);
 };
 
 
