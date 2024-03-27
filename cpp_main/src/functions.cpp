@@ -142,47 +142,6 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
             node->odo_data.py,
             q);
 
-        // if (ImgLog.number == 0)
-        // {
-        //     m.startPoint.x_meter = node->odo_data.px;
-        //     m.startPoint.y_meter = node->odo_data.py;
-        //     m.startPoint.x_pixel_img = m.width_pixel / 2;
-        //     m.startPoint.y_pixel_img = m.height_pixel / 2;
-        //     m.startPoint.x_pixel_map = 0;
-        //     m.startPoint.y_pixel_map = 0;
-        //     m.previousPoint = m.startPoint;
-        //     m.currentPoint = m.startPoint;
-        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
-        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
-        //     // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
-        //     cv::circle(
-        //         m.map,
-        //         cv::Point(m.startPoint.x_pixel_img, m.startPoint.y_pixel_img),
-        //         2,
-        //         cv::Scalar(255, 255, 255),
-        //         FILLED);
-        //     cv::putText(
-        //         m.map, 
-        //         "Start Point", 
-        //         cv::Point(m.startPoint.x_pixel_img, 
-        //         m.startPoint.y_pixel_img), 
-        //         cv::FONT_HERSHEY_PLAIN, 
-        //         0.5, 
-        //         cv::Scalar(255, 255, 255), 
-        //         1);
-        // }
-        // else
-        // {
-        //     m.previousPoint = m.currentPoint;
-        //     m.currentPoint = m.map2img(node->odo_data.px, node->odo_data.py);
-        //     cv::line(
-        //         m.map, 
-        //         cv::Point(m.currentPoint.x_pixel_img, m.currentPoint.y_pixel_img), 
-        //         cv::Point(m.previousPoint.x_pixel_img, m.previousPoint.y_pixel_img), 
-        //         cv::Scalar(0, 255, 0), 
-        //         2);
-        // }
-
         mut.unlock();
 
         // coordinate logging.
@@ -383,7 +342,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     int frame_rate = 30;
     cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
-    cfg.enable_record_to_file(bag_path);
+    // cfg.enable_record_to_file(bag_path);
 
     // initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -398,13 +357,15 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // initialize cv objects. 
     const string win1 = "Color Image";
     const string win2 = "Map";
+    const string win3 = "Trajectory";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::namedWindow(win3, WINDOW_NORMAL);
     cv::Mat image;
-    cv::Mat map;
 
     // initialize other objects.
     My_Map m(width, height, res);
+    My_Map t(width, height, res);
     std::mutex mut;
     std::ofstream f;
 
@@ -454,6 +415,27 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
+        // draw the map. 
+        mut.lock();
+
+        Quaternion_ q;
+        q.w = node->odo_data.ow;
+        q.x = node->odo_data.ox;
+        q.y = node->odo_data.oy;
+        q.z = node->odo_data.oz;
+        m.poseUpdate(
+            ImgLog.number, 
+            node->odo_data.px, 
+            node->odo_data.py,
+            q);
+        t.poseUpdate(
+            ImgLog.number, 
+            node->odo_data.px, 
+            node->odo_data.py,
+            q);
+
+        mut.unlock();
+
         // calculate realsense pointcloud and convert it into PCL format.
         points = pointcloud.calculate(depth);
         cloud = Points2PCL(points);
@@ -461,33 +443,88 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // filter the depth map with z-value. 
 		filter.setInputCloud(cloud);
 		filter.setFilterFieldName("z");
-		filter.setFilterLimits(0, 5);
+		filter.setFilterLimits(0, 3);
 		filter.filter(*cloud_filtered);
 
-        // // create RANSAC object and compute
-        // Eigen::VectorXf* coef = new Eigen::VectorXf;
-		// pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr
-		// 	model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-		// pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-		// ransac.setDistanceThreshold(0.10);
-		// ransac.setMaxIterations(3000);
-		// ransac.computeModel();
-		// ransac.getInliers(inliers);
-		// ransac.getModelCoefficients(*coef);
+        // create RANSAC object and compute. 
+        Eigen::VectorXf* coef = new Eigen::VectorXf;
+        pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
+        pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
+        ransac.setDistanceThreshold(.05);
+        ransac.setMaxIterations(3000);
+        ransac.setProbability(.65);  // default value is 0.99. 
+        // ransac.setProbability(.80);  // default value is 0.99. 
+        ransac.computeModel();
+        ransac.getInliers(inliers);
+        ransac.getModelCoefficients(*coef);
 
-        // // show the plane in dark green. 
-		// for (int n = 0; n < inliers.size(); n++)
-		// {
-		// 	cloud_filtered->points[inliers[n]].r = 0;
-		// 	cloud_filtered->points[inliers[n]].g = 127;
-		// 	cloud_filtered->points[inliers[n]].b = 0;
-		// }
+        // show the plane in dark green. 
+        for (int n = 0; n < inliers.size(); n++)
+        {
+            cloud_filtered->points[inliers[n]].r = 0;
+            cloud_filtered->points[inliers[n]].g = 127;
+            cloud_filtered->points[inliers[n]].b = 0;
+        }
+        
+        // calculate the roughness. 
+        Roughness R(*coef);
+        R.get_Roughness(*cloud_filtered);
 
-        // depth info logging. 
-        depth_suffix = "/depth_" + to_string(ImgLog.number) +".csv";
-        depth_path = depth_folder + depth_suffix;
-        // depth_log(depth_path, cloud_filtered);
-        PCL2PLY(cloud_filtered, depth_path);
+        // show the roughness on the pointcloud in red gradient. 
+        for (int i = 0; i < R.outliers.size(); i++)
+        {
+            (*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
+            (*cloud_filtered).points[R.outliers[i]].g = 0;
+            (*cloud_filtered).points[R.outliers[i]].b = 0;
+        }
+
+        // calculate the best path. 
+        Score S(cloud_filtered); 
+        S.setSearchRange(3.0);
+        S.setSearchStep(0.70);
+        S.setSize(0.60);
+        S.setStride(0.5 * S.size);
+        S.setInlierWeight(0.70);
+        S.setOutlierWeight(1.80);
+        S.setDisWeight(1.80);
+        S.setAngleWeight(0.1);
+
+        for (double z = 0.0; z < S.search_range; z += S.search_step)
+        {
+            S.get_boundary(z);
+            S.get_slices_3(z);
+            S.get_score(z);
+            m.mapUpdate(S);
+            S.find_best_path();
+        }
+
+        m.headingShow();
+        t.headingShow();
+
+        // show the best path in the point cloud. 
+        for (int k = 0; k < S.best_paths.size(); k++)
+        {
+            for (int n = 0; n < S.best_paths[k].indices.size(); n++)
+            {
+                (*cloud_filtered).points[S.best_paths[k].indices[n]].r = 0;
+                (*cloud_filtered).points[S.best_paths[k].indices[n]].g = 255;
+            }
+        }
+
+        // // depth info logging. 
+        // depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
+        // depth_path = depth_folder + depth_suffix;
+        // PCL2PLY(cloud_filtered, depth_path);
+
+        // trajectory logging. 
+        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        traj_path = traj_folder + traj_suffix;
+        cv::imwrite(traj_path, t.tempMap);
+
+        // map logging. 
+        map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
+        map_path = map_folder + map_suffix;
+        cv::imwrite(map_path, m.tempMap);
 
         // visualization. 
         pc_layers.push_back(cloud_filtered);
@@ -506,10 +543,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
         cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
+        cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
         cv::moveWindow(win1, 0, 0);
         cv::moveWindow(win2, (image.cols + 70), 0);
+        cv::moveWindow(win3, (image.cols + 70), (m.map_.rows + 150));
         cv::imshow(win1, image);
-        cv::imshow(win2, m.map_);
+        cv::imshow(win2, m.tempMap);
+        cv::imshow(win3, t.tempMap);
         char c = cv::waitKey(10);
 
         // check whether to terminate the programme. 
@@ -524,8 +564,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         inliers.clear();
         pc_layers.clear();
 		viewer->removeAllPointClouds();
-
-
     }
 
     // document the general info.
@@ -591,8 +629,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // initialize cv objects. 
     const string win1 = "Color Image";
     const string win2 = "Map";
+    // const string win3 = "Trajectory";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
+    // cv::namedWindow(win3, WINDOW_NORMAL);
     cv::Mat image;
     // cv::Mat map;
 
@@ -658,6 +698,11 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
         node->odo_data.px, 
         node->odo_data.py,
         q);
+    // t.poseUpdate(
+    //     ImgLog.number, 
+    //     node->odo_data.px, 
+    //     node->odo_data.py,
+    //     q);
 
     mut.unlock();
 
@@ -724,6 +769,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	}
 
     m.headingShow();
+    // t.headingShow();
 
 	// show the best path in the point cloud. 
 	for (int k = 0; k < S.best_paths.size(); k++)
