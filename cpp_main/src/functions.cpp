@@ -659,7 +659,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     Eigen::VectorXf* coef = new Eigen::VectorXf;
     pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
     pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-    ransac.setDistanceThreshold(.10);
+    ransac.setDistanceThreshold(.05);
 	ransac.setMaxIterations(3000);
 	ransac.setProbability(.65);  // default value is 0.99. 
 	// ransac.setProbability(.80);  // default value is 0.99. 
@@ -693,10 +693,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	S.setSearchStep(0.70);
 	S.setSize(0.80);
 	S.setStride(0.5 * S.size);
-	S.setInlierWeight(0.40);
-	S.setOutlierWeight(1.65);
-	S.setDisWeight(1.70);
-	S.setAngleWeight(1.1);
+	S.setInlierWeight(0.50);
+	S.setOutlierWeight(1.80);
+	S.setDisWeight(1.50);
+	S.setAngleWeight(0.2);
 
     for (double z = 0.0; z < S.search_range; z += S.search_step)
 	{
@@ -756,7 +756,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
         cv::moveWindow(win1, 0, 0);
         cv::moveWindow(win2, (image.cols + 70), 0);
         cv::imshow(win1, image);
-        cv::imshow(win2, m.map_);
+        cv::imshow(win2, m.tempMap);
         int c = cv::waitKey(1000);
 		viewer->spinOnce(1000);
 		std::this_thread::sleep_for(100ms);

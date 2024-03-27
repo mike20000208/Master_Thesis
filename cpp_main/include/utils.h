@@ -277,7 +277,6 @@ public:
     // Coordinate transformation method.
     void map2img(Pose& p);
     Point2D map2img(Point2D p);
-    // Pose map2img(double x, double y, EulerAngle_ e);
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -294,17 +293,28 @@ public:
 class Roughness
 {
 public:
-
-	// attributes. 
+    // Plane model coefficients. 
 	double a = 0, b = 0, c = 0, d = 0;
+
+    // the serial numebr of the outliers in the pointcloud. 
 	vector<int> outliers;
+
+    // the normalized roughness corresponding to the saved outliers serial number. 
 	vector<double> rough;
 
-	// methods
+    // Constructor. 
 	Roughness();
+
+    // Constructor with plane model coefficients. 
 	Roughness(Eigen::VectorXf& coefficients);
+
+    // Constructor with plane model coefficients. 
 	Roughness(pcl::ModelCoefficients& coefficients);
+
+    //
 	double get_distance(pcl::PointXYZRGB point);
+
+    //
 	void get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud);
 };
 

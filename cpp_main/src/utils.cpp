@@ -401,18 +401,13 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 
 	// draw the heading as an arrow. 
 	My_Map::tempMap = My_Map::map_.clone();
-	// Point2D d_map, d_img;
-	// d_map.x = currentPoint.heading.x;
-	// d_map.y = currentPoint.heading.y;
-	// d_img = My_Map::map2img(d_map);
-	// double endX = currentPoint.x_pixel_img + d_img.x;
-	// double endY = currentPoint.y_pixel_img + d_img.y;
-
-
+	printf(
+		"The heading of current scene = %f [degree], and the corresponding vector = [%.2f, %.2f]", 
+		currentPoint.yaw,
+		currentPoint.heading.x,
+		currentPoint.heading.y);
 	double endX = currentPoint.x_pixel_map + currentPoint.heading.x;
 	double endY = currentPoint.y_pixel_map + currentPoint.heading.y;
-	// // double endX = currentPoint.x_pixel_img + currentPoint.heading.x;
-	// // double endY = currentPoint.y_pixel_img + currentPoint.heading.y;
 	int endX_int, endY_int;
 
 	if (endX >= 0)
@@ -437,15 +432,6 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 	point_map.x = endX_int;
 	point_map.y = endY_int;
 	point_img = My_Map::map2img(point_map);
-
-	// cv::arrowedLine(
-    //     My_Map::tempMap,
-    //     cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
-    //     cv::Point(endX_int, endY_int),
-    //     cv::Scalar(255, 0, 0),
-	// 	3
-    // );
-
     cv::arrowedLine(
         My_Map::tempMap,
         cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
@@ -506,7 +492,7 @@ Roughness::Roughness(pcl::ModelCoefficients& coefficients)
 
 
 /**
- * @brief Calculate the distance between point and plane.
+ * @brief Calculate the distance between a point and plane.
  * @param point one point from outliers. 
  * @return distance distance between point and plane.
 */
@@ -538,7 +524,8 @@ void Roughness::get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud)
 			outliers.push_back(i);
 		}
 	}
-	normalize(temp, rough, 0, 255, cv::NORM_MINMAX, CV_64F);
+	normalize(temp, rough, 50, 255, cv::NORM_MINMAX, CV_64F);
+	// normalize(temp, rough, 0, 255, cv::NORM_MINMAX, CV_64F);
 }
 
 
