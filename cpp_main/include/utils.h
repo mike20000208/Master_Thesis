@@ -141,7 +141,7 @@ struct Pose
     double roll = 0.0;  // about x-axis.
     double yaw = 0.0;  // about z-axis. 
     double pitch = 0.0;  // about y-axis. 
-    Heading heading;
+    Heading heading;  // as a direction vector. 
 };
 
 
@@ -262,8 +262,11 @@ public:
     My_Map();
     My_Map(int w, int h, int r);
 
-    // 
+    // get the orientation. 
     EulerAngle_ Quater2Euler(Quaternion_ q);
+
+    // extract the heading. 
+    Heading getHeading(EulerAngle_ e);
 
     // coordinate transformation method.
     Pose map2img(double x, double y, EulerAngle_ e);

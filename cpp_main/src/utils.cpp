@@ -199,7 +199,11 @@ My_Map::My_Map()
     res = 5;
     width_pixel = width_meter * res;
     height_pixel = height_meter * res;
-    My_Map::map_ = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
+    My_Map::map_ = cv::Mat(
+		height_pixel, 
+		width_pixel, 
+		CV_8UC3, 
+		cv::Scalar(150, 150, 150));
 }
 
 
@@ -216,7 +220,11 @@ My_Map::My_Map(int w, int h, int r)
     res = r;
     width_pixel = width_meter * res;
     height_pixel = height_meter * res;
-    My_Map::map_ = cv::Mat(height_pixel, width_pixel, CV_8UC3, cv::Scalar(0, 0, 0));
+    My_Map::map_ = cv::Mat(
+		height_pixel, 
+		width_pixel, 
+		CV_8UC3, 
+		cv::Scalar(150, 150, 150));
 }
 
 
@@ -295,11 +303,13 @@ Pose My_Map::map2img(double x, double y, EulerAngle_ e)
 Heading My_Map::getHeading(EulerAngle_ e)
 {
 	Heading h;
-	h.x = cos(e.yaw);  // the x component of direction vector;
-    h.y = sin(e.yaw);  // the y component of direction vector;
-    h.norm = sqrt(pow(h.x, 2), pow(h.y, 2));
+	h.x = cos(-e.yaw);  // the x component of direction vector;
+    h.y = sin(-e.yaw);  // the y component of direction vector;
+    h.norm = sqrt(pow(h.x, 2) + pow(h.y, 2));
     h.x /= h.norm;
     h.y /= h.norm;
+	h.x *= 20;
+	h.y *= 20;
 	return h;
 }
 
@@ -312,19 +322,20 @@ Heading My_Map::getHeading(EulerAngle_ e)
 */
 void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 {
-    // get the current Euler angles 
-    EulerAngle_ e = My_Map::Quater2Euler(q);
+    // // get the current Euler angles 
+    // EulerAngle_ e = My_Map::Quater2Euler(q);
 
-	// get the corresponding heading. 
-	Heading h = My_Map::getHeading(e);
-    // h.x = cos(currentPoint.yaw);  // the x component of direction vector;
-    // h.y = sin(currentPoint.yaw);  // the y component of direction vector;
-    // h.norm = sqrt(pow(h.x, 2), pow(h.y, 2));
-    // h.x /= h.norm;
-    // h.y /= h.norm;
+	// // get the corresponding heading. 
+	// Heading h = My_Map::getHeading(e);
 
     if (number == 0)
     {
+		// get the current Euler angles 
+		q.w -= 1;
+    	EulerAngle_ e = My_Map::Quater2Euler(q);
+
+		// get the corresponding heading. 
+		Heading h = My_Map::getHeading(e);
         startPoint.x_meter = x;
         startPoint.y_meter = y;
         startPoint.x_pixel_img = width_pixel / 2;
@@ -344,7 +355,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
             My_Map::map_,
             cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
             2,
-            cv::Scalar(255, 255, 255),
+            cv::Scalar(0, 0, 0),
             FILLED);
         cv::putText(
             My_Map::map_, 
@@ -353,27 +364,56 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
             startPoint.y_pixel_img), 
             cv::FONT_HERSHEY_PLAIN, 
             1.0, 
-            cv::Scalar(255, 255, 255), 
+            cv::Scalar(0, 0, 0), 
             1);
     }
     else
     {
+		// get the current Euler angles 
+    	EulerAngle_ e = My_Map::Quater2Euler(q);
+
+		// get the corresponding heading. 
+		Heading h = My_Map::getHeading(e);
         previousPoint = currentPoint;
         currentPoint = My_Map::map2img(x, y, e);
         cv::line(
             map_, 
             cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img), 
             cv::Point(previousPoint.x_pixel_img, previousPoint.y_pixel_img), 
-            cv::Scalar(0, 255, 0), 
+            cv::Scalar(0, 150, 0), 
             2);
     }
 
 	// draw the heading as an arrow. 
+	My_Map::tempMap = My_Map::map_.clone();
+	double endX = currentPoint.x_pixel_img + currentPoint.heading.x;
+	double endY = currentPoint.y_pixel_img + currentPoint.heading.y;
+	int endX_int, endY_int;
+
+	if (endX >= 0)
+	{
+		endX_int = ceil(endX);
+	}
+	else
+	{
+		endX_int = floor(endX);
+	}
+
+	if (endY >= 0)
+	{
+		endY_int = ceil(endY);
+	}
+	else
+	{
+		endY_int = floor(endY);
+	}
+
     cv::arrowedLine(
-        My_Map::map_,
+        My_Map::tempMap,
         cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
-        cv::Point(),
-        cv::Scalar(255, 0, 0)
+        cv::Point(endX_int, endY_int),
+        cv::Scalar(255, 0, 0),
+		3
     );
 }
 

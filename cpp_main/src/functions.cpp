@@ -899,19 +899,10 @@ int log_replay(string folder_name)
     f.close();
 
     // initialize map drawing.
-    // My_Map t(
-    //     infoLog["map_width_meter"], 
-    //     infoLog["map_height_meter"], 
-    //     infoLog["resolution"]);
-
     printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
     int map_width_meter, map_height_meter, map_res;
     cin >> map_width_meter >> map_height_meter >> map_res; 
     My_Map t(map_width_meter, map_height_meter, map_res);
-
-    // My_Map t(20, 20, 5);
-
-    // My_Map t(200, 200, 5);
 
     // start replaying. 
     for (; imgNum < num_files; imgNum++)
@@ -962,7 +953,7 @@ int log_replay(string folder_name)
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);
-        cv::imshow(win2, t.map_);
+        cv::imshow(win2, t.tempMap);
         char c = (char)cv::waitKey(100);
 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -971,6 +962,9 @@ int log_replay(string folder_name)
             TERMINATE = true;
             break;
         }
+
+        // reset the temporary map which is only used to display. 
+        t.tempMap = Mat();
     }
 
     return 0;
