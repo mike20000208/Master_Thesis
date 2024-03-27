@@ -261,8 +261,8 @@ EulerAngle_ My_Map::Quater2Euler(Quaternion_ q)
 Heading My_Map::getHeading(EulerAngle_ e)
 {
 	Heading h;
-	h.x = cos(-e.yaw);  // the x component of direction vector;
-    h.y = sin(-e.yaw);  // the y component of direction vector;
+	h.x = cos(e.yaw);  // the x component of direction vector;
+    h.y = sin(e.yaw);  // the y component of direction vector;
     h.norm = sqrt(pow(h.x, 2) + pow(h.y, 2));
     h.x /= h.norm;
     h.y /= h.norm;
@@ -281,38 +281,20 @@ void My_Map::map2img(Pose& p)
 {
 	p.x_pixel_img = -p.y_pixel_map + My_Map::width_pixel / 2;
 	p.y_pixel_img = -p.x_pixel_map + My_Map::height_pixel / 2;
+}
 
-    // Pose current;
-    // current.x_meter = x;
-    // current.y_meter = y;
-    // current.roll = e.roll;
-    // current.pitch = e.pitch;
-    // current.yaw = e.yaw;
-	// current.heading = My_Map::getHeading(e);
-    // double dx = x - My_Map::startPoint.x_meter;
-    // double dy = y - My_Map::startPoint.y_meter;
 
-    // if (dx >= 0)
-    // {
-    //     current.x_pixel_map = ceil(dx * My_Map::res);
-    // }
-    // else
-    // {
-    //     current.x_pixel_map = floor(dx * My_Map::res);
-    // }
-
-    // if (dy >= 0)
-    // {
-    //     current.y_pixel_map = ceil(dy * My_Map::res);
-    // }
-    // else
-    // {
-    //     current.y_pixel_map = floor(dy * My_Map::res);
-    // }
-
-    // current.x_pixel_img = -current.y_pixel_map + My_Map::width_pixel / 2;
-    // current.y_pixel_img = -current.x_pixel_map + My_Map::height_pixel / 2;
-    // return current;
+/**
+ * @brief
+ * @param p
+ * @return 
+*/
+Point2D My_Map::map2img(Point2D p)
+{
+	Point2D point;
+	point.x = -p.y + My_Map::width_pixel / 2;
+	point.y = -p.x + My_Map::height_pixel / 2;
+	return point;
 }
 
 
@@ -366,20 +348,14 @@ Pose My_Map::getCurrent(double x, double y, EulerAngle_ e)
 */
 void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 {
-    // // get the current Euler angles 
-    // EulerAngle_ e = My_Map::Quater2Euler(q);
+    // get the current Euler angles 
+    EulerAngle_ e = My_Map::Quater2Euler(q);
 
-	// // get the corresponding heading. 
-	// Heading h = My_Map::getHeading(e);
+	// get the corresponding heading. 
+	Heading h = My_Map::getHeading(e);
 
     if (number == 0)
     {
-		// get the current Euler angles 
-		q.w -= 1;
-    	EulerAngle_ e = My_Map::Quater2Euler(q);
-
-		// get the corresponding heading. 
-		Heading h = My_Map::getHeading(e);
         startPoint.x_meter = x;
         startPoint.y_meter = y;
         startPoint.x_pixel_img = width_pixel / 2;
@@ -413,11 +389,6 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
     }
     else
     {
-		// get the current Euler angles 
-    	EulerAngle_ e = My_Map::Quater2Euler(q);
-
-		// get the corresponding heading. 
-		Heading h = My_Map::getHeading(e);
         previousPoint = currentPoint;
         currentPoint = My_Map::getCurrent(x, y, e);
         cv::line(
@@ -430,8 +401,18 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 
 	// draw the heading as an arrow. 
 	My_Map::tempMap = My_Map::map_.clone();
-	double endX = currentPoint.x_pixel_img + currentPoint.heading.x;
-	double endY = currentPoint.y_pixel_img + currentPoint.heading.y;
+	// Point2D d_map, d_img;
+	// d_map.x = currentPoint.heading.x;
+	// d_map.y = currentPoint.heading.y;
+	// d_img = My_Map::map2img(d_map);
+	// double endX = currentPoint.x_pixel_img + d_img.x;
+	// double endY = currentPoint.y_pixel_img + d_img.y;
+
+
+	double endX = currentPoint.x_pixel_map + currentPoint.heading.x;
+	double endY = currentPoint.y_pixel_map + currentPoint.heading.y;
+	// // double endX = currentPoint.x_pixel_img + currentPoint.heading.x;
+	// // double endY = currentPoint.y_pixel_img + currentPoint.heading.y;
 	int endX_int, endY_int;
 
 	if (endX >= 0)
@@ -452,12 +433,28 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 		endY_int = floor(endY);
 	}
 
+	Point2D point_map, point_img;
+	point_map.x = endX_int;
+	point_map.y = endY_int;
+	point_img = My_Map::map2img(point_map);
+
+	// cv::arrowedLine(
+    //     My_Map::tempMap,
+    //     cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
+    //     cv::Point(endX_int, endY_int),
+    //     cv::Scalar(255, 0, 0),
+	// 	3
+    // );
+
     cv::arrowedLine(
         My_Map::tempMap,
         cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
-        cv::Point(endX_int, endY_int),
+        cv::Point(point_img.x, point_img.y),
         cv::Scalar(255, 0, 0),
-		3
+		2,
+		8,
+		0,
+		0.3
     );
 }
 

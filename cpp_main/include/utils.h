@@ -144,6 +144,12 @@ struct Pose
     Heading heading;  // as a direction vector. 
 };
 
+struct Point2D
+{
+    double x = 0.0;
+    double y = 0.0;
+};
+
 
 struct Slice
 {
@@ -270,6 +276,7 @@ public:
 
     // Coordinate transformation method.
     void map2img(Pose& p);
+    Point2D map2img(Point2D p);
     // Pose map2img(double x, double y, EulerAngle_ e);
 
     // Get the current pose of the robot

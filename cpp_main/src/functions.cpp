@@ -939,7 +939,7 @@ int log_replay(string folder_name)
             }
         }
 
-        // update the pose of the robot. 
+        // Gather the odometry data to update the pose of the robot. 
         Quaternion_ q;
         q.w = currentOdo.ow;
         q.x = currentOdo.ox;
