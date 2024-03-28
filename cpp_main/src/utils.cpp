@@ -279,8 +279,8 @@ Heading My_Map::getHeading(EulerAngle_ e)
 */
 void My_Map::map2img(Pose& p)
 {
-	p.x_pixel_img = -p.y_pixel_map + My_Map::width_pixel / 2;
-	p.y_pixel_img = -p.x_pixel_map + My_Map::height_pixel / 2;
+	p.x_pixel_img = -p.y_pixel_map + ceil(My_Map::width_pixel / 2);
+	p.y_pixel_img = -p.x_pixel_map + ceil(My_Map::height_pixel / 2);
 }
 
 
@@ -292,8 +292,8 @@ void My_Map::map2img(Pose& p)
 Point2D My_Map::map2img(Point2D p)
 {
 	Point2D point;
-	point.x = -p.y + My_Map::width_pixel / 2;
-	point.y = -p.x + My_Map::height_pixel / 2;
+	point.x = -p.y + ceil(My_Map::width_pixel / 2);
+	point.y = -p.x + ceil(My_Map::height_pixel / 2);
 	return point;
 }
 
@@ -460,8 +460,8 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
     {
         startPoint.x_meter = x;
         startPoint.y_meter = y;
-        startPoint.x_pixel_img = width_pixel / 2;
-        startPoint.y_pixel_img = height_pixel / 2;
+        startPoint.x_pixel_img = ceil(width_pixel / 2);
+        startPoint.y_pixel_img = ceil(height_pixel / 2);
         startPoint.x_pixel_map = 0;
         startPoint.y_pixel_map = 0;
         startPoint.roll = e.roll;
