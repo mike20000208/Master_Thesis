@@ -52,6 +52,8 @@ using namespace std::filesystem;
 #define DEVICE "Intel RealSense D455"
 #define REPLAY_FOLDER "/home/mike/DatatoAnalyze/"
 #define REPLAY_DATE "2024-03-17-18:26:07"
+#define DEBUG_FILE "/home/mike/Debug/debug.csv"
+#define RECORDING_PATH "/home/mike/Recording/Room005.bag"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define ODO_TOPIC "/my_odo"
@@ -146,8 +148,8 @@ struct Pose
 
 struct Point2D
 {
-    double x = 0.0;
-    double y = 0.0;
+    int x = 0.0;
+    int y = 0.0;
 };
 
 struct Point3D
@@ -158,10 +160,9 @@ struct Point3D
 };
 
 
-
 struct Slice
 {
-	double score = 0;
+	double score = 0.0;
 	cv::Vec3d centroid = cv::Vec3d(0.0, 0.0, 0.0);
 	vector<int> indices;
 };
@@ -252,6 +253,9 @@ public:
     // Pointcloud to score. 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
+    // maximum and minimum score of the whole region.
+    double maxScore = 0.0, minScore = 0.0;
+
     // X border. 
 	double maxX = 0, minX = 0;  
 
@@ -302,16 +306,7 @@ public:
 	void get_boundary(double z);
 
     //
-	void get_roi(double z);
-
-    //
-	void get_slices_1(double z);
-
-    //
-	void get_slices_2();
-
-    //
-	void get_slices_3(double z);
+	void get_slices(double z);
 
     //
 	double get_angle(cv::Vec3d v);
@@ -358,8 +353,12 @@ public:
     Pose currentPoint;
 
     // Corners of projection area. Will be in camera frame first, then converted to map frame. follewed by being converted to image frame. 
-    cv::Vec3d bottom_right;
-    cv::Vec3d top_left;
+    cv::Vec3d bottom_right_cam;
+    cv::Vec3d top_left_cam;
+    cv::Vec3d bottom_right_map;
+    cv::Vec3d top_left_map;
+    // cv::Vec3i bottom_right_img;
+    // cv::Vec3i top_left_img;
 
     // Flag to check whether the area is already transformed to map frame.
     bool isTransformed = false;
@@ -380,10 +379,10 @@ public:
 
     // Coordinate transformation method (camera to map).
     void cam2map();
-    cv::Vec3d cam2map(cv::Vec3d p);
+    // cv::Vec3d cam2map(cv::Vec3d p);
 
     //Project the slice area on the map. 
-    void project();
+    void sliceProject(Score S, int index);
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);

@@ -306,91 +306,149 @@ Point2D My_Map::map2img(Point2D p)
 */
 void My_Map::cam2map()
 {
-	cv::Vec3d temp;
-	temp = My_Map::top_left;
-	My_Map::top_left[0] = temp[2];
-	My_Map::top_left[1] = temp[0];
-	My_Map::top_left[2] = temp[1];
-	temp = My_Map::bottom_right;
-	My_Map::bottom_right[0] = temp[2];
-	My_Map::bottom_right[1] = temp[0];
-	My_Map::bottom_right[2] = temp[1];
+	// convert the relative location of the corners into the map frame. 
+	My_Map::top_left_map[0] = My_Map::top_left_cam[2];
+	My_Map::top_left_map[1] = My_Map::top_left_cam[0];
+	My_Map::top_left_map[2] = My_Map::top_left_cam[1];
+	My_Map::bottom_right_map[0] = bottom_right_cam[2];
+	My_Map::bottom_right_map[1] = bottom_right_cam[0];
+	My_Map::bottom_right_map[2] = bottom_right_cam[1];
+
+	// make the unit consistant. from meter to pixel. 
+	My_Map::top_left_map *= My_Map::res;
+	My_Map::bottom_right_map *= My_Map::res;
+
+	// make it an absolute location in the map frame. 
+	My_Map::top_left_map += cv::Vec3d(
+		My_Map::currentPoint.x_pixel_map, 
+		My_Map::currentPoint.y_pixel_map, 
+		0);
+	My_Map::bottom_right_map += cv::Vec3d(
+		My_Map::currentPoint.x_pixel_map, 
+		My_Map::currentPoint.y_pixel_map, 
+		0);
+
+	// confirm the transformation is done. 
 	My_Map::isTransformed = true;
 }
 
 
-/**
- * @brief Transform the point in camera frame into map frame. 
- * @param
-*/
-cv::Vec3d My_Map::cam2map(cv::Vec3d p)
-{
-	cv::Vec3d p_map;
-	p_map[0] = p[2];
-	p_map[1] = p[0];
-	p_map[2] = p[1];
-	return p_map;
-}
+// /**
+//  * @brief Transform the point in camera frame into map frame. 
+//  * @param p a point in the camera frame. 
+// */
+// cv::Vec3d My_Map::cam2map(cv::Vec3d p)
+// {
+// 	cv::Vec3d p_map;
+// 	p_map[0] = p[2];
+// 	p_map[1] = p[0];
+// 	p_map[2] = p[1];
+// 	return p_map;
+// }
 
 
 /**
- * @brief Project the slice area on the map. 
+ * @brief Project the slice area on the map and show it. 
+ * @param S the instance of class Score which is running the scoring currently. 
+ * @param index the index of current slice which is going to be projected on the map. 
 */
-void My_Map::project()
+void My_Map::sliceProject(Score S, int index)
 {
-	Point2D top_left_real, bottom_right_real, top_left_img, bottom_right_img;
+	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
 	if (My_Map::isTransformed)
 	{
-		// get the actual coordinates of corners in map frame.
-		if (My_Map::top_left[0] >= 0)
+		// make sure the numebers will be integers. but still in the map frame  
+		if (My_Map::top_left_map[0] >= 0)
 		{
-			top_left_real.x = ceil(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
+			top_left_map.x = ceil(My_Map::top_left_map[0]);
 		}
 		else
 		{
-			top_left_real.x = floor(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
+			top_left_map.x = floor(My_Map::top_left_map[0]);
 		}
 
-		if (My_Map::top_left[1] >= 0)
+		if (My_Map::top_left_map[1] >= 0)
 		{
-			top_left_real.y = ceil(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
+			top_left_map.y = ceil(My_Map::top_left_map[1]);
 		}
 		else
 		{
-			top_left_real.y = floor(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
+			top_left_map.y = floor(My_Map::top_left_map[1]);
 		}
 
-		if (My_Map::bottom_right[0] >= 0)
+		if (My_Map::bottom_right_map[0] >= 0)
 		{
-			bottom_right_real.x = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
+			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
 		}
 		else
 		{
-			bottom_right_real.x = floor(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
+			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
 		}
 
-		if (My_Map::bottom_right[1] >= 0)
+		if (My_Map::bottom_right_map[1] >= 0)
 		{
-			bottom_right_real.y = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
+			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
 		}
 		else
 		{
-			bottom_right_real.y = floor(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
+			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
 		}
+		
+		// // get the actual coordinates of corners in map frame.
+		// if (My_Map::top_left[0] >= 0)
+		// {
+		// 	top_left_real.x = ceil(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
+		// }
+		// else
+		// {
+		// 	top_left_real.x = floor(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
+		// }
+
+		// if (My_Map::top_left[1] >= 0)
+		// {
+		// 	top_left_real.y = ceil(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
+		// }
+		// else
+		// {
+		// 	top_left_real.y = floor(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
+		// }
+
+		// if (My_Map::bottom_right[0] >= 0)
+		// {
+		// 	bottom_right_real.x = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
+		// }
+		// else
+		// {
+		// 	bottom_right_real.x = floor(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
+		// }
+
+		// if (My_Map::bottom_right[1] >= 0)
+		// {
+		// 	bottom_right_real.y = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
+		// }
+		// else
+		// {
+		// 	bottom_right_real.y = floor(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
+		// }
 
 		// transform the coordinates of the corners to image frame. 
-		top_left_img = My_Map::map2img(top_left_real);
-		bottom_right_img = My_Map::map2img(bottom_right_real);
+		top_left_img = My_Map::map2img(top_left_map);
+		bottom_right_img = My_Map::map2img(bottom_right_map);
 
 		// draw the area as a rectangle on the map. 
+		int lowG = 150;
+		int highG = 255;
+		int g = 0;
+		g = ((S.slices[index].score - S.minScore) / (S.maxScore - S.minScore)) * (highG - lowG) + lowG;
 		cv::rectangle(
 			My_Map::map_,
 			cv::Point(top_left_img.x, top_left_img.y),
 			cv::Point(bottom_right_img.x, bottom_right_img.y),
-			cv::Scalar(0, 0, 0),
+			cv::Scalar(0, g, 0),
 			-1
 		);
 
+		// reset the flag. 
 		My_Map::isTransformed = false;
 	}
 	else
@@ -405,7 +463,7 @@ void My_Map::project()
  * @brief Get the current pose and heading of the robot. 
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
- * @param e 
+ * @param e Euler angle extracted from the orientation in quaternion format. 
  * @return current the current pose.
 */
 Pose My_Map::getCurrent(double x, double y, EulerAngle_ e)
@@ -474,12 +532,12 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
         // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
         // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
         // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
-        cv::circle(
-            My_Map::map_,
-            cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
-            2,
-            cv::Scalar(0, 0, 0),
-            FILLED);
+        // cv::circle(
+        //     My_Map::map_,
+        //     cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
+        //     2,
+        //     cv::Scalar(255, 0, 0),
+        //     FILLED);
         cv::putText(
             My_Map::map_, 
             "Start Point", 
@@ -558,16 +616,16 @@ void My_Map::mapUpdate(Score S)
 {
     for (int i = 0; i < S.slices.size(); i++)
 	{
-		My_Map::top_left = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
-		My_Map::bottom_right = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
+		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
+		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
 		My_Map::cam2map();
-		My_Map::project();
+		My_Map::sliceProject(S, i);
 	}
 }
 
 
 /**
- * @brief
+ * @brief Visualize the heading on the map. 
 */
 void My_Map::headingShow()
 {
@@ -704,11 +762,15 @@ Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
 	pcl::copyPointCloud(*incloud, *cloud);
 	vector<int> X;
 
-	// calculate the boudary for get_slice_1(). 
-	for (auto& p : (*cloud).points)
-	{
-		X.push_back(p.x);
-	}
+	// // calculate the boudary for get_slice_1(). 
+	// for (auto& p : (*cloud).points)
+	// {
+	// 	X.push_back(p.x);
+	// }
+
+	// initialize the maximum and minimum score of the whole scanned region. 
+	Score::minScore = 999999;
+	Score::maxScore = -999999;
 }
 
 
@@ -862,228 +924,9 @@ void Score::get_boundary(double z)
 
 
 /**
- * @brief Get the roi as pointcloud for get_slice_2(). 
- * @param z lower limit of z value.
-*/
-void Score::get_roi(double z)
-{
-	Score::roi = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-	// build the condition. 
-	pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr
-		condition(new pcl::ConditionAnd<pcl::PointXYZRGB>);
-	(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-	(new pcl::FieldComparison<pcl::PointXYZRGB>("z",
-												pcl::ComparisonOps::GE,
-												z)));
-	(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-	(new pcl::FieldComparison<pcl::PointXYZRGB>("z",
-												pcl::ComparisonOps::LT,
-												(z + Score::search_step))));
-
-	// build the filter. 
-	pcl::ConditionalRemoval<pcl::PointXYZRGB> filter;
-	filter.setCondition(condition);
-	filter.setInputCloud(cloud);
-	filter.setKeepOrganized(true);
-
-	// apply the filter. 
-	filter.filter((*Score::roi));
-
-	// set the flag
-	Score::found_roi = true;
-}
-
-
-/**
- * @brief Get the slices along x direction within specified z range. (by built-in function in PCL)
- * @param z lower limit of z value. 
-*/
-void Score::get_slices_1(double z)
-{
-	// check the flag. 
-	if (!Score::found_boundary)
-	{
-		cerr << "\n\nNeeds to find the boundary first! \n\n";
-		exit(-1);
-	}
-	else
-	{
-		Score::found_boundary = false;
-	}
-	
-	// reset attributes. 
-	Score::slices.clear();
-
-	// prepare some variables. 
-	vector<int> X, Y, Z;
-
-	for (int i = 0; i < num_slices; i++)
-	{		
-		// prepare some variables. 
-		pcl::PointCloud<pcl::PointXYZRGB>::Ptr
-			roi(new pcl::PointCloud<pcl::PointXYZRGB>);
-		pcl::IndicesConstPtr inliers;
-		Slice slice;
-
-		// build the condition. 
-		pcl::ConditionOr<pcl::PointXYZRGB>::Ptr
-			condition(new pcl::ConditionOr<pcl::PointXYZRGB>);
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("z", 
-													pcl::ComparisonOps::LT, 
-													z)));
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("z", 
-													pcl::ComparisonOps::GE, 
-													(z + Score::search_step))));
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("x",
-													pcl::ComparisonOps::LT,
-													(Score::minX + i * Score::stride))));
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("x",
-													pcl::ComparisonOps::GE,
-													(Score::minX + i * Score::stride + Score::size))));
-
-		// build the filter. 
-		pcl::ConditionalRemoval<pcl::PointXYZRGB> filter(true);  // default: extract_removed_indices = false
-		filter.setCondition(condition);
-		filter.setInputCloud(Score::cloud);
-		filter.setKeepOrganized(true);
-
-		// apply the filter. 
-		filter.filter(*roi);
-		inliers = filter.getRemovedIndices();
-
-		if (inliers->size() == 0)  // there is no points in this slice. 
-		{
-			continue;
-		}
-
-		// save the slice. 
-		slice.score = 0.0;
-		slice.indices = (*inliers);
-		
-		for (int j = 0; j < (*inliers).size(); j++)
-		{
-			//slice.indices.push_back((*inliers)[j]);
-			X.push_back((*cloud).points[(*inliers)[j]].x);
-			Y.push_back((*cloud).points[(*inliers)[j]].y);
-			Z.push_back((*cloud).points[(*inliers)[j]].z);
-		}
-
-		cv::Scalar cx = cv::sum(X);
-		cv::Scalar cy = cv::sum(Y);
-		cv::Scalar cz = cv::sum(Z);
-		int len = X.size();
-		slice.centroid = cv::Vec3d(double(cx[0] / len), double(cy[0] / len), double(cz[0] / len));
-		Score::slices.push_back(slice);
-
-		// reset 
-		X.clear();
-		Y.clear();
-		Z.clear();
-	}
-}
-
-
-/**
- * @brief Get the slices along x direction within specified z range. This method relys on Score::get_boundary() and Score::get_roi(). 
-*/
-void Score::get_slices_2()
-{
-	// check the flag. 
-	if (!Score::found_boundary || !Score::found_roi)
-	{
-		if (!Score::found_boundary)
-		{
-			cerr << "\n\nNeeds to find the boundary first! \n\n";
-			exit(-1);
-		}
-		else
-		{
-			cerr << "\n\nNeeds to find the ROI first! \n\n";
-			exit(-1);
-		}
-	}
-	else
-	{
-		Score::found_boundary = false;
-		Score::found_roi = false;
-	}
-	
-	// reset attributes. 
-	Score::slices.clear();
-
-	// prepare some variables. 
-	vector<int> X, Y, Z;
-
-	for (int i = 0; i < num_slices; i++)
-	{
-		// prepare some variables. 
-		pcl::PointCloud<pcl::PointXYZRGB>::Ptr
-			slice_pc(new pcl::PointCloud<pcl::PointXYZRGB>);
-		pcl::IndicesConstPtr inliers;
-		Slice slice;
-
-		// build the condition. 
-		pcl::ConditionOr<pcl::PointXYZRGB>::Ptr
-			condition(new pcl::ConditionOr<pcl::PointXYZRGB>);
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("x",
-			pcl::ComparisonOps::LT,
-			(Score::minX + i * Score::stride))));
-		(*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-		(new pcl::FieldComparison<pcl::PointXYZRGB>("x",
-			pcl::ComparisonOps::GE,
-			(Score::minX + i * Score::stride + Score::size))));
-
-		// build the filter. 
-		pcl::ConditionalRemoval<pcl::PointXYZRGB> filter(true);  // default: extract_removed_indices = false
-		filter.setCondition(condition);
-		filter.setInputCloud(Score::roi);
-		filter.setKeepOrganized(true);
-
-		// apply the filter. 
-		filter.filter(*slice_pc);
-		inliers = filter.getRemovedIndices();
-
-		if (inliers->size() == 0)  // there is no points in this slice. 
-		{
-			continue;
-		}
-
-		// save the slice. 
-		slice.score = 0.0;
-		slice.indices = (*inliers);
-
-		for (int j = 0; j < (*inliers).size(); j++)
-		{
-			X.push_back((*cloud).points[(*inliers)[j]].x);
-			Y.push_back((*cloud).points[(*inliers)[j]].y);
-			Z.push_back((*cloud).points[(*inliers)[j]].z);
-		}
-
-		cv::Scalar cx = cv::sum(X);
-		cv::Scalar cy = cv::sum(Y);
-		cv::Scalar cz = cv::sum(Z);
-		int len = X.size();
-		slice.centroid = cv::Vec3d(double(cx[0] / len), double(cy[0] / len), double(cz[0] / len));
-		Score::slices.push_back(slice);
-
-		// reset 
-		X.clear();
-		Y.clear();
-		Z.clear();
-	}
-}
-
-
-/**
  * @brief Get the slice along x direction within specified z range. (by conventional iteration method)
 */
-void Score::get_slices_3(double z)
+void Score::get_slices(double z)
 {
 	// check the flag. 
 	if (!Score::found_boundary)
@@ -1125,7 +968,7 @@ void Score::get_slices_3(double z)
 			}
 		}
 
-		// check slice. 
+		// check slice is empty or not. 
 		if (slice.indices.size() == 0)
 		{
 			continue;
@@ -1136,7 +979,7 @@ void Score::get_slices_3(double z)
 		cv::Scalar cx = cv::sum(X);
 		cv::Scalar cy = cv::sum(Y);
 		cv::Scalar cz = cv::sum(Z);
-		int len = X.size();
+		double len = X.size();
 		slice.centroid = cv::Vec3d(double(cx[0] / len), double(cy[0] / len), double(cz[0] / len));
 		Score::slices.push_back(slice);
 
@@ -1188,6 +1031,10 @@ bool Score::get_score(double z, bool have_dst)
 {
 	bool is_Zero = false;
 
+	// want to log the score data. 
+	std::ofstream f;
+	f.open(DEBUG_FILE, ios::out | ios::app);
+
 	if (Score::slices.size() != 0)
 	{
 		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
@@ -1207,6 +1054,7 @@ bool Score::get_score(double z, bool have_dst)
 				}
 				else
 				{
+					Score::slices[i].score = -100000.0;
 					continue;
 				}
 			}
@@ -1230,13 +1078,37 @@ bool Score::get_score(double z, bool have_dst)
 				double angle = get_angle(Score::slices[i].centroid);
 				Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
 			}
+
+			// update the minScore and maxScore. 
+			if (Score::slices[i].score > Score::maxScore)
+			{
+				Score::maxScore = Score::slices[i].score;
+			}
+
+			if (Score::slices[i].score < Score::minScore)
+			{
+				Score::minScore = Score::slices[i].score;
+			}
+
+			// logging the score data to debug. 
+			f << z << ", " \
+			<< Score::minX << ", " \
+			<< Score::maxX << ", " \
+			<< i << ", " \
+			<< Score::slices[i].centroid[0] << ", " \
+			<< Score::slices[i].centroid[1] << ", " \
+			<< Score::slices[i].centroid[2] << ", " \
+			<< Score::slices[i].score << ", " \
+			<< Score::slices[i].indices.size() << "\n";
 		}
+		f.close();
 		return is_Zero;
 	}
 	else
 	{
 		return !is_Zero;
 	}
+
 }
 
 
@@ -1259,7 +1131,7 @@ bool Score::find_best_path()
 	{
 		for (int i = 0; i < Score::slices.size(); i++)
 		{
-			if (Score::slices[i].score > best_score)
+			if (Score::slices[i].score >= best_score)
 			{
 				best_score = Score::slices[i].score;
 				index = i;

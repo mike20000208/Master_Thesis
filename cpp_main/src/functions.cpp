@@ -452,7 +452,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
         ransac.setDistanceThreshold(.05);
         ransac.setMaxIterations(3000);
-        ransac.setProbability(.65);  // default value is 0.99. 
+        ransac.setProbability(.70);  // default value is 0.99. 
         // ransac.setProbability(.80);  // default value is 0.99. 
         ransac.computeModel();
         ransac.getInliers(inliers);
@@ -492,7 +492,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         for (double z = 0.0; z < S.search_range; z += S.search_step)
         {
             S.get_boundary(z);
-            S.get_slices_3(z);
+            S.get_slices(z);
             S.get_score(z);
             m.mapUpdate(S);
             S.find_best_path();
@@ -688,11 +688,6 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
         node->odo_data.px, 
         node->odo_data.py,
         q);
-    // t.poseUpdate(
-    //     ImgLog.number, 
-    //     node->odo_data.px, 
-    //     node->odo_data.py,
-    //     q);
 
     mut.unlock();
 
@@ -712,7 +707,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
     ransac.setDistanceThreshold(.05);
 	ransac.setMaxIterations(3000);
-	ransac.setProbability(.65);  // default value is 0.99. 
+	ransac.setProbability(.70);  // default value is 0.99. 
 	// ransac.setProbability(.80);  // default value is 0.99. 
 	ransac.computeModel();
 	ransac.getInliers(inliers);
@@ -752,7 +747,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     for (double z = 0.0; z < S.search_range; z += S.search_step)
 	{
 		S.get_boundary(z);
-		S.get_slices_3(z);
+		S.get_slices(z);
 		S.get_score(z);
         m.mapUpdate(S);
 		S.find_best_path();
