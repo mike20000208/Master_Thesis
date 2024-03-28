@@ -138,11 +138,27 @@ int main(int argc, char * argv[])
 
         case 6:
         {
-            // test how the auguments from the terminal are received. 
-            for (int i = 0; i < argc; i++)
+            // // test how the auguments from the terminal are received. 
+            // for (int i = 0; i < argc; i++)
+            // {
+            //     printf("No. %d argument = %s. \n\n", i, argv[i]);
+            // }
+
+            //// test time format as folder name. 
+            string time = getTime();
+            printf("\n\nThe current time is: %s. \n\n", time.c_str());
+            string main_path = "/home/mike/RobotLog/";
+            string file_path = main_path + time;
+            if (create_directories(file_path))
             {
-                printf("No. %d argument = %s. \n\n", i, argv[i]);
+                printf("\n\nDirectory [%s] is created. \n\n", file_path.c_str());
             }
+            else
+            {
+                printf("\n\nDirectory creation is failed. \n\n");
+            }
+
+            break;
         }
 
         case 7:
