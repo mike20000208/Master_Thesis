@@ -589,7 +589,6 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     string depth_folder = node->log_path + "/Depth";
     string map_folder = node->log_path + "/Map";
     string info_path = node->log_path + "/Info.txt";
-    // string bag_path = node->log_path + "/record.bag";
     string time_path = node->log_path + "/TimeLog.csv";
     string traj_final_path = node->log_path + "/Trajectory_final.png";
     string map_final_path = node->log_path + "/Map_final.png";
@@ -614,27 +613,18 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     int frame_rate = 30;
     cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
-    // cfg.enable_record_to_file(bag_path);
 
     // initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    // viewer->setBackgroundColor(0, 0, 0);
-	// viewer->setPosition(50, 70);
-	// viewer->addCoordinateSystem(5, "global");
-	// viewer->initCameraParameters();
 
     // initialize cv objects. 
     const string win1 = "Color Image";
     const string win2 = "Map";
-    // const string win3 = "Trajectory";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
-    // cv::namedWindow(win3, WINDOW_NORMAL);
     cv::Mat image;
-    // cv::Mat map;
 
     // initialize other objects.
     My_Map m(width, height, res);

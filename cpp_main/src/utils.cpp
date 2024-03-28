@@ -267,8 +267,8 @@ Heading My_Map::getHeading(EulerAngle_ e)
     h.norm = sqrt(pow(h.x, 2) + pow(h.y, 2));
     h.x /= h.norm;
     h.y /= h.norm;
-	h.x *= 20;
-	h.y *= 20;
+	h.x *= My_Map::res;
+	h.y *= My_Map::res;
 	return h;
 }
 
