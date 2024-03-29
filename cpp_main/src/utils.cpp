@@ -1075,6 +1075,8 @@ bool Score::get_score(double z, bool have_dst)
 				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
 				{
 					// Score::slices[i].score += Score::inlier_weight;
+
+					// test new score system. 
 					num_inliers++;
 				}
 				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
@@ -1083,6 +1085,8 @@ bool Score::get_score(double z, bool have_dst)
 					//Score::slices[i].score -= 0.3;
 					// Score::slices[i].score +=
 					// 	((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
+					
+					// test new score system. 
 					num_outliers++;
 				}
 				else
@@ -1095,7 +1099,6 @@ bool Score::get_score(double z, bool have_dst)
 			// check the percentage of inliers. 
 			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
 			Score::slices[i].score = percentage;
-
 
 			// ckeck if it's the first iteration in z range. 
 			if (z == Score::start_z + Score::search_step)
@@ -1309,7 +1312,8 @@ Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
 	pcl::visualization::PCLVisualizer::Ptr
 		viewer(new pcl::visualization::PCLVisualizer(window));
 	viewer->setBackgroundColor(color[0], color[1], color[2]);
-	viewer->setPosition(50, 70);
+	viewer->setPosition(0, 0);
+	// viewer->setPosition(50, 70);
 	//viewer->addCoordinateSystem(max(cloud->width, cloud->height), "global");
 	//viewer->addCoordinateSystem(10000, "global");
 	viewer->addCoordinateSystem(5, "global");

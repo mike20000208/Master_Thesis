@@ -611,8 +611,9 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     int stream_width = 1280;
     int stream_height = 720;
     int frame_rate = 30;
-    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
-    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
+    // cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    // cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
 
     // Initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -1034,8 +1035,9 @@ int pointcloud_debug(int width, int height, int res)
     int stream_width = 1280;
     int stream_height = 720;
     int frame_rate = 30;
-    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
-    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
+    // cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    // cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
 
     // Initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -1090,8 +1092,8 @@ int pointcloud_debug(int width, int height, int res)
     colors.push_back(cv::Vec3i(19, 104, 214));  // blue
     colors.push_back(cv::Vec3i(152, 19, 214));  // purple
     colors.push_back(cv::Vec3i(235, 59, 123));  // pink
-    double step = 0.5;
-    double range = 4;
+    double step = 0.7;
+    double range = 3.8;
     int c = 0;
     int count = 0;
 
@@ -1152,7 +1154,8 @@ int pointcloud_debug(int width, int height, int res)
     while (!viewer->wasStopped())
 	{
         cv::resizeWindow("Map", cv::Size(m.map_.cols, m.map_.rows));
-        cv::cvtColor(m.tempMap, m.tempMap, cv::COLOR_RGB2BGR);
+        cv::moveWindow("Map", 1200, 0);
+        // cv::cvtColor(m.tempMap, m.tempMap, cv::COLOR_RGB2BGR);
         cv::imshow("Map", m.tempMap);
         int c = cv::waitKey(1000);
         viewer->spinOnce(1000);
