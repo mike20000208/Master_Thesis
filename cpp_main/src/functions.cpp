@@ -582,7 +582,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
 int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
-    // prepare folders and other paths.  
+    // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
     string img_folder = node->log_path + "/Images";
     string traj_folder = node->log_path + "/Trajectories";
@@ -601,7 +601,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     string depth_path;
     string map_path;
 
-    // initialize rs2 objects. 
+    // Initialize rs2 objects. 
     rs2::pipeline p;
     rs2::frameset frames;
     rs2::frame color, depth;
@@ -614,7 +614,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
 
-    // initialize pcl objects.
+    // Initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PassThrough<pcl::PointXYZRGB> filter;
@@ -626,18 +626,17 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::Mat image;
 
-    // initialize other objects.
-    My_Map m(width, height, res);
-    // My_Map t(width, height, res);
+    // Initialize other objects.
+    My_Map m(width, height, res, true);
     std::mutex mut;
     std::ofstream f;
 
-    // initialize other variables.
+    // Initialize other variables.
     Img ImgLog;
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // create the log folders. 
+    // Create the log folders. 
     if (create_directories(img_folder) && 
     create_directories(traj_folder) && 
     create_directories(depth_folder) && 
@@ -650,21 +649,21 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
         printf("\n\nDirectory creation is failed. \n\n");
     }
 
-    // start the pipeline, and there will be no infinite loop since we only want a single frame. 
+    // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
     p.start(cfg);
 
-    // get color and depth frame. 
+    // Get color and depth frame. 
     frames = p.wait_for_frames();
     color = frames.get_color_frame();
     depth = frames.get_depth_frame();
 
-    // create color image and save it. 
+    // Create color image and save it. 
     const int w = color.as<rs2::video_frame>().get_width();
     const int h = color.as<rs2::video_frame>().get_height();
     image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-    // image and timestamp logging. 
+    // Image and timestamp logging. 
     ImgLog.number = count;
     ImgLog.timestamp = color.get_timestamp() / 1000;
     count ++;
@@ -675,9 +674,8 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
     f.close();
 
-    // draw the map. 
+    // Update the pose of the robot.  
     mut.lock();
-
     Quaternion_ q;
     q.w = node->odo_data.ow;
     q.x = node->odo_data.ox;
@@ -688,32 +686,41 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
         node->odo_data.px, 
         node->odo_data.py,
         q);
-
     mut.unlock();
 
-    // calculate realsense pointcloud and convert it into PCL format.
+    // Calculate realsense pointcloud and convert it into PCL format.
     points = pointcloud.calculate(depth);
     cloud = Points2PCL(points);
 
-    // filter the depth map with z-value. 
+    // // debug
+    // f.open(DEBUG_FILE, ios::out | ios::app);
+    // f << to_string(cloud->points.size()) << "\n";
+    // f.close();
+
+    // Filter the depth map with z-value. 
     filter.setInputCloud(cloud);
     filter.setFilterFieldName("z");
     filter.setFilterLimits(0, 3);
     filter.filter(*cloud_filtered);
 
-    // create RANSAC object and compute. 
+    // // debug
+    // f.open(DEBUG_FILE, ios::out | ios::app);
+    // f << to_string(cloud_filtered->points.size()) << "\n";
+    // f.close();
+
+    // Create RANSAC object and compute. 
     Eigen::VectorXf* coef = new Eigen::VectorXf;
     pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
     pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
     ransac.setDistanceThreshold(.05);
 	ransac.setMaxIterations(3000);
-	ransac.setProbability(.70);  // default value is 0.99. 
+	ransac.setProbability(.65);  // default value is 0.99. 
 	// ransac.setProbability(.80);  // default value is 0.99. 
 	ransac.computeModel();
 	ransac.getInliers(inliers);
 	ransac.getModelCoefficients(*coef);
 
-    // show the plane in dark green. 
+    // Show the plane in dark green. 
 	for (int n = 0; n < inliers.size(); n++)
 	{
 		cloud_filtered->points[inliers[n]].r = 0;
@@ -721,11 +728,11 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 		cloud_filtered->points[inliers[n]].b = 0;
 	}
 
-    // calculate the roughness. 
+    // Calculate the roughness. 
 	Roughness R(*coef);
 	R.get_Roughness(*cloud_filtered);
 
-    // show the roughness on the pointcloud in red gradient. 
+    // Show the roughness on the pointcloud in red gradient. 
 	for (int i = 0; i < R.outliers.size(); i++)
 	{
 		(*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
@@ -733,7 +740,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 		(*cloud_filtered).points[R.outliers[i]].b = 0;
 	}
 
-    // calculate the best path. 
+    // Calculate the best path. 
 	Score S(cloud_filtered); 
 	S.setSearchRange(3.0);
 	S.setSearchStep(0.70);
@@ -744,19 +751,25 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	S.setDisWeight(1.80);
 	S.setAngleWeight(0.1);
 
-    for (double z = 0.0; z < S.search_range; z += S.search_step)
+    for (double z = 0.5; z < S.search_range; z += S.search_step)
 	{
 		S.get_boundary(z);
 		S.get_slices(z);
 		S.get_score(z);
-        m.mapUpdate(S);
+
+        if (m.isMap)
+        {
+            m.mapUpdate(S);
+        }
+
 		S.find_best_path();
 	}
 
-    m.headingShow();
-    // t.headingShow();
+    // Show the heading of the robot, also as an indicator of the robot. 
+    // m.headingShow();
+    m.tempMap = m.map_.clone();
 
-	// show the best path in the point cloud. 
+	// Show the best path in the point cloud. 
 	for (int k = 0; k < S.best_paths.size(); k++)
 	{
 		for (int n = 0; n < S.best_paths[k].indices.size(); n++)
@@ -766,12 +779,17 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 		}
 	}
 
-    // depth info logging. 
+    // Depth info logging. 
     depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
     depth_path = depth_folder + depth_suffix;
     PCL2PLY(cloud_filtered, depth_path);
 
-    // visualization. 
+    // Map logging.
+    map_suffix = "/map_" + to_string(ImgLog.number) +".png";
+    map_path = map_folder + map_suffix;
+    cv::imwrite(map_path, m.tempMap);
+
+    // Visualization. 
     pc_layers.push_back(cloud_filtered);
     cv::Scalar bg_color(0, 0, 0);
     pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
@@ -995,5 +1013,153 @@ int log_replay(string folder_name)
         t.tempMap = Mat();
     }
 
+    return 0;
+}
+
+
+
+int pointcloud_debug(int width, int height, int res)
+{
+    // Initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frameset frames;
+    rs2::frame color, depth;
+    rs2::config cfg;
+    rs2::pointcloud pointcloud;
+    rs2::points points;
+    int stream_width = 1280;
+    int stream_height = 720;
+    int frame_rate = 30;
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+
+    // Initialize pcl objects.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PassThrough<pcl::PointXYZRGB> filter;
+
+    // Initialize other variables and objects.
+    ofstream f;
+    f.open(DEBUG_FILE, ios::out);
+    vector<int> inliers;
+    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
+    My_Map m(width, height, res, true);
+    cv::namedWindow("Map", WINDOW_NORMAL);
+
+    // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
+    p.start(cfg);
+
+    // Get color and depth frame. 
+    frames = p.wait_for_frames();
+    color = frames.get_color_frame();
+    depth = frames.get_depth_frame();
+
+    // Calculate realsense pointcloud and convert it into PCL format.
+    points = pointcloud.calculate(depth);
+    cloud = Points2PCL(points);
+
+    // Filter the depth map with z-value. 
+    filter.setInputCloud(cloud);
+    filter.setFilterFieldName("z");
+    filter.setFilterLimits(0, 5);
+    filter.filter(*cloud_filtered);
+    f << to_string(cloud_filtered->points.size()) << "\n";
+
+    // Update the pose of the robot.  
+    Quaternion_ q;
+    q.w = -0.000000;
+    q.x = 0.015092;
+    q.y = -0.000000;
+    q.z = -0.999886;
+    m.poseUpdate(
+        0, 
+        0.000000, 
+        0.000000,
+        q);
+
+    // Show the ranges in different colors.
+    vector<cv::Vec3i> colors;
+    colors.push_back(cv::Vec3i(143, 9, 9));  // red
+    colors.push_back(cv::Vec3i(214, 91, 19));  // orange
+    colors.push_back(cv::Vec3i(211, 214, 19));  // yellow
+    colors.push_back(cv::Vec3i(19, 214, 55));  // green
+    colors.push_back(cv::Vec3i(19, 104, 214));  // blue
+    colors.push_back(cv::Vec3i(152, 19, 214));  // purple
+    double step = 0.7;
+    double range = 4;
+    int c = 0;
+    int count = 0;
+
+    // Calculate the best path. 
+	Score S(cloud_filtered); 
+	S.setSearchRange(3.0);
+	S.setSearchStep(0.70);
+	S.setSize(0.60);
+	S.setStride(0.5 * S.size);
+	S.setInlierWeight(0.70);
+	S.setOutlierWeight(1.80);
+	S.setDisWeight(1.80);
+	S.setAngleWeight(0.1);
+
+    for (double z = 0.0; z < range; z += step)
+    {
+        for (int i = 0; i < cloud_filtered->points.size(); i++)
+        {
+            if ((cloud_filtered->points[i].z >= z) && 
+            (cloud_filtered->points[i].z < (z + step)))
+            {
+                cloud_filtered->points[i].r = colors[c][0];
+                cloud_filtered->points[i].g = colors[c][1];
+                cloud_filtered->points[i].b = colors[c][2];
+                count++;
+            }
+        }
+
+        // // debug
+        // f << to_string(z) << ", " << to_string(c) << ", " << to_string(count) << "\n";
+
+		S.get_boundary(z);
+		S.get_slices(z);
+		S.get_score(z);
+
+        if (m.isMap)
+        {
+            m.mapUpdate(S, colors, c);
+        }
+
+        c++;
+        count = 0;
+    }
+
+    m.tempMap = m.map_.clone();
+
+    f.close();
+
+    PCL2PLY(cloud_filtered, "/home/mike/Debug/pointcloud.ply");
+
+    // Visualization. 
+    pc_layers.push_back(cloud_filtered);
+    cv::Scalar bg_color(0, 0, 0);
+    pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
+        pc_layers, 
+        bg_color);
+
+    while (!viewer->wasStopped())
+	{
+        cv::resizeWindow("Map", cv::Size(m.map_.cols, m.map_.rows));
+        cv::imshow("Map", m.tempMap);
+        int c = cv::waitKey(1000);
+        viewer->spinOnce(1000);
+		std::this_thread::sleep_for(100ms);
+
+        // check whether to terminate the programme. 
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+	}
+    
     return 0;
 }

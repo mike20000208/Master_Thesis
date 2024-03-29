@@ -4,6 +4,9 @@
 bool TERMINATE = false;
 
 
+/**
+ * @brief Shows that the whole program is done. 
+*/
 void ProcessDone()
 {
     cout << "\n \n \nProcess Done. \n \n \n";
@@ -190,8 +193,15 @@ int Communication(std::shared_ptr<Mike> node)
 }
 
 
-/*
-* @brief Constrctor of class Map. 
+/**
+ * @brief Constrctor of class Map. 
+ * 
+ * There are two modes of the instance: map and trajectory. (the default mode is trajectory)
+ * 
+ * Map shows the pose of the robot and the relatively detailed information of the environment. 
+ * 
+ * Trajectory shows the pose of the robot and the trajactory it went through. 
+ * 
 */
 My_Map::My_Map()
 {
@@ -205,6 +215,7 @@ My_Map::My_Map()
 		width_pixel, 
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
+	My_Map::isMap = false;
 }
 
 
@@ -213,8 +224,9 @@ My_Map::My_Map()
  * @param w width of the map in meter.
  * @param h height of the map in meter.
  * @param r resolution of the map. [pixel/meter]
+ * @param flag determine whether the mode is map or trajectory. 
 */
-My_Map::My_Map(int w, int h, int r)
+My_Map::My_Map(int w, int h, int r, bool flag)
 {
     width_meter = w;
     height_meter = h;
@@ -226,6 +238,7 @@ My_Map::My_Map(int w, int h, int r)
 		width_pixel, 
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
+	My_Map::isMap = flag;
 }
 
 
@@ -393,43 +406,6 @@ void My_Map::sliceProject(Score S, int index)
 		{
 			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
 		}
-		
-		// // get the actual coordinates of corners in map frame.
-		// if (My_Map::top_left[0] >= 0)
-		// {
-		// 	top_left_real.x = ceil(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
-		// }
-		// else
-		// {
-		// 	top_left_real.x = floor(currentPoint.x_pixel_map + My_Map::top_left[0] * My_Map::res);
-		// }
-
-		// if (My_Map::top_left[1] >= 0)
-		// {
-		// 	top_left_real.y = ceil(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
-		// }
-		// else
-		// {
-		// 	top_left_real.y = floor(currentPoint.y_pixel_map + My_Map::top_left[1] * My_Map::res);
-		// }
-
-		// if (My_Map::bottom_right[0] >= 0)
-		// {
-		// 	bottom_right_real.x = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
-		// }
-		// else
-		// {
-		// 	bottom_right_real.x = floor(currentPoint.x_pixel_map + My_Map::bottom_right[0] * My_Map::res);
-		// }
-
-		// if (My_Map::bottom_right[1] >= 0)
-		// {
-		// 	bottom_right_real.y = ceil(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
-		// }
-		// else
-		// {
-		// 	bottom_right_real.y = floor(currentPoint.x_pixel_map + My_Map::bottom_right[1] * My_Map::res);
-		// }
 
 		// transform the coordinates of the corners to image frame. 
 		top_left_img = My_Map::map2img(top_left_map);
@@ -445,6 +421,77 @@ void My_Map::sliceProject(Score S, int index)
 			cv::Point(top_left_img.x, top_left_img.y),
 			cv::Point(bottom_right_img.x, bottom_right_img.y),
 			cv::Scalar(0, g, 0),
+			-1
+		);
+
+		// reset the flag. 
+		My_Map::isTransformed = false;
+	}
+	else
+	{
+		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+		exit(-1);
+	}
+}
+
+
+/**
+ * @brief Project the slice area on the map and show it. (only for debug)
+ * @param colors
+ * @param c
+*/
+void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
+{
+	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
+	if (My_Map::isTransformed)
+	{
+		// make sure the numebers will be integers. but still in the map frame  
+		if (My_Map::top_left_map[0] >= 0)
+		{
+			top_left_map.x = ceil(My_Map::top_left_map[0]);
+		}
+		else
+		{
+			top_left_map.x = floor(My_Map::top_left_map[0]);
+		}
+
+		if (My_Map::top_left_map[1] >= 0)
+		{
+			top_left_map.y = ceil(My_Map::top_left_map[1]);
+		}
+		else
+		{
+			top_left_map.y = floor(My_Map::top_left_map[1]);
+		}
+
+		if (My_Map::bottom_right_map[0] >= 0)
+		{
+			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
+		}
+		else
+		{
+			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
+		}
+
+		if (My_Map::bottom_right_map[1] >= 0)
+		{
+			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
+		}
+		else
+		{
+			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
+		}
+
+		// transform the coordinates of the corners to image frame. 
+		top_left_img = My_Map::map2img(top_left_map);
+		bottom_right_img = My_Map::map2img(bottom_right_map);
+
+		// draw the area as a rectangle on the map. 
+		cv::rectangle(
+			My_Map::map_,
+			cv::Point(top_left_img.x, top_left_img.y),
+			cv::Point(bottom_right_img.x, bottom_right_img.y),
+			cv::Scalar(colors[c][2], colors[c][1], colors[c][0]),
 			-1
 		);
 
@@ -552,65 +599,24 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
     {
         previousPoint = currentPoint;
         currentPoint = My_Map::getCurrent(x, y, e);
-        cv::line(
-            map_, 
-            cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img), 
-            cv::Point(previousPoint.x_pixel_img, previousPoint.y_pixel_img), 
-            cv::Scalar(0, 150, 0), 
-            2);
+
+		// show the trajcectory if it's trajectory mode.
+		if (!My_Map::isMap)
+		{
+			cv::line(
+				My_Map::map_, 
+            	cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img), 
+            	cv::Point(previousPoint.x_pixel_img, previousPoint.y_pixel_img), 
+            	cv::Scalar(0, 150, 0), 
+            	2);
+		}
     }
-
-	// // draw the heading as an arrow. 
-	// My_Map::tempMap = My_Map::map_.clone();
-
-	// // // only for debug
-	// // printf(
-	// // 	"The heading of current scene = %f [degree], and the corresponding vector = [%.2f, %.2f]", 
-	// // 	currentPoint.yaw,
-	// // 	currentPoint.heading.x,
-	// // 	currentPoint.heading.y);
-
-	// double endX = currentPoint.x_pixel_map + currentPoint.heading.x;
-	// double endY = currentPoint.y_pixel_map + currentPoint.heading.y;
-	// int endX_int, endY_int;
-
-	// if (endX >= 0)
-	// {
-	// 	endX_int = ceil(endX);
-	// }
-	// else
-	// {
-	// 	endX_int = floor(endX);
-	// }
-
-	// if (endY >= 0)
-	// {
-	// 	endY_int = ceil(endY);
-	// }
-	// else
-	// {
-	// 	endY_int = floor(endY);
-	// }
-
-	// Point2D point_map, point_img;
-	// point_map.x = endX_int;
-	// point_map.y = endY_int;
-	// point_img = My_Map::map2img(point_map);
-    // cv::arrowedLine(
-    //     My_Map::tempMap,
-    //     cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
-    //     cv::Point(point_img.x, point_img.y),
-    //     cv::Scalar(255, 0, 0),
-	// 	2,
-	// 	8,
-	// 	0,
-	// 	0.3
-    // );
 }
 
 
 /**
  * @brief Update the map with the info from camera. 
+ * @param S
 */
 void My_Map::mapUpdate(Score S)
 {
@@ -620,6 +626,24 @@ void My_Map::mapUpdate(Score S)
 		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
 		My_Map::cam2map();
 		My_Map::sliceProject(S, i);
+	}
+}
+
+
+/**
+ * @brief Update the map with the info from camera. (only for debug)
+ * @param S
+ * @param colors
+ * @param c
+*/
+void My_Map::mapUpdate(Score S, vector<cv::Vec3i> colors, int c)
+{
+    for (int i = 0; i < S.slices.size(); i++)
+	{
+		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
+		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
+		My_Map::cam2map();
+		My_Map::sliceProject(colors, c);
 	}
 }
 
@@ -869,39 +893,6 @@ void Score::setAngleWeight(double aw)
 */
 void Score::get_boundary(double z)
 {
-	// // prepare some variables. 
-	// pcl::PointCloud<pcl::PointXYZRGB>::Ptr
-	// 	slice_pc(new pcl::PointCloud<pcl::PointXYZRGB>);
-	// vector<double> X;
-
-	// // build the condition.. 
-	// pcl::ConditionAnd<pcl::PointXYZRGB>::Ptr
-	// 	condition(new pcl::ConditionAnd<pcl::PointXYZRGB>);
-	// (*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-	// (new pcl::FieldComparison<pcl::PointXYZRGB>("z", 
-	// 											pcl::ComparisonOps::GE, 
-	// 											z)));
-	// (*condition).addComparison(pcl::FieldComparison<pcl::PointXYZRGB>::ConstPtr
-	// (new pcl::FieldComparison<pcl::PointXYZRGB>("z", 
-	// 											pcl::ComparisonOps::LT, 
-	// 											(z + Score::search_step))));
-
-	// // build the filter. 
-	// pcl::ConditionalRemoval<pcl::PointXYZRGB> filter(true);  // default: extract_removed_indices = false
-	// filter.setCondition(condition);
-	// filter.setInputCloud(cloud);
-	// filter.setKeepOrganized(false);
-
-	// // apply the filter. 
-	// filter.filter(*slice_pc);
-
-	// // calculate the boudary for get_slice_2(). 
-	// for (auto& p : (*slice_pc).points)
-	// {
-	// 	X.push_back(p.x);
-	// }
-
-
 	// use the conventional iteration way.
 	vector<double> X;
 
@@ -917,6 +908,13 @@ void Score::get_boundary(double z)
 	cv::minMaxLoc(X, &(Score::minX), &(Score::maxX));
 	Score::x_len = Score::maxX - Score::minX;
 	Score::num_slices = floor(Score::x_len / Score::stride) - 1;
+
+		// // debug 
+		// std::ofstream f;
+		// f.open(DEBUG_FILE, ios::out | ios::app);
+		// f << to_string(Score::cloud->size()) << "\n";
+		// f << to_string(X.size()) << "\n";
+		// f.close();
 
 	// set the flag
 	Score::found_boundary = true;
@@ -1054,7 +1052,7 @@ bool Score::get_score(double z, bool have_dst)
 				}
 				else
 				{
-					Score::slices[i].score = -100000.0;
+					// Score::slices[i].score = -100000.0;
 					continue;
 				}
 			}
@@ -1091,15 +1089,15 @@ bool Score::get_score(double z, bool have_dst)
 			}
 
 			// logging the score data to debug. 
-			f << z << ", " \
-			<< Score::minX << ", " \
-			<< Score::maxX << ", " \
-			<< i << ", " \
-			<< Score::slices[i].centroid[0] << ", " \
-			<< Score::slices[i].centroid[1] << ", " \
-			<< Score::slices[i].centroid[2] << ", " \
-			<< Score::slices[i].score << ", " \
-			<< Score::slices[i].indices.size() << "\n";
+			f << to_string(z) << ", " \
+			<< to_string(Score::minX) << ", " \
+			<< to_string(Score::maxX) << ", " \
+			<< to_string(i) << ", " \
+			<< to_string(Score::slices[i].centroid[0]) << ", " \
+			<< to_string(Score::slices[i].centroid[1]) << ", " \
+			<< to_string(Score::slices[i].centroid[2]) << ", " \
+			<< to_string(Score::slices[i].score) << ", " \
+			<< to_string(Score::slices[i].indices.size()) << "\n";
 		}
 		f.close();
 		return is_Zero;

@@ -365,7 +365,10 @@ public:
 
     // Constructor. 
     My_Map();
-    My_Map(int w, int h, int r);
+    My_Map(int w, int h, int r, bool flag = false);
+
+    // Flag of is map or trajectory.
+    bool isMap = false;
 
     // Get the orientation. 
     EulerAngle_ Quater2Euler(Quaternion_ q);
@@ -383,6 +386,7 @@ public:
 
     //Project the slice area on the map. 
     void sliceProject(Score S, int index);
+    void sliceProject(vector<cv::Vec3i> colors, int c);  // only for debug
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -392,6 +396,7 @@ public:
 
     // Map info update method. 
     void mapUpdate(Score S);
+    void mapUpdate(Score S, vector<cv::Vec3i> colors, int c);  // only for debug. 
 
     // Show the heading. 
     void headingShow();

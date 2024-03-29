@@ -5,14 +5,13 @@
 int main(int argc, char * argv[])
 {
     string command;
-    // vector<string> commands{"replay", "trajectory", "map", "stream_test"};
     map<string, int> commands = {
         {"replay", 1}, 
         {"trajectory", 2}, 
         {"stream_map", 3},
         {"single_frame_map", 4}, 
         {"None", 5},
-        {"test", 6},
+        {"debug", 6},
         {"log_replay", 7}};
     
     if (argc > 1)
@@ -144,19 +143,22 @@ int main(int argc, char * argv[])
             //     printf("No. %d argument = %s. \n\n", i, argv[i]);
             // }
 
-            //// test time format as folder name. 
-            string time = getTime();
-            printf("\n\nThe current time is: %s. \n\n", time.c_str());
-            string main_path = "/home/mike/RobotLog/";
-            string file_path = main_path + time;
-            if (create_directories(file_path))
-            {
-                printf("\n\nDirectory [%s] is created. \n\n", file_path.c_str());
-            }
-            else
-            {
-                printf("\n\nDirectory creation is failed. \n\n");
-            }
+            // // test time format as folder name. 
+            // string time = getTime();
+            // printf("\n\nThe current time is: %s. \n\n", time.c_str());
+            // string main_path = "/home/mike/RobotLog/";
+            // string file_path = main_path + time;
+            // if (create_directories(file_path))
+            // {
+            //     printf("\n\nDirectory [%s] is created. \n\n", file_path.c_str());
+            // }
+            // else
+            // {
+            //     printf("\n\nDirectory creation is failed. \n\n");
+            // }
+
+            // pointcloud debug
+            pointcloud_debug(stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
 
             break;
         }
