@@ -742,6 +742,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Calculate the best path. 
 	Score S(cloud_filtered); 
+    S.setStartZ(0.7);
 	S.setSearchRange(3.0);
 	S.setSearchStep(0.70);
 	S.setSize(0.60);
@@ -751,11 +752,11 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	S.setDisWeight(1.80);
 	S.setAngleWeight(0.1);
 
-    for (double z = 0.5; z < S.search_range; z += S.search_step)
+    for (double z = S.start_z; z < S.search_range; z += S.search_step)
 	{
 		S.get_boundary(z);
 		S.get_slices(z);
-		S.get_score(z);
+		S.get_score(z, false);
 
         if (m.isMap)
         {
@@ -767,7 +768,8 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Show the heading of the robot, also as an indicator of the robot. 
     // m.headingShow();
-    m.tempMap = m.map_.clone();
+    // m.tempMap = m.map_.clone();
+    m.originShow();
 
 	// Show the best path in the point cloud. 
 	for (int k = 0; k < S.best_paths.size(); k++)
@@ -1017,7 +1019,9 @@ int log_replay(string folder_name)
 }
 
 
-
+/**
+ * @brief 
+*/
 int pointcloud_debug(int width, int height, int res)
 {
     // Initialize rs2 objects. 
@@ -1085,7 +1089,8 @@ int pointcloud_debug(int width, int height, int res)
     colors.push_back(cv::Vec3i(19, 214, 55));  // green
     colors.push_back(cv::Vec3i(19, 104, 214));  // blue
     colors.push_back(cv::Vec3i(152, 19, 214));  // purple
-    double step = 0.7;
+    colors.push_back(cv::Vec3i(235, 59, 123));  // pink
+    double step = 0.5;
     double range = 4;
     int c = 0;
     int count = 0;
@@ -1093,7 +1098,7 @@ int pointcloud_debug(int width, int height, int res)
     // Calculate the best path. 
 	Score S(cloud_filtered); 
 	S.setSearchRange(3.0);
-	S.setSearchStep(0.70);
+	S.setSearchStep(0.50);
 	S.setSize(0.60);
 	S.setStride(0.5 * S.size);
 	S.setInlierWeight(0.70);
@@ -1115,8 +1120,8 @@ int pointcloud_debug(int width, int height, int res)
             }
         }
 
-        // // debug
-        // f << to_string(z) << ", " << to_string(c) << ", " << to_string(count) << "\n";
+        // debug
+        f << to_string(z) << ", " << to_string(c) << ", " << to_string(count) << "\n";
 
 		S.get_boundary(z);
 		S.get_slices(z);
@@ -1147,6 +1152,7 @@ int pointcloud_debug(int width, int height, int res)
     while (!viewer->wasStopped())
 	{
         cv::resizeWindow("Map", cv::Size(m.map_.cols, m.map_.rows));
+        cv::cvtColor(m.tempMap, m.tempMap, cv::COLOR_RGB2BGR);
         cv::imshow("Map", m.tempMap);
         int c = cv::waitKey(1000);
         viewer->spinOnce(1000);

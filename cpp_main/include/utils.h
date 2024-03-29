@@ -279,6 +279,9 @@ public:
 	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr roi;
 
+    // 
+    double start_z = 0.5;
+
     // Slices within specific z range
 	vector<Slice> slices;  
 
@@ -292,6 +295,7 @@ public:
 	Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
 
     // Methods to setup scoring parameters. 
+    void setStartZ(double z);
 	void setSearchRange(double z);
 	void setSearchStep(double step);
 	void setStride(double instride);
@@ -363,6 +367,12 @@ public:
     // Flag to check whether the area is already transformed to map frame.
     bool isTransformed = false;
 
+    // 
+    bool isOriginShown = false;
+
+    //
+    bool isHeadingShown = false;
+
     // Constructor. 
     My_Map();
     My_Map(int w, int h, int r, bool flag = false);
@@ -400,6 +410,9 @@ public:
 
     // Show the heading. 
     void headingShow();
+
+    // Show the origin. 
+    void originShow();
 
 };
 
