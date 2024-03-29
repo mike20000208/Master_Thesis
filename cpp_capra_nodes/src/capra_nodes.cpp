@@ -65,10 +65,10 @@ private:
         msg.pose.pose.position.x = 0.0;
         msg.pose.pose.position.y = 0.0;
         msg.pose.pose.position.z = 0.0;
-        msg.pose.pose.orientation.x = -0.00449947209946643;
-        msg.pose.pose.orientation.y = 0.01509203650661661;
-        msg.pose.pose.orientation.z = -6.791461978048238e-05;
-        msg.pose.pose.orientation.w = -0.9998759825960986;
+        msg.pose.pose.orientation.x = -0.000000;
+        msg.pose.pose.orientation.y = 0.015092;
+        msg.pose.pose.orientation.z = -0.000000;
+        msg.pose.pose.orientation.w = -0.999886;
         odo_pub->publish(msg);
         RCLCPP_INFO(
             this->get_logger(), 
