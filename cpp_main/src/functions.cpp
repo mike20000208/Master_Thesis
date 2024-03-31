@@ -634,7 +634,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Initialize other variables.
     Img ImgLog;
-    vector<int> inliers;
+    // vector<int> inliers;
+    // Eigen::VectorXf* coef = new Eigen::VectorXf;
+    pcl::ModelCoefficients::Ptr coef(new pcl::ModelCoefficients);
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
     // Create the log folders. 
@@ -709,25 +712,44 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // f << to_string(cloud_filtered->points.size()) << "\n";
     // f.close();
 
-    // Create RANSAC object and compute. 
-    Eigen::VectorXf* coef = new Eigen::VectorXf;
-    pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-    pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-    ransac.setDistanceThreshold(.05);
-	ransac.setMaxIterations(3000);
-	ransac.setProbability(.65);  // default value is 0.99. 
+    // // Create RANSAC object and compute. 
+    // pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
+    // pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
+    // ransac.setDistanceThreshold(.010);
+	// ransac.setMaxIterations(4000);
+	// // ransac.setProbability(.50);  // default value is 0.99. 
 	// ransac.setProbability(.80);  // default value is 0.99. 
-	ransac.computeModel();
-	ransac.getInliers(inliers);
-	ransac.getModelCoefficients(*coef);
+	// ransac.computeModel();
+	// ransac.getInliers(inliers);
+	// ransac.getModelCoefficients(*coef);
 
-    // Show the plane in dark green. 
-	for (int n = 0; n < inliers.size(); n++)
+    // use another RANSAC object to segment the plane. 
+    pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+    seg.setModelType(pcl::SACMODEL_PLANE);
+	seg.setMethodType(pcl::SAC_MSAC);
+	// seg.setMethodType(pcl::SAC_RANSAC);
+	seg.setDistanceThreshold(0.05);
+    seg.setProbability(.80);
+	seg.setMaxIterations(3000);
+	seg.setInputCloud(cloud_filtered);
+	seg.segment(*inliers, *coef);
+
+    // // Show the plane in dark green. (SampleConsensusModelPlane)
+	// for (int n = 0; n < inliers.size(); n++)
+	// {
+	// 	cloud_filtered->points[inliers[n]].r = 0;
+	// 	cloud_filtered->points[inliers[n]].g = 127;
+	// 	cloud_filtered->points[inliers[n]].b = 0;
+	// }
+
+    // Show the plane in dark green. (SACSegmentation)
+	for (int n = 0; n < (*inliers).indices.size(); n++)
 	{
-		cloud_filtered->points[inliers[n]].r = 0;
-		cloud_filtered->points[inliers[n]].g = 127;
-		cloud_filtered->points[inliers[n]].b = 0;
+		cloud_filtered->points[(*inliers).indices[n]].r = 0;
+		cloud_filtered->points[(*inliers).indices[n]].g = 127;
+		cloud_filtered->points[(*inliers).indices[n]].b = 0;
 	}
+
 
     // Calculate the roughness. 
 	Roughness R(*coef);
@@ -769,8 +791,8 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Show the heading of the robot, also as an indicator of the robot. 
     // m.headingShow();
-    // m.tempMap = m.map_.clone();
-    m.originShow();
+    // m.originShow();
+    m.mapShow();
 
 	// Show the best path in the point cloud. 
 	for (int k = 0; k < S.best_paths.size(); k++)
@@ -822,7 +844,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // reset. 
     cv::destroyAllWindows();
-    inliers.clear();
+    // inliers.clear();
     pc_layers.clear();
     viewer->removeAllPointClouds();
     p.stop();

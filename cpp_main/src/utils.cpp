@@ -567,16 +567,27 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 			-1
 		);
 
-		// print the number of slice on the map. 
-		cv::putText(
+		// // print the number of slice on the map. 
+		// cv::putText(
+		// 	My_Map::map_,
+		// 	to_string(i),
+		// 	cv::Point(
+		// 		((top_left_img.x + bottom_right_img.x) / 2), 
+		// 		((top_left_img.y + bottom_right_img.y) / 2)),
+		// 	FONT_HERSHEY_COMPLEX_SMALL,
+		// 	0.01,
+		// 	cv::Scalar(0, 0, 0)
+		// );
+
+		// put a circle on the center of the slice. 
+		cv::circle(
 			My_Map::map_,
-			to_string(i),
 			cv::Point(
 				((top_left_img.x + bottom_right_img.x) / 2), 
 				((top_left_img.y + bottom_right_img.y) / 2)),
-			FONT_HERSHEY_COMPLEX_SMALL,
-			0.01,
-			cv::Scalar(0, 0, 0)
+			1,
+			cv::Scalar(0, 0, 0),
+			-1
 		);
 
 		// reset the flag. 
@@ -805,6 +816,18 @@ void My_Map::originShow()
 		(int)(0.6 * My_Map::res * 0.5),
 		cv::Scalar(255, 0, 0),
 		FILLED);
+}
+
+
+/**
+ * @brief Copy the map information to the one meant to display. 
+*/
+void My_Map::mapShow()
+{
+	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
+	{
+		My_Map::tempMap = My_Map::map_.clone();
+	}
 }
 
 
@@ -1159,20 +1182,22 @@ bool Score::get_score(double z, bool have_dst)
 			{
 				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
 				{
-					// Score::slices[i].score += Score::inlier_weight;
+					Score::slices[i].score += Score::inlier_weight;
 
-					// test new score system. 
-					num_inliers++;
+					// // test new score system. 
+					// num_inliers++;
 				}
 				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
 					(*Score::cloud).points[Score::slices[i].indices[j]].b == 0)  // outliers
 				{
-					//Score::slices[i].score -= 0.3;
-					// Score::slices[i].score +=
-					// 	((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
+					// // the oldest version. 
+					// Score::slices[i].score -= 0.3;
+
+					Score::slices[i].score +=
+						((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
 					
-					// test new score system. 
-					num_outliers++;
+					// // test new score system. 
+					// num_outliers++;
 				}
 				else
 				{
@@ -1181,38 +1206,38 @@ bool Score::get_score(double z, bool have_dst)
 				}
 			}
 
-			// check the percentage of inliers. 
-			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
-			Score::slices[i].score = percentage;
+			// // check the percentage of inliers. 
+			// percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
+			// Score::slices[i].score = percentage;
 
-			// ckeck if it's the first iteration in z range. 
-			if (z == Score::start_z + Score::search_step)
+			// // ckeck if it's the first iteration in z range. 
+			// if (z == Score::start_z + Score::search_step)
+			// {
+			// 	if (Score::slices[i].centroid[0] == 0 && Score::slices[i].centroid[1] == 0)
+			// 	{
+			// 		Score::slices[i].score += 0.5;
+			// 	}
+			// }
+
+			// normalize the score by the number of points. 
+			Score::slices[i].score = (Score::slices[i].score) / (Score::slices[i].indices.size());
+
+			// check the distance between currrnt slice and the best slice from the last search. 
+			if (Score::best_paths.size() != 0)
 			{
-				if (Score::slices[i].centroid[0] == 0 && Score::slices[i].centroid[1] == 0)
-				{
-					Score::slices[i].score += 0.5;
-				}
+				double distance = get_distance(Score::best_paths[Score::best_paths.size() - 1].centroid, Score::slices[i].centroid);
+				double maxD = sqrt(pow(Score::search_step, 2) + pow(Score::x_len, 2));
+				double minD = Score::search_step;
+				distance = (distance - minD) / (maxD - minD);
+				Score::slices[i].score -= distance * Score::dis_weight;
 			}
 
-			// // normalize the score by the number of points. 
-			// Score::slices[i].score = (Score::slices[i].score) / (Score::slices[i].indices.size());
-
-			// // check the distance between currrnt slice and the best slice from the last search. 
-			// if (Score::best_paths.size() != 0)
-			// {
-			// 	double distance = get_distance(Score::best_paths[Score::best_paths.size() - 1].centroid, Score::slices[i].centroid);
-			// 	double maxD = sqrt(pow(Score::search_step, 2) + pow(Score::x_len, 2));
-			// 	double minD = Score::search_step;
-			// 	distance = (distance - minD) / (maxD - minD);
-			// 	Score::slices[i].score -= distance * Score::dis_weight;
-			// }
-
-			// // if have destination to go, then take it into consideration when calculating the score. 
-			// if (have_dst)
-			// {
-			// 	double angle = get_angle(Score::slices[i].centroid);
-			// 	Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
-			// }
+			// if have destination to go, then take it into consideration when calculating the score. 
+			if (have_dst)
+			{
+				double angle = get_angle(Score::slices[i].centroid);
+				Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
+			}
 
 			// update the minScore and maxScore. 
 			if (Score::slices[i].score > Score::maxScore)

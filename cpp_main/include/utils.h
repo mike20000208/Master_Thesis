@@ -31,7 +31,7 @@
 #include "pcl-1.10/pcl/sample_consensus/sac_model_plane.h"
 #include "pcl-1.10/pcl/sample_consensus/method_types.h"
 #include "pcl-1.10/pcl/sample_consensus/model_types.h"
-// #include "pcl-1.10/pcl/segmentation/sac_segmentation.h"
+#include "pcl-1.10/pcl/segmentation/sac_segmentation.h"
 #include "pcl-1.10/pcl/visualization/pcl_visualizer.h"
 #include "pcl-1.10/pcl/visualization/cloud_viewer.h"
 #include "pcl-1.10/pcl/filters/passthrough.h"
@@ -414,6 +414,9 @@ public:
 
     // Show the origin. 
     void originShow();
+
+    // Show the map.
+    void mapShow();
 
 };
 
