@@ -507,6 +507,90 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
 
 
 /**
+ * @brief Project the slice area on the map and show it. (only for debug)
+ * @param colors
+ * @param c
+ * @param i
+*/
+void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
+{
+	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
+	if (My_Map::isTransformed)
+	{
+		// make sure the numebers will be integers. but still in the map frame  
+		if (My_Map::top_left_map[0] >= 0)
+		{
+			top_left_map.x = ceil(My_Map::top_left_map[0]);
+		}
+		else
+		{
+			top_left_map.x = floor(My_Map::top_left_map[0]);
+		}
+
+		if (My_Map::top_left_map[1] >= 0)
+		{
+			top_left_map.y = ceil(My_Map::top_left_map[1]);
+		}
+		else
+		{
+			top_left_map.y = floor(My_Map::top_left_map[1]);
+		}
+
+		if (My_Map::bottom_right_map[0] >= 0)
+		{
+			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
+		}
+		else
+		{
+			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
+		}
+
+		if (My_Map::bottom_right_map[1] >= 0)
+		{
+			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
+		}
+		else
+		{
+			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
+		}
+
+		// transform the coordinates of the corners to image frame. 
+		top_left_img = My_Map::map2img(top_left_map);
+		bottom_right_img = My_Map::map2img(bottom_right_map);
+
+		// draw the area as a rectangle on the map. 
+		cv::rectangle(
+			My_Map::map_,
+			cv::Point(top_left_img.x, top_left_img.y),
+			cv::Point(bottom_right_img.x, bottom_right_img.y),
+			cv::Scalar(colors[c][2], colors[c][1], colors[c][0]),
+			-1
+		);
+
+		// print the number of slice on the map. 
+		cv::putText(
+			My_Map::map_,
+			to_string(i),
+			cv::Point(
+				((top_left_img.x + bottom_right_img.x) / 2), 
+				((top_left_img.y + bottom_right_img.y) / 2)),
+			FONT_HERSHEY_COMPLEX_SMALL,
+			0.01,
+			cv::Scalar(0, 0, 0)
+		);
+
+		// reset the flag. 
+		My_Map::isTransformed = false;
+	}
+	else
+	{
+		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+		exit(-1);
+	}
+}
+
+
+/**
  * @brief Get the current pose and heading of the robot. 
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
@@ -643,7 +727,8 @@ void My_Map::mapUpdate(Score S, vector<cv::Vec3i> colors, int c)
 		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
 		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
 		My_Map::cam2map();
-		My_Map::sliceProject(colors, c);
+		My_Map::sliceProject(colors, c, i);
+		// My_Map::sliceProject(colors, c);
 	}
 }
 

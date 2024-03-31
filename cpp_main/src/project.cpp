@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
         case 5:
         {
             // No command is typed.
-            printf("\n\nPlease enter one of below commands: \n\n");
+            printf("\n\nPlease enter one of below commands after planner: \n\n");
 
             for (auto c : commands)
             {

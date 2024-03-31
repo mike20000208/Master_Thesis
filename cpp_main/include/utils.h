@@ -397,6 +397,7 @@ public:
     //Project the slice area on the map. 
     void sliceProject(Score S, int index);
     void sliceProject(vector<cv::Vec3i> colors, int c);  // only for debug
+    void sliceProject(vector<cv::Vec3i> colors, int c, int i);  // only for debug
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
