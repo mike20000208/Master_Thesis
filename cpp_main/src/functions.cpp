@@ -340,8 +340,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     int stream_width = 1280;
     int stream_height = 720;
     int frame_rate = 30;
-    cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
-    cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
+    // cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
+    // cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
     // cfg.enable_record_to_file(bag_path);
 
     // initialize pcl objects.
@@ -611,7 +612,8 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     int stream_width = 1280;
     int stream_height = 720;
     int frame_rate = 30;
-    cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
+    // cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
+    cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
     // cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     // cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
 
@@ -712,10 +714,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // f << to_string(cloud_filtered->points.size()) << "\n";
     // f.close();
 
-    // Create RANSAC object and compute. 
+    // Create RANSAC object and compute. (use SampleConsensusModelPlane and RandomSampleConsensus)
     pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
     pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-    ransac.setDistanceThreshold(.05);
+    ransac.setDistanceThreshold(.10);
 	ransac.setMaxIterations(2500);
 	ransac.setProbability(.70);  // default value is 0.99. 
     ransac.setNumberOfThreads(2);
@@ -723,7 +725,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	ransac.getInliers(inliers);
 	ransac.getModelCoefficients(*coef);
 
-    // // use another RANSAC object to segment the plane. 
+    // // use another RANSAC object (SACSegmentation) to segment the plane. 
     // pcl::SACSegmentation<pcl::PointXYZRGB> seg;
     // seg.setModelType(pcl::SACMODEL_PLANE);
 	// seg.setMethodType(pcl::SAC_RRANSAC);
@@ -789,10 +791,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	// 	S.find_best_path();
 	// }
 
-    // // Show the heading of the robot, also as an indicator of the robot. 
-    // // m.headingShow();
-    // // m.originShow();
-    // m.mapShow();
+    // Show the heading of the robot, also as an indicator of the robot. 
+    m.headingShow();
+    // m.originShow();
+    m.mapShow();
 
 	// // Show the best path in the point cloud. 
 	// for (int k = 0; k < S.best_paths.size(); k++)

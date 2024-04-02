@@ -1,0 +1,5 @@
+2024/04/02
+
+    1. The current probleem is that the RANSAC DOESN'T WORK! 
+
+    2. 

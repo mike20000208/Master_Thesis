@@ -56,11 +56,11 @@ using namespace std::filesystem;
 #define RECORDING_PATH "/home/mike/Recording/Room005.bag"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
-#define ODO_TOPIC "/my_odo"
-#define GPS_TOPIC "/fix"
+// #define ODO_TOPIC "/my_odo"
+// #define GPS_TOPIC "/fix"
 #define VEL_TOPIC "/capra/remote/direct_velocity"
-// #define ODO_TOPIC "/mike/odo"
-// #define GPS_TOPIC "/mike/gps"
+#define ODO_TOPIC "/mike/odo"
+#define GPS_TOPIC "/mike/gps"
 
 
 extern bool TERMINATE;
