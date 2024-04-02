@@ -12,7 +12,8 @@ int main(int argc, char * argv[])
         {"single_frame_map", 4}, 
         {"None", 5},
         {"debug", 6},
-        {"log_replay", 7}};
+        {"log_replay", 7},
+        {"communication", 8}};
     
     if (argc > 1)
     {
@@ -213,6 +214,14 @@ int main(int argc, char * argv[])
                 }
             }
 
+            break;
+        }
+
+        case 8:
+        {
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+            Communication(node);
             break;
         }
 
