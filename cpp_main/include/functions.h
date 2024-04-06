@@ -21,3 +21,6 @@ int log_replay(string folder_name);
 
 
 int pointcloud_debug(int width, int height, int res);
+
+
+int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res);

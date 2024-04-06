@@ -3,6 +3,8 @@
 
 bool TERMINATE = false;
 
+bool isEnableFromFile = false;
+
 
 /**
  * @brief Shows that the whole program is done. 
@@ -224,9 +226,9 @@ My_Map::My_Map()
  * @param w width of the map in meter.
  * @param h height of the map in meter.
  * @param r resolution of the map. [pixel/meter]
- * @param flag determine whether the mode is map or trajectory. 
+ * @param isMap determine whether the mode is map or trajectory. 
 */
-My_Map::My_Map(int w, int h, int r, bool flag)
+My_Map::My_Map(int w, int h, int r, bool isMap)
 {
     width_meter = w;
     height_meter = h;
@@ -238,7 +240,7 @@ My_Map::My_Map(int w, int h, int r, bool flag)
 		width_pixel, 
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
-	My_Map::isMap = flag;
+	My_Map::isMap = isMap;
 }
 
 
@@ -411,7 +413,7 @@ void My_Map::sliceProject(Score S, int index)
 		top_left_img = My_Map::map2img(top_left_map);
 		bottom_right_img = My_Map::map2img(bottom_right_map);
 
-		// draw the area as a rectangle on the map. 
+		// draw the area as a rectangle on the map. (rendering with the score in green-scale)
 		int lowG = 150;
 		int highG = 255;
 		int g = 0;
@@ -423,6 +425,30 @@ void My_Map::sliceProject(Score S, int index)
 			cv::Scalar(0, g, 0),
 			-1
 		);
+
+		// draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
+		double threshold = 0.5;
+
+		if (S.slices[index].score >= threshold)
+		{
+			cv::rectangle(
+				My_Map::map_,
+				cv::Point(top_left_img.x, top_left_img.y),
+				cv::Point(bottom_right_img.x, bottom_right_img.y),
+				cv::Scalar(0, 127, 0),
+				-1
+			);
+		}
+		else
+		{
+			cv::rectangle(
+				My_Map::map_,
+				cv::Point(top_left_img.x, top_left_img.y),
+				cv::Point(bottom_right_img.x, bottom_right_img.y),
+				cv::Scalar(0, 0, 127),
+				-1
+			);
+		}
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -579,16 +605,16 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 		// 	cv::Scalar(0, 0, 0)
 		// );
 
-		// put a circle on the center of the slice. 
-		cv::circle(
-			My_Map::map_,
-			cv::Point(
-				((top_left_img.x + bottom_right_img.x) / 2), 
-				((top_left_img.y + bottom_right_img.y) / 2)),
-			1,
-			cv::Scalar(0, 0, 0),
-			-1
-		);
+		// // put a circle on the center of the slice. 
+		// cv::circle(
+		// 	My_Map::map_,
+		// 	cv::Point(
+		// 		((top_left_img.x + bottom_right_img.x) / 2), 
+		// 		((top_left_img.y + bottom_right_img.y) / 2)),
+		// 	1,
+		// 	cv::Scalar(0, 0, 0),
+		// 	-1
+		// );
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -680,15 +706,15 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
         //     (int)(0.6 * My_Map::res),
         //     cv::Scalar(255, 0, 0),
         //     FILLED);
-        cv::putText(
-            My_Map::map_, 
-            "Start Point", 
-            cv::Point(startPoint.x_pixel_img, 
-            startPoint.y_pixel_img), 
-            cv::FONT_HERSHEY_PLAIN, 
-            1.0, 
-            cv::Scalar(0, 0, 0), 
-            1);
+        // cv::putText(
+        //     My_Map::map_, 
+        //     "Start Point", 
+        //     cv::Point(startPoint.x_pixel_img, 
+        //     startPoint.y_pixel_img), 
+        //     cv::FONT_HERSHEY_PLAIN, 
+        //     1.0, 
+        //     cv::Scalar(0, 0, 0), 
+        //     1);
     }
     else
     {
@@ -711,14 +737,15 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 
 /**
  * @brief Update the map with the info from camera. 
- * @param S
+ * @param S an object contains the information to update the map. 
 */
 void My_Map::mapUpdate(Score S)
 {
+	double scale = 3;
     for (int i = 0; i < S.slices.size(); i++)
 	{
-		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
-		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
+		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
+		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
 		My_Map::cam2map();
 		My_Map::sliceProject(S, i);
 	}
@@ -727,16 +754,17 @@ void My_Map::mapUpdate(Score S)
 
 /**
  * @brief Update the map with the info from camera. (only for debug)
- * @param S
- * @param colors
- * @param c
+ * @param S an object contains the information to update the map. 
+ * @param colors the colors that can divide the pointcloud based on distance. 
+ * @param c the index to decide the color. 
 */
 void My_Map::mapUpdate(Score S, vector<cv::Vec3i> colors, int c)
 {
+	double scale = 4;
     for (int i = 0; i < S.slices.size(); i++)
 	{
-		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / 2), 0.0, (S.search_step / 2));
-		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / 2), 0.0, -(S.search_step / 2));
+		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
+		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
 		My_Map::cam2map();
 		My_Map::sliceProject(colors, c, i);
 		// My_Map::sliceProject(colors, c);
@@ -1268,7 +1296,82 @@ bool Score::get_score(double z, bool have_dst)
 	{
 		return !is_Zero;
 	}
+}
 
+
+/**
+ * @brief Get the roughness of each slice to provide the info to the map. 
+ * @param z the operating range along z-axis. 
+ * @return is this range void or not. 
+*/
+bool Score::get_roughness(double z)
+{
+	bool is_Zero = false;
+	int num_inliers = 0, num_outliers = 0;
+	double percentage = 0.0;
+
+	// want to log the score data. 
+	std::ofstream f;
+	f.open(DEBUG_FILE, ios::out | ios::app);
+	f << "\n\n";
+
+	if (Score::slices.size() != 0)
+	{
+		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
+		{
+			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
+			{
+				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
+				{
+					num_inliers++;
+				}
+				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
+					(*Score::cloud).points[Score::slices[i].indices[j]].b == 0)  // outliers
+				{
+					num_outliers++;
+				}
+				else
+				{
+					continue;
+				}
+			}
+
+			// check the percentage of inliers. 
+			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
+			Score::slices[i].score = percentage;
+
+			// update the minScore and maxScore. 
+			if (Score::slices[i].score > Score::maxScore)
+			{
+				Score::maxScore = Score::slices[i].score;
+			}
+
+			if (Score::slices[i].score < Score::minScore)
+			{
+				Score::minScore = Score::slices[i].score;
+			}
+
+			// logging the score data to debug. 
+			f << to_string(z) << ", " \
+			<< to_string(Score::minX) << ", " \
+			<< to_string(Score::maxX) << ", " \
+			<< to_string(i) << ", " \
+			<< to_string(Score::slices[i].centroid[0]) << ", " \
+			<< to_string(Score::slices[i].centroid[1]) << ", " \
+			<< to_string(Score::slices[i].centroid[2]) << ", " \
+			<< to_string(Score::slices[i].score) << ", " \
+			<< to_string(Score::slices[i].indices.size()) << "\n";
+			num_inliers = 0;
+			num_outliers = 0;
+			percentage = 0.0;
+		}
+		// f.close();
+		return is_Zero;
+	}
+	else
+	{
+		return !is_Zero;
+	}
 }
 
 

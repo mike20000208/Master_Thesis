@@ -158,8 +158,28 @@ int main(int argc, char * argv[])
             //     printf("\n\nDirectory creation is failed. \n\n");
             // }
 
-            // pointcloud debug
-            pointcloud_debug(stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
+            // // pointcloud debug
+            // pointcloud_debug(stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
+
+            // map projection debug
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+
+            if (argc > 2)
+            {
+                thread thread1 (Communication, node);
+                thread thread2 (map_projection_debug, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
+                thread1.join();
+                thread2.join();
+            }
+            else
+            {
+                thread thread1 (Communication, node);
+                thread thread2 (map_projection_debug, node, 100, 100, 10);
+                thread1.join();
+                thread2.join();
+            }
+            // map_projection_debug(stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
 
             break;
         }

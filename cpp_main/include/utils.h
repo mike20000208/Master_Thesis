@@ -56,14 +56,15 @@ using namespace std::filesystem;
 #define RECORDING_PATH "/home/mike/Recording/Room005.bag"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
-// #define ODO_TOPIC "/my_odo"
-// #define GPS_TOPIC "/fix"
+#define ODO_TOPIC "/my_odo"
+#define GPS_TOPIC "/fix"
 #define VEL_TOPIC "/capra/remote/direct_velocity"
-#define ODO_TOPIC "/mike/odo"
-#define GPS_TOPIC "/mike/gps"
+// #define ODO_TOPIC "/mike/odo"
+// #define GPS_TOPIC "/mike/gps"
 
 
 extern bool TERMINATE;
+extern bool isEnableFromFile;
 
 
 struct GPS
@@ -280,7 +281,7 @@ public:
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr roi;
 
     // 
-    double start_z = 0.5;
+    double start_z = 0.0;
 
     // Slices within specific z range
 	vector<Slice> slices;  
@@ -320,6 +321,9 @@ public:
 
     //
 	bool get_score(double z, bool have_dst = true);
+
+    //
+    bool get_roughness(double z);  // for debug. (temporarily)
 
     //
 	bool find_best_path();
@@ -375,7 +379,7 @@ public:
 
     // Constructor. 
     My_Map();
-    My_Map(int w, int h, int r, bool flag = false);
+    My_Map(int w, int h, int r, bool isMap = false);
 
     // Flag of is map or trajectory.
     bool isMap = false;
