@@ -906,8 +906,12 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 /**
  * @brief Replay the trajectory and scene based on the save images and log file in csv format. (more robust than "replay")
  * @param folder_name the name of the recording folder. 
+ * @param width
+ * @param height
+ * @param mode
+ * 
 */
-int log_replay(string folder_name)
+int log_replay(string folder_name, int width, int height, int res)
 {
     // initialize loading path. 
     string folder = REPLAY_FOLDER + folder_name;
@@ -1020,10 +1024,11 @@ int log_replay(string folder_name)
     f.close();
 
     // initialize map drawing.
-    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-    int map_width_meter, map_height_meter, map_res;
-    cin >> map_width_meter >> map_height_meter >> map_res; 
-    My_Map t(map_width_meter, map_height_meter, map_res);
+    // printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+    // int map_width_meter, map_height_meter, map_res;
+    // cin >> map_width_meter >> map_height_meter >> map_res; 
+    // My_Map t(map_width_meter, map_height_meter, map_res);
+    My_Map t(width, height, res);
 
     // start replaying. 
     for (; imgNum < num_files; imgNum++)
@@ -1067,10 +1072,12 @@ int log_replay(string folder_name)
         q.y = currentOdo.oy;
         q.z = currentOdo.oz;
         t.poseUpdate(imgNum, currentOdo.px, currentOdo.py, q);
+        t.headingShow();
+        // t.mapShow();
 
         // show the map and scene. 
-        cv::resizeWindow(win1, scene.cols, scene.rows);
-        cv::resizeWindow(win2, t.map_.cols / 2, t.map_.rows / 2);
+        cv::resizeWindow(win1, scene.cols / 2, scene.rows / 2);
+        cv::resizeWindow(win2, t.map_.cols, t.map_.rows);
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);
@@ -1249,7 +1256,7 @@ int pointcloud_debug(int width, int height, int res)
 /**
  * @brief Debug the map projection function. 
 */
-int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res)
+int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res, string mode)
 {
     // prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
@@ -1435,7 +1442,7 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
         // render the pointcloud and debug the map projection. 
         int color = 0;
         Score S(cloud_filtered); 
-        S.setStartZ(0.6);
+        S.setStartZ(0.3);
         S.setSearchRange(3.0);
         S.setSearchStep(0.70);
         S.setSize(0.60);
@@ -1447,27 +1454,45 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
 
         for (double z = S.start_z; z < S.search_range; z += S.search_step)
         {
-            // for (int i = 0; i < cloud_filtered->points.size(); i++)
-            // {
-            //     if ((cloud_filtered->points[i].z >= z) && 
-            //     (cloud_filtered->points[i].z < (z + S.search_step)))
-            //     {
-            //         cloud_filtered->points[i].r = colors[color][0];
-            //         cloud_filtered->points[i].g = colors[color][1];
-            //         cloud_filtered->points[i].b = colors[color][2];
-            //     }
-            // }
-
-            S.get_boundary(z);
-            S.get_slices(z);
-            // S.get_score(z);
-            S.get_roughness(z);
-            if (m.isMap)
+            if (mode == "color")
             {
-                // m.mapUpdate(S, colors, color);
-                m.mapUpdate(S);
+                for (int i = 0; i < cloud_filtered->points.size(); i++)
+                {
+                    if ((cloud_filtered->points[i].z >= z) && 
+                    (cloud_filtered->points[i].z < (z + S.search_step)))
+                    {
+                        cloud_filtered->points[i].r = colors[color][0];
+                        cloud_filtered->points[i].g = colors[color][1];
+                        cloud_filtered->points[i].b = colors[color][2];
+                    }
+                }
+                S.get_boundary(z);
+                S.get_slices(z);
+                if (m.isMap)
+                {
+                    // m.mapUpdate(S, colors, color);
+                    m.mapUpdate(S, colors, color);
+                }
+                color++;
             }
-            color++;
+            else if (mode == "info")
+            {
+                S.get_boundary(z);
+                S.get_slices(z);
+                // S.get_score(z);
+                S.get_roughness(z);
+                if (m.isMap)
+                {
+                    // m.mapUpdate(S, colors, color);
+                    m.mapUpdate(S);
+                }
+            }
+            else 
+            {
+                cerr << "Wrong mode was used! (" << mode << "). \n\n";
+                return -1;
+            }
+
         }
 
         // m.headingShow();
@@ -1483,20 +1508,20 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
         //     }
         // }
 
-        // depth info logging. 
-        depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
-        depth_path = depth_folder + depth_suffix;
-        PCL2PLY(cloud_filtered, depth_path);
+        // // depth info logging. 
+        // depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
+        // depth_path = depth_folder + depth_suffix;
+        // PCL2PLY(cloud_filtered, depth_path);
 
         // // trajectory logging. 
         // traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         // traj_path = traj_folder + traj_suffix;
         // cv::imwrite(traj_path, t.tempMap);
 
-        // map logging. 
-        map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
-        map_path = map_folder + map_suffix;
-        cv::imwrite(map_path, m.tempMap);
+        // // map logging. 
+        // map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
+        // map_path = map_folder + map_suffix;
+        // cv::imwrite(map_path, m.tempMap);
 
         // visualization. 
         pc_layers.push_back(cloud_filtered);

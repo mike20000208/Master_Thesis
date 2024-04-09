@@ -282,8 +282,8 @@ Heading My_Map::getHeading(EulerAngle_ e)
     h.norm = sqrt(pow(h.x, 2) + pow(h.y, 2));
     h.x /= h.norm;
     h.y /= h.norm;
-	h.x *= My_Map::res;
-	h.y *= My_Map::res;
+	h.x *= My_Map::res * 1.5;
+	h.y *= My_Map::res * 1.5;
 	return h;
 }
 
@@ -463,6 +463,11 @@ void My_Map::sliceProject(Score S, int index)
 
 /**
  * @brief Project the slice area on the map and show it. (only for debug)
+ * 
+ * The pointcloud is rendered in colors based on the distance interval, and 
+ * 
+ * this will project the location and color of that slice on the map. 
+ * 
  * @param colors
  * @param c
 */
@@ -534,6 +539,11 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
 
 /**
  * @brief Project the slice area on the map and show it. (only for debug)
+ * 
+ * The pointcloud is rendered in colors based on the distance interval, and 
+ * 
+ * this will project the location, color, and number of that slice on the map. 
+ * 
  * @param colors
  * @param c
  * @param i
@@ -593,28 +603,28 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 			-1
 		);
 
-		// // print the number of slice on the map. 
-		// cv::putText(
-		// 	My_Map::map_,
-		// 	to_string(i),
-		// 	cv::Point(
-		// 		((top_left_img.x + bottom_right_img.x) / 2), 
-		// 		((top_left_img.y + bottom_right_img.y) / 2)),
-		// 	FONT_HERSHEY_COMPLEX_SMALL,
-		// 	0.01,
-		// 	cv::Scalar(0, 0, 0)
-		// );
+		// print the number of slice on the map. 
+		cv::putText(
+			My_Map::map_,
+			to_string(i),
+			cv::Point(
+				((top_left_img.x + bottom_right_img.x) / 2), 
+				((top_left_img.y + bottom_right_img.y) / 2)),
+			FONT_HERSHEY_COMPLEX_SMALL,
+			0.01,
+			cv::Scalar(0, 0, 0)
+		);
 
-		// // put a circle on the center of the slice. 
-		// cv::circle(
-		// 	My_Map::map_,
-		// 	cv::Point(
-		// 		((top_left_img.x + bottom_right_img.x) / 2), 
-		// 		((top_left_img.y + bottom_right_img.y) / 2)),
-		// 	1,
-		// 	cv::Scalar(0, 0, 0),
-		// 	-1
-		// );
+		// put a circle on the center of the slice. 
+		cv::circle(
+			My_Map::map_,
+			cv::Point(
+				((top_left_img.x + bottom_right_img.x) / 2), 
+				((top_left_img.y + bottom_right_img.y) / 2)),
+			1,
+			cv::Scalar(0, 0, 0),
+			-1
+		);
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -741,7 +751,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 */
 void My_Map::mapUpdate(Score S)
 {
-	double scale = 3;
+	double scale = 1.5;
     for (int i = 0; i < S.slices.size(); i++)
 	{
 		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
@@ -760,14 +770,14 @@ void My_Map::mapUpdate(Score S)
 */
 void My_Map::mapUpdate(Score S, vector<cv::Vec3i> colors, int c)
 {
-	double scale = 4;
+	double scale = 1.5;
     for (int i = 0; i < S.slices.size(); i++)
 	{
 		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
 		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
 		My_Map::cam2map();
-		My_Map::sliceProject(colors, c, i);
-		// My_Map::sliceProject(colors, c);
+		// My_Map::sliceProject(colors, c, i);
+		My_Map::sliceProject(colors, c);
 	}
 }
 
