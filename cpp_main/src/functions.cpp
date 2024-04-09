@@ -219,9 +219,12 @@ int time_files_test()
  * 
  * @param folder_name the name of the recording folder. 
  */
-int replay(string folder_name)
+int replay_from_images(string folder_name)
 {
-    // initialize counter. 
+    // Initialize flag. 
+    bool isPressed = false;
+
+    // Initialize counter. 
     int num_files = 0;
     int count = 0;
 
@@ -248,8 +251,10 @@ int replay(string folder_name)
         num_files++;
     }
 
-    // main loop. 
-    for (count = 0; count < num_files; count++)
+    // Main loop. Start replaying
+    count = 0;
+    // for (count = 0; count < num_files; count++)
+    while(count < num_files)
     {
         img_suffix = "img_" + to_string(count) + ".png";
         traj_suffix = "trajectory_" + to_string(count) + ".png";
@@ -271,7 +276,7 @@ int replay(string folder_name)
         img_height = scene.rows;
         traj_width = trajectory.cols;
         traj_height = trajectory.rows;
-        cv::resizeWindow(win1, img_width, img_height);
+        cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
         cv::resizeWindow(win2, traj_width, traj_height);
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, img_width + 70, 0);
@@ -279,12 +284,34 @@ int replay(string folder_name)
         cv::imshow(win2, trajectory);
         char c = (char)cv::waitKey(100);
 
+        // if (c == 13 || TERMINATE == true)
         if (c == 32 || c == 13 || TERMINATE == true)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
             break;
         }
+
+        if (c == 100)
+        {
+            printf("\n\nKey [D] is pressed, 15 frames forward. \n\n");
+            count += 15;
+            isPressed = true;
+        }
+
+        if (c == 97)
+        {
+            printf("\n\nKey [A] is pressed, 10 frames backward. \n\n");
+            count -= 10;
+            isPressed = true;
+        }
+
+        if (!isPressed)
+        {
+            count++;
+        }
+        
+        isPressed = false;
     }
 
     return 0;
@@ -910,7 +937,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
  * @param mode
  * 
 */
-int log_replay(string folder_name, int width, int height, int res)
+int replay_from_odometry(string folder_name, int width, int height, int res)
 {
     // initialize loading path. 
     string folder = REPLAY_FOLDER + folder_name;
@@ -1072,7 +1099,7 @@ int log_replay(string folder_name, int width, int height, int res)
         q.z = currentOdo.oz;
         t.poseUpdate(imgNum, currentOdo.px, currentOdo.py, q);
         t.headingShow();
-        // t.mapShow();
+        t.mapShow();
 
         // show the map and scene. 
         cv::resizeWindow(win1, scene.cols / 2, scene.rows / 2);
@@ -1736,3 +1763,168 @@ int delay_test(std::shared_ptr<Mike> node)
     return 0;
 }
 
+
+/**
+ * @brief Logging function for the field trip. 
+ * @param node
+ * @param width
+ * @param height
+ * @param res
+*/
+int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
+{
+    // Prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    
+    string img_folder = node->log_path + "/Images";
+    string traj_folder = node->log_path + "/Trajectories";
+    string depth_folder = node->log_path + "/Depth";
+    string map_folder = node->log_path + "/Map";
+    
+    string info_path = node->log_path + "/Info.txt";
+    string bag_path = node->log_path + "/record.bag";
+    string time_path = node->log_path + "/TimeLog.csv";
+    string traj_final_path = node->log_path + "/Trajectory_final.png";
+    string map_final_path = node->log_path + "/Map_final.png";
+    
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+    
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+    
+    // Initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frameset frames;
+    rs2::frame color, depth;
+    rs2::config cfg;
+    rs2::pointcloud pointcloud;
+    rs2::points points;
+    int stream_color_width = 1280;
+    int stream_color_height = 720;
+    int stream_depth_width = 1280;
+    int stream_depth_height = 720;
+    // int stream_depth_width = 848;
+    // int stream_depth_height = 480;
+    int frame_rate = 30;
+
+    if (isEnableFromFile)
+    {
+        cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
+    }
+    else
+    {
+        cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+        cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    }
+
+    if (isRecording)
+    {
+        cfg.enable_record_to_file(bag_path);
+    }
+    
+    // Initialize cv objects. 
+    const string win1 = "Color Image";
+    // const string win2 = "Map";
+    const string win3 = "Trajectory";
+    cv::namedWindow(win1, WINDOW_NORMAL);
+    // cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::namedWindow(win3, WINDOW_NORMAL);
+    cv::Mat image;
+    
+    // Initialize general objects and variables.
+    // My_Map m(width, height, res, true);
+    My_Map t(width, height, res);
+    std::mutex mut;
+    std::ofstream f;
+    Img ImgLog;
+    
+    // Create the log folders. 
+    if (create_directories(img_folder) && 
+    create_directories(traj_folder) && 
+    create_directories(depth_folder) && 
+    create_directories(map_folder))
+    {
+        printf("\n\nDirectories are created. \n\n");
+    }
+    else
+    {
+        printf("\n\nDirectory creation is failed. \n\n");
+    }
+
+    // Start the pipeline. 
+    p.start(cfg);
+
+    // Start streaming. 
+    while (1)
+    {
+        // Get frame. 
+        frames = p.wait_for_frames();
+        color = frames.get_color_frame();
+        // depth = frames.get_depth_frame();
+
+        // Create color image and save it. 
+        const int w = color.as<rs2::video_frame>().get_width();
+        const int h = color.as<rs2::video_frame>().get_height();
+        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+        // Image and timestamp logging. 
+        ImgLog.number = count;
+        ImgLog.timestamp = color.get_timestamp() / 1000;
+        count ++;
+        img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+        img_path = img_folder + img_suffix;
+        cv::imwrite(img_path, image);
+        f.open(time_path, ios::app | ios::out);
+        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+        f.close();
+
+        // Draw the trajectory only. 
+        mut.lock();
+        Quaternion_ q;
+        q.w = node->odo_data.ow;
+        q.x = node->odo_data.ox;
+        q.y = node->odo_data.oy;
+        q.z = node->odo_data.oz;
+        t.poseUpdate(
+            ImgLog.number, 
+            node->odo_data.px, 
+            node->odo_data.py,
+            q);
+        mut.unlock();
+        t.headingShow();
+        t.mapShow();
+
+        // Trajectory logging. 
+        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        traj_path = traj_folder + traj_suffix;
+        cv::imwrite(traj_path, t.tempMap);
+
+        // Visualization. 
+        cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
+        // cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
+        cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
+        cv::moveWindow(win1, 0, 0);
+        // cv::moveWindow(win2, (image.cols + 70), 0);
+        cv::moveWindow(win3, (image.cols + 70), (t.map_.rows + 250));
+        cv::imshow(win1, image);
+        // cv::imshow(win2, m.tempMap);
+        cv::imshow(win3, t.tempMap);
+        char c = cv::waitKey(10);
+
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            cv::imwrite(traj_final_path, t.tempMap);
+            TERMINATE = true;
+            break;
+        }
+    }
+
+    return 0;
+}

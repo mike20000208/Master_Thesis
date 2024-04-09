@@ -34,7 +34,7 @@ data.append([0.0,
              'frame_id', 
              'child_frame_id', 
              0.0])
-DEBUG_PATH = '/home/mike/Debug/delay_test.csv'
+DEBUG_PATH = '/home/mike/Debug/delay_test_MQTT.csv'
 NANO = 1e-9
 
 # define ROS node publisher.
@@ -75,7 +75,7 @@ class Publisher(Node):
         # # logging the data to debug
         # with open(DEBUG_PATH, mode='a', newline='') as f:
         #     writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     writer.writerows(data)
+        #     writer.writerow(data[-1])
 
 
 # define MQTT client. 

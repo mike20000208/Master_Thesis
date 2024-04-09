@@ -5,6 +5,8 @@ bool TERMINATE = false;
 
 bool isEnableFromFile = false;
 
+bool isRecording = true;
+
 
 /**
  * @brief Shows that the whole program is done. 

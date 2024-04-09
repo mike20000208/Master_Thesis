@@ -6,16 +6,17 @@ int main(int argc, char * argv[])
 {
     string command;
     map<string, int> commands = {
-        {"replay", 1}, 
+        {"replay_from_images", 1}, 
         {"trajectory", 2}, 
         {"stream_map", 3},
         {"single_frame_map", 4}, 
         {"None", 5},
         {"debug", 6},
-        {"log_replay", 7},
+        {"replay_from_odometry", 7},
         {"communication", 8}, 
         {"map_demo", 9},
-        {"delay_test", 10}};
+        {"delay_test", 10}, 
+        {"field_trip", 11}};
     
     if (argc > 1)
     {
@@ -33,7 +34,7 @@ int main(int argc, char * argv[])
             //// test replay. 
             if (argc > 2)
             {
-                replay(argv[2]);
+                replay_from_images(argv[2]);
             }
             else
             {
@@ -215,7 +216,7 @@ int main(int argc, char * argv[])
                     printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
                     int map_width_meter, map_height_meter, map_res;
                     cin >> map_width_meter >> map_height_meter >> map_res; 
-                    log_replay(argv[2], map_width_meter, map_height_meter, map_res);
+                    replay_from_odometry(argv[2], map_width_meter, map_height_meter, map_res);
                 }
 
             }
@@ -268,6 +269,21 @@ int main(int argc, char * argv[])
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
             thread thread1 (Communication, node);
             thread thread2 (delay_test, node);
+            thread1.join();
+            thread2.join();
+            break;
+        }
+
+
+        case 11:
+        {
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+            printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+            int map_width_meter, map_height_meter, map_res;
+            cin >> map_width_meter >> map_height_meter >> map_res; 
+            thread thread1 (Communication, node);
+            thread thread2 (field_trip, node, map_width_meter, map_height_meter, map_res);
             thread1.join();
             thread2.join();
             break;

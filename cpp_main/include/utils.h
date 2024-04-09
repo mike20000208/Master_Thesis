@@ -66,6 +66,7 @@ using namespace std::filesystem;
 
 extern bool TERMINATE;
 extern bool isEnableFromFile;
+extern bool isRecording;
 
 
 struct GPS
