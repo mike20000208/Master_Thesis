@@ -23,7 +23,19 @@ MAX_RECONNECT_COUNT = 12
 MAX_RECONNECT_DELAY = 60
 FLAG_EXIT = False
 data = []
-data.append([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 'frame_id', 'child_frame_id'])
+data.append([0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             'frame_id', 
+             'child_frame_id', 
+             0.0])
+DEBUG_PATH = '/home/mike/Debug/delay_test.csv'
+NANO = 1e-9
 
 # define ROS node publisher.
 ros_topic = '/my_odo'
@@ -56,8 +68,14 @@ class Publisher(Node):
         msg.pose.pose.orientation.w = data[-1][7]
         self.publisher_.publish(msg)
         self.get_logger().info('Publishing odometry messages to topic [%s]. ' % ros_topic)
+        data[-1][10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
         # self.get_logger().info('Publishing odometry messages to topic [%s]. \nAnd the timestamp = %.4f' % (ros_topic, data[-1][0]))
         self.cnt += 1
+
+        # # logging the data to debug
+        # with open(DEBUG_PATH, mode='a', newline='') as f:
+        #     writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        #     writer.writerows(data)
 
 
 # define MQTT client. 
@@ -105,8 +123,18 @@ def message_callback(client:mqtt_client.Client, userdata, msg:MQTTMessage):
     ow = json_dic['pose']['pose']['orientation']['w']
     frame_id = json_dic['header']['frame_id']
     child_frame_id = json_dic['child_frame_id']
-    data.append([timestamp, px, py, pz, ox, oy, oz, ow, frame_id, child_frame_id])
-    # with open('/home/mike/RobotLog/Odolog.csv', mode='w', newline='') as f:
+    data.append([timestamp, 
+                 px, 
+                 py, 
+                 pz, 
+                 ox, 
+                 oy, 
+                 oz, 
+                 ow, 
+                 frame_id, 
+                 child_frame_id, 
+                 0.0])
+    # with open('/home/mike/RobotLog/Odolog.csv', mode='aw', newline='') as f:
     #     writer = csv.writer(f, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
     #     writer.writerows(data)
 
