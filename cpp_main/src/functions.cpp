@@ -74,7 +74,6 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     Img ImgLog;
 
     // start the pipeline. 
-    // auto profile = p.start(cfg);
     auto profile = p.start(cfg);
     // rs2::device device = profile.get_device();
     // string device_name = device.get_info(RS2_CAMERA_INFO_NAME);
@@ -102,7 +101,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // start streaming. 
     while(1)
     {
-        // get frame. 
+        // get a frame. 
         frames = p.wait_for_frames();
         // depth_frame = frames.get_depth_frame();
         color_frame = frames.get_color_frame();
@@ -1573,6 +1572,167 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
     // f << "Size of depth image (width x height): " << to_string(stream_depth_width) << " x " << to_string(stream_depth_height) << "\n\n";
     // f.close();
     
+    return 0;
+}
+
+
+/**
+ * @brief Test the delay between the receiving node and the main program. 
+ * 
+ * @param node a ROS node that communicates with the Capra robot. 
+*/
+int delay_test(std::shared_ptr<Mike> node)
+{
+    // Initialize general objects and variables.
+    My_Map t(10, 10, 5);
+    // My_Map t(width, height, res);
+    std::mutex mut;
+    std::ofstream f;
+    Img ImgLog;
+    double pc_time = 0.0, node_time = 0.0, camera_time = 0.0;
+    
+    // Prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    mut.lock();
+    string img_folder = node->log_path + "/Images";
+    string traj_folder = node->log_path + "/Trajectories";
+    string depth_folder = node->log_path + "/Depth";
+    string map_folder = node->log_path + "/Map";
+
+    string info_path = node->log_path + "/Info.txt";
+    string bag_path = node->log_path + "/record.bag";
+    string time_path = node->log_path + "/TimeLog.csv";
+    string traj_final_path = node->log_path + "/Trajectory_final.png";
+    string map_final_path = node->log_path + "/Map_final.png";
+    string record_path = node->log_path + "/record.bag";
+    string coordinate_path = node->log_path + "/CoordinateLog.csv";
+    // string debug_path = node->log_path + "/delay_test_only_scene.csv";
+    string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
+    mut.unlock();
+
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+
+    // Initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frame color_frame, depth_frame;
+    rs2::frameset frames;
+    rs2::config cfg;
+    int stream_color_width = 1280;
+    int stream_color_height = 720;
+    int stream_depth_width = 1280;
+    int stream_depth_height = 720;
+    int frame_rate = 30;
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    // cfg.enable_record_to_file(bag_path);
+
+    // Initialize cv objects. 
+    const string win1 = "Color Image";
+    const string win2 = "Trajectory";
+	cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win2, WINDOW_NORMAL);
+	cv::moveWindow(win1, 0, 0);
+	cv::moveWindow(win2, 300, 150);
+    cv::Mat image;
+
+    // Start the pipeline. 
+    auto profile = p.start(cfg);
+
+    // Create the folders for logging. 
+    if (
+        create_directories(img_folder) && 
+        create_directories(traj_folder))
+    {
+        printf("\n\nDirectories are created. \n\n");
+    }
+    else
+    {
+        printf("\n\nDirectory creation is failed. \n\n");
+    }
+
+    // Start streaming. 
+    while (1)
+    {
+        // Get a frame. 
+        frames = p.wait_for_frames();
+        // depth_frame = frames.get_depth_frame();
+        color_frame = frames.get_color_frame();
+
+        // Get the information of the frame. 
+        const int w = color_frame.as<rs2::video_frame>().get_width();
+        const int h = color_frame.as<rs2::video_frame>().get_height();
+
+        // Create color images. 
+        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+        // Save the image. 
+        img_suffix = "/img_" + to_string(count) + ".png";
+        img_path = img_folder + img_suffix;
+        cv::imwrite(img_path, image);
+
+        // Image number and timestamp logging.
+        ImgLog.number = count;
+        ImgLog.timestamp = color_frame.get_timestamp() / 1000;
+        count ++;
+        f.open(time_path, ios::app | ios::out);
+        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+        f.close();
+
+        // test the delay between the main program and the ROS node. 
+        std::time_t currentTime = std::time(nullptr);
+        pc_time = (double)currentTime;
+        camera_time = ImgLog.timestamp;
+
+        mut.lock();
+        node_time = node->odo_data.timestamp;
+        mut.unlock();
+
+        f.open(debug_path, ios::app | ios::out);
+        f << to_string(camera_time) << ", " \
+        << to_string(pc_time) << ", " \
+        << to_string(node_time) << "\n";
+        f.close();
+
+        // Draw the trajectory. 
+        mut.lock();
+        Quaternion_ q;
+        q.w = node->odo_data.ow;
+        q.x = node->odo_data.ox;
+        q.y = node->odo_data.oy;
+        q.z = node->odo_data.oz;
+        t.poseUpdate(
+            ImgLog.number, 
+            node->odo_data.px, 
+            node->odo_data.py,
+            q);
+        mut.unlock();
+        t.headingShow();
+        t.mapShow();
+
+        // Show the current scene. 
+        cv::resizeWindow(win1, image.cols, image.rows);
+        cv::resizeWindow(win2, t.width_pixel, t.height_pixel);
+        cv::imshow(win1, image);
+        cv::imshow(win2, t.tempMap);
+        char c = (char)cv::waitKey(10);
+
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            cv::imwrite(traj_final_path, t.tempMap);
+            break;
+        }
+    }
+
     return 0;
 }
 

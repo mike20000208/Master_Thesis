@@ -14,7 +14,8 @@ int main(int argc, char * argv[])
         {"debug", 6},
         {"log_replay", 7},
         {"communication", 8}, 
-        {"map_demo", 9}};
+        {"map_demo", 9},
+        {"delay_test", 10}};
     
     if (argc > 1)
     {
@@ -258,6 +259,18 @@ int main(int argc, char * argv[])
             // thread thread2 (map_projection_debug, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
             thread1.join();
             thread2.join();
+            break;
+        }
+
+        case 10:
+        {
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+            thread thread1 (Communication, node);
+            thread thread2 (delay_test, node);
+            thread1.join();
+            thread2.join();
+            break;
         }
 
         default:

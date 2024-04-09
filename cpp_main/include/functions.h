@@ -24,3 +24,6 @@ int pointcloud_debug(int width, int height, int res);
 
 
 int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res, string mode="color");
+
+
+int delay_test(std::shared_ptr<Mike> node);
