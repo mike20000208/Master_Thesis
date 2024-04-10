@@ -228,11 +228,20 @@ int replay_from_images(string folder_name)
     int num_files = 0;
     int count = 0;
 
+    // Initialize log containers. 
+    vector<double> timeLog;
+
+    // Initialize general variables and objects.
+    fstream f;
+    vector<string> row;
+    string line, word, temp;
+
     // initialize directories.
-    string folder_path = REPLAY_FOLDER + folder_name;
-    string img_folder = folder_path + "/Images/";
-    string traj_folder = folder_path + "/Trajectories/";
-    string img_suffix, traj_suffix, full_img_path, full_traj_path;
+    string folder = REPLAY_FOLDER + folder_name;
+    string img_folder = folder + "/Images/";
+    string traj_folder = folder + "/Trajectories/";
+    string time_path = folder + "/TimeLog.csv";
+    string img_suffix, traj_suffix, img_full_path, traj_full_path;
 
     // initialize cv objects.
     cv::Mat scene;
@@ -242,6 +251,24 @@ int replay_from_images(string folder_name)
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     int img_width, traj_width, img_height, traj_height;
+
+    // read TimeLog.csv. 
+    f.open(time_path, ios::in);
+
+    while (getline(f, line))
+    {
+        row.clear();
+        stringstream linestream(line);
+
+        while(getline(linestream, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        timeLog.push_back(stod(row[0]));
+    }
+
+    f.close();
 
     // count the number of files. 
     std::filesystem::path P {img_folder};
@@ -258,24 +285,41 @@ int replay_from_images(string folder_name)
     {
         img_suffix = "img_" + to_string(count) + ".png";
         traj_suffix = "trajectory_" + to_string(count) + ".png";
-        full_img_path = img_folder + img_suffix;
-        full_traj_path = traj_folder + traj_suffix;
-        scene = cv::imread(full_img_path, cv::IMREAD_COLOR);
-        trajectory = cv::imread(full_traj_path, cv::IMREAD_COLOR);
+        img_full_path = img_folder + img_suffix;
+        traj_full_path = traj_folder + traj_suffix;
+        scene = cv::imread(img_full_path, cv::IMREAD_COLOR);
+        trajectory = cv::imread(traj_full_path, cv::IMREAD_COLOR);
 
         if (scene.empty() || trajectory.empty())
         {
             printf("\n\nReading Error!  \n\n");
             printf("\n\nCannot read images from directories [%s] or [%s]. \n\n", 
-            full_img_path.c_str(), 
-            full_traj_path.c_str());
+            img_full_path.c_str(), 
+            traj_full_path.c_str());
             break;
         }
 
+        // Visualization. 
         img_width = scene.cols;
         img_height = scene.rows;
         traj_width = trajectory.cols;
         traj_height = trajectory.rows;
+        cv::putText(
+            scene, 
+            "Replaying.....",
+		    cv::Point(50, 50),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
+        cv::putText(
+            scene, 
+            to_string(timeLog[count]),
+		    cv::Point(50, 100),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
         cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
         cv::resizeWindow(win2, traj_width, traj_height);
         cv::moveWindow(win1, 0, 0);
@@ -939,6 +983,9 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 */
 int replay_from_odometry(string folder_name, int width, int height, int res)
 {
+    // Initialize flag. 
+    bool isPressed = false;
+    
     // initialize loading path. 
     string folder = REPLAY_FOLDER + folder_name;
     string img_folder = folder + "/Images/";
@@ -1057,7 +1104,8 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     My_Map t(width, height, res);
 
     // start replaying. 
-    for (; imgNum < num_files; imgNum++)
+    while (imgNum < num_files)
+    // for (; imgNum < num_files; imgNum++)
     {
         // prepare the color image. 
         img_suffix = "img_" + to_string(imgNum) + ".png";
@@ -1101,8 +1149,24 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         t.headingShow();
         t.mapShow();
 
-        // show the map and scene. 
-        cv::resizeWindow(win1, scene.cols / 2, scene.rows / 2);
+        // Show the map and scene. 
+        cv::putText(
+            scene, 
+            "Replaying.....",
+		    cv::Point(50, 50),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
+        cv::putText(
+            scene, 
+            to_string(timeLog[imgNum]),
+		    cv::Point(50, 100),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
+        cv::resizeWindow(win1, (int)scene.cols / 2, (int)scene.rows / 2);
         cv::resizeWindow(win2, t.map_.cols, t.map_.rows);
         cv::moveWindow(win1, 0, 0);
 	    cv::moveWindow(win2, scene.cols + 70, 0);
@@ -1119,6 +1183,34 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 
         // reset the temporary map which is only used to display. 
         t.tempMap = Mat();
+
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+
+        if (c == 100)
+        {
+            printf("\n\nKey [D] is pressed, 15 frames forward. \n\n");
+            imgNum += 15;
+            isPressed = true;
+        }
+
+        if (c == 97)
+        {
+            printf("\n\nKey [A] is pressed, 10 frames backward. \n\n");
+            imgNum -= 10;
+            isPressed = true;
+        }
+
+        if (!isPressed)
+        {
+            imgNum++;
+        }
+
+        isPressed = false;
     }
 
     return 0;
