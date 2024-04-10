@@ -1805,15 +1805,16 @@ int delay_test(std::shared_ptr<Mike> node)
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
-        // test the delay between the main program and the ROS node. 
-        std::time_t currentTime = std::time(nullptr);
-        pc_time = (double)currentTime;
+        // Test the delay between the main program and the ROS node. 
+        const auto currenTime = std::chrono::system_clock::now();
+        pc_time = (double)std::chrono::duration_cast<std::chrono::microseconds>(currenTime.time_since_epoch()).count() * MICRO;
         camera_time = ImgLog.timestamp;
 
         mut.lock();
         node_time = node->odo_data.timestamp;
         mut.unlock();
 
+        // Logging the delay. 
         f.open(debug_path, ios::app | ios::out);
         f << to_string(camera_time) << ", " \
         << to_string(pc_time) << ", " \

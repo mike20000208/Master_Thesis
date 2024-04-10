@@ -31,25 +31,89 @@ int main(int argc, char * argv[])
     {
         case 1:
         {
-            //// test replay. 
+            // Test replay purely from images. 
+            bool isWrong = true;
+            int i = 0;
+
+            // See how many folders are there in the destinaiton. 
+            vector<string> folders;
+            std::filesystem::path P {REPLAY_FOLDER};
+            for (auto& p : std::filesystem::directory_iterator(P))
+            {
+                folders.push_back(p.path().filename());
+            }
+
             if (argc > 2)
             {
-                replay_from_images(argv[2]);
+                // Check if the input folder name is correct. 
+                for (i = 0; i < folders.size(); i++)
+                {
+                    if (argv[2] == folders[i])
+                    {
+                        isWrong = false;
+                        break;
+                    }
+                }
+
+                if (isWrong)
+                {
+                    printf("\n\nPlease type the correct folder name you want to replay! \n\n");
+                    printf("The available folder names are shown below: \n\n");
+                    for (i = 0; i < folders.size(); i++)
+                    {
+                        printf("%d  ->  %s \n\n", i, folders[i].c_str());
+                    }
+                    int folder;
+                    cin >> folder;
+                    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                    int map_width_meter, map_height_meter, map_res;
+                    cin >> map_width_meter >> map_height_meter >> map_res; 
+                    replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
+                }
+                else
+                {
+                    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                    int map_width_meter, map_height_meter, map_res;
+                    cin >> map_width_meter >> map_height_meter >> map_res; 
+                    replay_from_odometry(argv[2], map_width_meter, map_height_meter, map_res);
+                }
             }
             else
             {
-                // replay(REPLAY_DATE);
                 printf("\n\nPlease specify which folder you want to replay! \n\n");
                 printf("The available folder names are shown below: \n\n");
-                int cnt = 1;
-                std::filesystem::path P {REPLAY_FOLDER };
 
-                for (auto& p : std::filesystem::directory_iterator(P))
+                for (i = 0; i < folders.size(); i++)
                 {
-                    printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
-                    cnt ++;
+                    printf("%d  ->  %s \n\n", i, folders[i].c_str());
                 }
+                int folder;
+                cin >> folder;
+                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                int map_width_meter, map_height_meter, map_res;
+                cin >> map_width_meter >> map_height_meter >> map_res; 
+                replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
             }
+
+            // // Original. 
+            // if (argc > 2)
+            // {
+            //     replay_from_images(argv[2]);
+            // }
+            // else
+            // {
+            //     // replay(REPLAY_DATE);
+            //     printf("\n\nPlease specify which folder you want to replay! \n\n");
+            //     printf("The available folder names are shown below: \n\n");
+            //     int cnt = 1;
+            //     std::filesystem::path P {REPLAY_FOLDER };
+
+            //     for (auto& p : std::filesystem::directory_iterator(P))
+            //     {
+            //         printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
+            //         cnt ++;
+            //     }
+            // }
 
             break;
         }
@@ -57,10 +121,10 @@ int main(int argc, char * argv[])
         case 2:
         {
             // test trajectory building. 
+            rclcpp::init(argc, argv);
+            std::shared_ptr<Mike> node = std::make_shared<Mike>();
             if (argc > 2)
             {
-                rclcpp::init(argc, argv);
-                std::shared_ptr<Mike> node = std::make_shared<Mike>();
                 thread thread1 (Communication, node);
                 thread thread2 (stream_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
                 thread1.join();
@@ -68,14 +132,18 @@ int main(int argc, char * argv[])
             }
             else
             {
-                rclcpp::init(argc, argv);
-                std::shared_ptr<Mike> node = std::make_shared<Mike>();
                 thread thread1 (Communication, node);
                 thread thread2 (stream_test, node, 30, 30, 5);
                 thread1.join();
                 thread2.join();
             }
 
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -99,7 +167,13 @@ int main(int argc, char * argv[])
                 thread1.join();
                 thread2.join();
             }
-            
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -123,6 +197,13 @@ int main(int argc, char * argv[])
                 thread1.join();
                 thread2.join();
             }
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -178,12 +259,18 @@ int main(int argc, char * argv[])
             thread1.join();
             thread2.join();
 
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
         case 7:
         {
-            //// test replay from csv logs. 
+            // Test replay from odometry logs. 
             bool isWrong = true;
             if (argc > 2)
             {
@@ -242,6 +329,13 @@ int main(int argc, char * argv[])
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
             Communication(node);
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -260,6 +354,13 @@ int main(int argc, char * argv[])
             // thread thread2 (map_projection_debug, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
             thread1.join();
             thread2.join();
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -271,6 +372,13 @@ int main(int argc, char * argv[])
             thread thread2 (delay_test, node);
             thread1.join();
             thread2.join();
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
@@ -286,12 +394,19 @@ int main(int argc, char * argv[])
             thread thread2 (field_trip, node, map_width_meter, map_height_meter, map_res);
             thread1.join();
             thread2.join();
+
+            // Write a note to specify which command is executed in this folder. 
+            string node_path = node->log_path + "/Mode.txt";
+            fstream f;
+            f.open(node_path, ios::out | ios::app);
+            f << "Command " << argv[1] << " is used. \n";
+            f.close(); 
             break;
         }
 
         default:
         {
-            // incorrect command is detected. . 
+            // Incorrect command is detected. . 
             printf("\n\nPlease enter the correct command! \n\n");
             printf("Avalibale commands are shown below, please choose one of them: \n\n");
 
@@ -302,7 +417,6 @@ int main(int argc, char * argv[])
 
             break;
         }
-
     }
 
     ProcessDone();
