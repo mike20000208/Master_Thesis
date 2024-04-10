@@ -197,6 +197,169 @@ int Communication(std::shared_ptr<Mike> node)
 }
 
 
+Logging::Logging(std::shared_ptr<Mike> node)
+{
+    std::mutex mut;
+    mut.lock();
+
+	img_folder = node->log_path + "/Images";
+    traj_folder = node->log_path + "/Trajectories";
+    depth_folder = node->log_path + "/Depth";
+    map_folder = node->log_path + "/Map";
+
+    info_path = node->log_path + "/Info.txt";
+    bag_path = node->log_path + "/record.bag";
+    time_path = node->log_path + "/TimeLog.csv";
+    string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
+
+    traj_final_path = node->log_path + "/Trajectory_final.png";
+    map_final_path = node->log_path + "/Map_final.png";
+
+    mut.unlock();
+}
+
+
+void Logging::createDir(string mode)
+{
+	switch (Logging::commands[mode])
+	{
+        case 1:
+        {
+			// replay_from_images. 
+            break;
+        }
+
+        case 2:
+        {
+			// trajectory
+			if (create_directories(img_folder) && create_directories(traj_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        case 3:
+        {
+			// stream_map
+			if (create_directories(img_folder) && 
+			create_directories(traj_folder) && 
+			create_directories(depth_folder) && 
+			create_directories(map_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        case 4:
+        {
+			// single_frame_map
+			if (create_directories(img_folder) && 
+			create_directories(traj_folder) && 
+			create_directories(depth_folder) && 
+			create_directories(map_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        case 5:
+        {
+			// None
+            break;
+        }
+
+        case 6:
+        {
+			// debug
+			if (create_directories(img_folder) && 
+			create_directories(traj_folder) && 
+			create_directories(depth_folder) && 
+			create_directories(map_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        case 7:
+        {
+			// replay_from_odometry
+            break;
+        }
+
+        case 8:
+        {
+			// coomunication
+            break;
+        }
+
+        case 9:
+        {
+			// map_demo
+            break;
+        }
+
+        case 10:
+        {
+			// delay_test
+			if (
+				create_directories(img_folder) && 
+				create_directories(traj_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        case 11:
+        {
+			// field_trip
+			if (create_directories(img_folder) && 
+			create_directories(traj_folder) && 
+			create_directories(depth_folder) && 
+			create_directories(map_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+	}
+}
+
+
+
 /**
  * @brief Constrctor of class Map. 
  * 

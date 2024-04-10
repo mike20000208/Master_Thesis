@@ -95,26 +95,6 @@ int main(int argc, char * argv[])
                 replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
             }
 
-            // // Original. 
-            // if (argc > 2)
-            // {
-            //     replay_from_images(argv[2]);
-            // }
-            // else
-            // {
-            //     // replay(REPLAY_DATE);
-            //     printf("\n\nPlease specify which folder you want to replay! \n\n");
-            //     printf("The available folder names are shown below: \n\n");
-            //     int cnt = 1;
-            //     std::filesystem::path P {REPLAY_FOLDER };
-
-            //     for (auto& p : std::filesystem::directory_iterator(P))
-            //     {
-            //         printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
-            //         cnt ++;
-            //     }
-            // }
-
             break;
         }
 
@@ -142,7 +122,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -172,7 +152,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -202,7 +182,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -263,7 +243,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -334,7 +314,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -359,7 +339,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -377,7 +357,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }
@@ -399,7 +379,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command " << argv[1] << " is used. \n";
+            f << "Command [" << argv[1] << "] is used. \n";
             f.close(); 
             break;
         }

@@ -255,6 +255,44 @@ class Logging
 {
 public:
 
+    string img_folder;
+    string traj_folder;
+    string depth_folder;
+    string map_folder;
+
+    string info_path;
+    string bag_path;
+    string time_path;
+    string traj_final_path;
+    string map_final_path;
+
+    string traj_suffix;
+    string img_suffix;
+    string depth_suffix;
+    string map_suffix;
+
+    string img_path;
+    string traj_path;
+    string depth_path;
+    string map_path;
+    string debug_path;
+
+    map<string, int> commands = {
+        {"replay_from_images", 1}, 
+        {"trajectory", 2}, 
+        {"stream_map", 3},
+        {"single_frame_map", 4}, 
+        {"None", 5},
+        {"debug", 6},
+        {"replay_from_odometry", 7},
+        {"communication", 8}, 
+        {"map_demo", 9},
+        {"delay_test", 10}, 
+        {"field_trip", 11}};
+
+    Logging(std::shared_ptr<Mike> node);
+
+    void createDir(string mode);
 
 };
 

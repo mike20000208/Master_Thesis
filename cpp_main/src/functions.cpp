@@ -21,25 +21,27 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
     // prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string record_path = node->log_path + "/record.bag";
-    string coordinate_path = node->log_path + "/CoordinateLog.csv";
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    Logging l(node);
+    l.createDir("trajectory");
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
+    // string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
+    // string record_path = node->log_path + "/record.bag";
+    // string coordinate_path = node->log_path + "/CoordinateLog.csv";
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
     
     // initialize rs2 objects. 
     rs2::pipeline p;
@@ -51,7 +53,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     int frame_rate = 30;
     cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
-    cfg.enable_record_to_file(bag_path);
+    cfg.enable_record_to_file(l.bag_path);
     // cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     // cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_XYZ32F);
 
@@ -89,14 +91,14 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     //     printf("\n\n\nCamera [%s] is connected! \n\n\n", device_name.c_str());
     // }
 
-    if (create_directories(img_folder) && create_directories(traj_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // if (create_directories(l.img_folder) && create_directories(l.traj_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // start streaming. 
     while(1)
@@ -115,15 +117,15 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
         // save the image. 
-        img_suffix = "/img_" + to_string(count) + ".png";
-        img_path = img_folder + img_suffix;
-        cv::imwrite(img_path, image);
+        l.img_suffix = "/img_" + to_string(count) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
 
         // image number and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color_frame.get_timestamp() / 1000;
         count ++;
-        f.open(time_path, ios::app | ios::out);
+        f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -143,18 +145,18 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         mut.unlock();
 
-        // coordinate logging.
-        f.open(coordinate_path, ios::app | ios::out);
-        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << ", " \
-        << to_string(m.currentPoint.x_meter) << ", " << to_string(m.currentPoint.y_meter) << ", " \
-        << to_string(m.currentPoint.x_pixel_img) << ", " << to_string(m.currentPoint.y_pixel_img) << ", " \
-        << to_string(m.currentPoint.x_pixel_map) << ", " << to_string(m.currentPoint.y_pixel_map) << "\n";
-        f.close();
+        // // coordinate logging.
+        // f.open(coordinate_path, ios::app | ios::out);
+        // f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << ", " \
+        // << to_string(m.currentPoint.x_meter) << ", " << to_string(m.currentPoint.y_meter) << ", " \
+        // << to_string(m.currentPoint.x_pixel_img) << ", " << to_string(m.currentPoint.y_pixel_img) << ", " \
+        // << to_string(m.currentPoint.x_pixel_map) << ", " << to_string(m.currentPoint.y_pixel_map) << "\n";
+        // f.close();
 
         // save the trajectory as an image.
-        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
-        traj_path = traj_folder + traj_suffix;
-        cv::imwrite(traj_path, m.map_);
+        l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        l.traj_path = l.traj_folder + l.traj_suffix;
+        cv::imwrite(l.traj_path, m.map_);
 
         // show the current scene. 
         // mut.lock();
@@ -172,13 +174,13 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
-            cv::imwrite(traj_final_path, m.map_);
+            cv::imwrite(l.traj_final_path, m.map_);
             break;
         }
     }
 
     // document the general info.
-    f.open(info_path, ios::app | ios::out);
+    f.open(l.info_path, ios::app | ios::out);
     f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
     f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n\n";
     f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n\n";
@@ -382,23 +384,25 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
     // prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    Logging l(node);
+    l.createDir("stream_test");
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
+    // string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
     
     // initialize rs2 objects. 
     rs2::pipeline p;
@@ -457,18 +461,18 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // create the log folders. 
-    if (create_directories(img_folder) && 
-    create_directories(traj_folder) && 
-    create_directories(depth_folder) && 
-    create_directories(map_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // // create the log folders. 
+    // if (create_directories(img_folder) && 
+    // create_directories(traj_folder) && 
+    // create_directories(depth_folder) && 
+    // create_directories(map_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // start the pipeline. 
     p.start(cfg);
@@ -491,10 +495,10 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
         count ++;
-        img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-        img_path = img_folder + img_suffix;
-        cv::imwrite(img_path, image);
-        f.open(time_path, ios::app | ios::out);
+        l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
+        f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -620,14 +624,14 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // PCL2PLY(cloud_filtered, depth_path);
 
         // trajectory logging. 
-        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
-        traj_path = traj_folder + traj_suffix;
-        cv::imwrite(traj_path, t.tempMap);
+        l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        l.traj_path = l.traj_folder + l.traj_suffix;
+        cv::imwrite(l.traj_path, t.tempMap);
 
         // map logging. 
-        map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
-        map_path = map_folder + map_suffix;
-        cv::imwrite(map_path, m.tempMap);
+        l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
+        l.map_path = l.map_folder + l.map_suffix;
+        cv::imwrite(l.map_path, m.tempMap);
 
         // visualization. 
         pc_layers.push_back(cloud_filtered);
@@ -670,7 +674,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     }
 
     // document the general info.
-    f.open(info_path, ios::app | ios::out);
+    f.open(l.info_path, ios::app | ios::out);
     // f << "Map Information" << "\n\n";
     f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
     f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n\n";
@@ -683,26 +687,44 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 }
 
 
+/**
+ * @brief Create the map with environment information while only take a single frame from camera. 
+ * 
+ * When getting the arguments from the terminal. 
+ * 
+ *  the first one is width,
+ * 
+ *  the second one is height,
+ * 
+ *  the thrid one is res. 
+ * 
+ * @param node a node that communicates with the capra robot. 
+ * @param width width of the map in meter. 
+ * @param height height of the map in meter.
+ * @param res resolution of the map. 
+*/
 int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
     // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
-    string info_path = node->log_path + "/Info.txt";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    Logging l(node);
+    l.createDir("single_frame_map");
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
+    // string info_path = node->log_path + "/Info.txt";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
 
     // Initialize rs2 objects. 
     rs2::pipeline p;
@@ -755,18 +777,18 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	// pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // Create the log folders. 
-    if (create_directories(img_folder) && 
-    create_directories(traj_folder) && 
-    create_directories(depth_folder) && 
-    create_directories(map_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // // Create the log folders. 
+    // if (create_directories(img_folder) && 
+    // create_directories(traj_folder) && 
+    // create_directories(depth_folder) && 
+    // create_directories(map_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
     p.start(cfg);
@@ -786,10 +808,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     ImgLog.number = count;
     ImgLog.timestamp = color.get_timestamp() / 1000;
     count ++;
-    img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-    img_path = img_folder + img_suffix;
-    cv::imwrite(img_path, image);
-    f.open(time_path, ios::app | ios::out);
+    l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+    l.img_path = l.img_folder + l.img_suffix;
+    cv::imwrite(l.img_path, image);
+    f.open(l.time_path, ios::app | ios::out);
     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
     f.close();
 
@@ -925,14 +947,14 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	// }
 
     // Depth info logging. 
-    depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
-    depth_path = depth_folder + depth_suffix;
-    PCL2PLY(cloud_filtered, depth_path);
+    l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
+    l.depth_path = l.depth_folder + l.depth_suffix;
+    PCL2PLY(cloud_filtered, l.depth_path);
 
     // Map logging.
-    map_suffix = "/map_" + to_string(ImgLog.number) +".png";
-    map_path = map_folder + map_suffix;
-    cv::imwrite(map_path, m.tempMap);
+    l.map_suffix = "/map_" + to_string(ImgLog.number) +".png";
+    l.map_path = l.map_folder + l.map_suffix;
+    cv::imwrite(l.map_path, m.tempMap);
 
     // Visualization. 
     pc_layers.push_back(cloud_filtered);
@@ -978,8 +1000,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
  * @param folder_name the name of the recording folder. 
  * @param width
  * @param height
- * @param mode
- * 
+ * @param res
 */
 int replay_from_odometry(string folder_name, int width, int height, int res)
 {
@@ -1372,29 +1393,36 @@ int pointcloud_debug(int width, int height, int res)
 
 
 /**
- * @brief Debug the map projection function. 
+ * @brief Debug the map projection function while streaming. 
+ * @param node 
+ * @param width
+ * @param height
+ * @param res
+ * @param mode
 */
 int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res, string mode)
 {
     // prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    Logging l(node);
+    l.createDir("debug");
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
+    // string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
     
     // initialize rs2 objects. 
     rs2::pipeline p;
@@ -1463,18 +1491,18 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
     colors.push_back(cv::Vec3i(152, 19, 214));  // purple
     colors.push_back(cv::Vec3i(235, 59, 123));  // pink
 
-    // create the log folders. 
-    if (create_directories(img_folder) && 
-    create_directories(traj_folder) && 
-    create_directories(depth_folder) && 
-    create_directories(map_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // // create the log folders. 
+    // if (create_directories(img_folder) && 
+    // create_directories(traj_folder) && 
+    // create_directories(depth_folder) && 
+    // create_directories(map_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // start the pipeline. 
     p.start(cfg);
@@ -1497,10 +1525,10 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
         count ++;
-        img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-        img_path = img_folder + img_suffix;
-        cv::imwrite(img_path, image);
-        f.open(time_path, ios::app | ios::out);
+        l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
+        f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -1712,31 +1740,33 @@ int delay_test(std::shared_ptr<Mike> node)
     
     // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    mut.lock();
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
+    Logging l(node);
+    l.createDir("delay_test");
+    // mut.lock();
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
 
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
-    string record_path = node->log_path + "/record.bag";
-    string coordinate_path = node->log_path + "/CoordinateLog.csv";
-    // string debug_path = node->log_path + "/delay_test_only_scene.csv";
-    string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
-    mut.unlock();
+    // string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
+    // string record_path = node->log_path + "/record.bag";
+    // string coordinate_path = node->log_path + "/CoordinateLog.csv";
+    // // string debug_path = node->log_path + "/delay_test_only_scene.csv";
+    // string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
+    // mut.unlock();
 
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
 
     // Initialize rs2 objects. 
     rs2::pipeline p;
@@ -1764,17 +1794,17 @@ int delay_test(std::shared_ptr<Mike> node)
     // Start the pipeline. 
     auto profile = p.start(cfg);
 
-    // Create the folders for logging. 
-    if (
-        create_directories(img_folder) && 
-        create_directories(traj_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // // Create the folders for logging. 
+    // if (
+    //     create_directories(img_folder) && 
+    //     create_directories(traj_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // Start streaming. 
     while (1)
@@ -1793,15 +1823,15 @@ int delay_test(std::shared_ptr<Mike> node)
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
         // Save the image. 
-        img_suffix = "/img_" + to_string(count) + ".png";
-        img_path = img_folder + img_suffix;
-        cv::imwrite(img_path, image);
+        l.img_suffix = "/img_" + to_string(count) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
 
         // Image number and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color_frame.get_timestamp() / 1000;
         count ++;
-        f.open(time_path, ios::app | ios::out);
+        f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -1815,7 +1845,7 @@ int delay_test(std::shared_ptr<Mike> node)
         mut.unlock();
 
         // Logging the delay. 
-        f.open(debug_path, ios::app | ios::out);
+        f.open(l.debug_path, ios::app | ios::out);
         f << to_string(camera_time) << ", " \
         << to_string(pc_time) << ", " \
         << to_string(node_time) << "\n";
@@ -1848,7 +1878,7 @@ int delay_test(std::shared_ptr<Mike> node)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
-            cv::imwrite(traj_final_path, t.tempMap);
+            cv::imwrite(l.traj_final_path, t.tempMap);
             break;
         }
     }
@@ -1868,27 +1898,28 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
 {
     // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    Logging l(node);
+    l.createDir("field_trip");
+    // string img_folder = node->log_path + "/Images";
+    // string traj_folder = node->log_path + "/Trajectories";
+    // string depth_folder = node->log_path + "/Depth";
+    // string map_folder = node->log_path + "/Map";
     
-    string img_folder = node->log_path + "/Images";
-    string traj_folder = node->log_path + "/Trajectories";
-    string depth_folder = node->log_path + "/Depth";
-    string map_folder = node->log_path + "/Map";
+    // string info_path = node->log_path + "/Info.txt";
+    // string bag_path = node->log_path + "/record.bag";
+    // string time_path = node->log_path + "/TimeLog.csv";
+    // string traj_final_path = node->log_path + "/Trajectory_final.png";
+    // string map_final_path = node->log_path + "/Map_final.png";
     
-    string info_path = node->log_path + "/Info.txt";
-    string bag_path = node->log_path + "/record.bag";
-    string time_path = node->log_path + "/TimeLog.csv";
-    string traj_final_path = node->log_path + "/Trajectory_final.png";
-    string map_final_path = node->log_path + "/Map_final.png";
+    // string traj_suffix;
+    // string img_suffix;
+    // string depth_suffix;
+    // string map_suffix;
     
-    string traj_suffix;
-    string img_suffix;
-    string depth_suffix;
-    string map_suffix;
-    
-    string img_path;
-    string traj_path;
-    string depth_path;
-    string map_path;
+    // string img_path;
+    // string traj_path;
+    // string depth_path;
+    // string map_path;
     
     // Initialize rs2 objects. 
     rs2::pipeline p;
@@ -1917,7 +1948,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
 
     if (isRecording)
     {
-        cfg.enable_record_to_file(bag_path);
+        cfg.enable_record_to_file(l.bag_path);
     }
     
     // Initialize cv objects. 
@@ -1936,18 +1967,18 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     std::ofstream f;
     Img ImgLog;
     
-    // Create the log folders. 
-    if (create_directories(img_folder) && 
-    create_directories(traj_folder) && 
-    create_directories(depth_folder) && 
-    create_directories(map_folder))
-    {
-        printf("\n\nDirectories are created. \n\n");
-    }
-    else
-    {
-        printf("\n\nDirectory creation is failed. \n\n");
-    }
+    // // Create the log folders. 
+    // if (create_directories(img_folder) && 
+    // create_directories(traj_folder) && 
+    // create_directories(depth_folder) && 
+    // create_directories(map_folder))
+    // {
+    //     printf("\n\nDirectories are created. \n\n");
+    // }
+    // else
+    // {
+    //     printf("\n\nDirectory creation is failed. \n\n");
+    // }
 
     // Start the pipeline. 
     p.start(cfg);
@@ -1970,10 +2001,10 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
         count ++;
-        img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-        img_path = img_folder + img_suffix;
-        cv::imwrite(img_path, image);
-        f.open(time_path, ios::app | ios::out);
+        l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
+        f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
@@ -1994,9 +2025,9 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         t.mapShow();
 
         // Trajectory logging. 
-        traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
-        traj_path = traj_folder + traj_suffix;
-        cv::imwrite(traj_path, t.tempMap);
+        l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+        l.traj_path = l.traj_folder + l.traj_suffix;
+        cv::imwrite(l.traj_path, t.tempMap);
 
         // Visualization. 
         cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
@@ -2013,7 +2044,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         if (c == 32 || c == 13 || TERMINATE == true)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
-            cv::imwrite(traj_final_path, t.tempMap);
+            cv::imwrite(l.traj_final_path, t.tempMap);
             TERMINATE = true;
             break;
         }
