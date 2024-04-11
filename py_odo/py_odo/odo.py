@@ -9,7 +9,7 @@ import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry as Odo
 from tf2_msgs.msg import TFMessage as TF    
-from threading import Thread
+from threading import Thread, Semaphore
 
 # define MQTT client information. 
 broker = '10.46.28.1'
@@ -34,8 +34,33 @@ data.append([0.0,
              'frame_id', 
              'child_frame_id', 
              0.0])
+data_receiving = [0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             'frame_id', 
+             'child_frame_id', 
+             0.0]
+data_publishing = [0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             0.0, 
+             'frame_id', 
+             'child_frame_id', 
+             0.0]
 DEBUG_PATH = '/home/mike/Debug/delay_test_MQTT.csv'
 NANO = 1e-9
+frameID = 0
+isUpdated = False
+semaphore = Semaphore(2)
 
 # define ROS node publisher.
 ros_topic = '/my_odo'
@@ -49,33 +74,78 @@ class Publisher(Node):
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, 
                                        self.timer_callback)
-        self.cnt = 0
+        # while True:
+        #     semaphore.acquire()
+        #     try:
+        #         if isUpdated:
+        #             msg = Odo()
+        #             msg.header.stamp = self.get_clock().now().to_msg()
+        #             msg.header.frame_id = data[-1][8]
+        #             msg.child_frame_id = data[-1][9]
+        #             msg.pose.pose.position.x = data[-1][1]
+        #             msg.pose.pose.position.y = data[-1][2]
+        #             msg.pose.pose.position.z = data[-1][3]
+        #             msg.pose.pose.orientation.x = data[-1][4]
+        #             msg.pose.pose.orientation.y = data[-1][5]
+        #             msg.pose.pose.orientation.z = data[-1][6]
+        #             msg.pose.pose.orientation.w = data[-1][7]
+        #             self.publisher_.publish(msg)
+        #             self.get_logger().info('Publishing odometry messages to topic [%s]. ' % ros_topic)
+        #             data[-1][10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
+        #             isUpdated = False
+        #     finally:
+        #         semaphore.release()
         
     def timer_callback(self):
-        msg = Odo()
-        # msg.header.frame_id = 'test'
-        # msg.header.stamp = data[-1][0]
-        msg.header.stamp = self.get_clock().now().to_msg()
-        # print(len(data[-1]))
-        msg.header.frame_id = data[-1][8]
-        msg.child_frame_id = data[-1][9]
-        msg.pose.pose.position.x = data[-1][1]
-        msg.pose.pose.position.y = data[-1][2]
-        msg.pose.pose.position.z = data[-1][3]
-        msg.pose.pose.orientation.x = data[-1][4]
-        msg.pose.pose.orientation.y = data[-1][5]
-        msg.pose.pose.orientation.z = data[-1][6]
-        msg.pose.pose.orientation.w = data[-1][7]
-        self.publisher_.publish(msg)
-        self.get_logger().info('Publishing odometry messages to topic [%s]. ' % ros_topic)
-        data[-1][10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
-        # self.get_logger().info('Publishing odometry messages to topic [%s]. \nAnd the timestamp = %.4f' % (ros_topic, data[-1][0]))
-        self.cnt += 1
+        global isUpdated, data_publishing, data_receiving
+        semaphore.acquire
+        try:
+            if isUpdated:
+                msg = Odo()
+                data_publishing = data_receiving
+                msg.header.stamp = self.get_clock().now().to_msg()
+                msg.header.frame_id = data_publishing[8]
+                msg.child_frame_id = data_publishing[9]
+                msg.pose.pose.position.x = data_publishing[1]
+                msg.pose.pose.position.y = data_publishing[2]
+                msg.pose.pose.position.z = data_publishing[3]
+                msg.pose.pose.orientation.x = data_publishing[4]
+                msg.pose.pose.orientation.y = data_publishing[5]
+                msg.pose.pose.orientation.z = data_publishing[6]
+                msg.pose.pose.orientation.w = data_publishing[7]
+                self.publisher_.publish(msg)
+                self.get_logger().info('Publishing odometry messages to topic [%s]. ' % ros_topic)
 
-        # # logging the data to debug
+                # for delay test
+                data_publishing[10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
+
+                # msg.header.stamp = self.get_clock().now().to_msg()
+                # msg.header.frame_id = data[-1][8]
+                # msg.child_frame_id = data[-1][9]
+                # msg.pose.pose.position.x = data[-1][1]
+                # msg.pose.pose.position.y = data[-1][2]
+                # msg.pose.pose.position.z = data[-1][3]
+                # msg.pose.pose.orientation.x = data[-1][4]
+                # msg.pose.pose.orientation.y = data[-1][5]
+                # msg.pose.pose.orientation.z = data[-1][6]
+                # msg.pose.pose.orientation.w = data[-1][7]
+                # self.publisher_.publish(msg)
+                # self.get_logger().info('Publishing odometry messages to topic [%s]. ' % ros_topic)
+                # data[-1][10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
+                isUpdated = False
+
+                # # logging the data to test delay
+                # with open(DEBUG_PATH, mode='a', newline='') as f:
+                #     writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                #     writer.writerow(data_publishing)
+        finally:
+            semaphore.release()
+
+        # # logging the data to test delay
         # with open(DEBUG_PATH, mode='a', newline='') as f:
         #     writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        #     writer.writerow(data[-1])
+        #     writer.writerow(data_publishing)
+        #     # writer.writerow(data[-1])
 
 
 # define MQTT client. 
@@ -112,28 +182,37 @@ def disconnect_callback(client, userdata, rc):
 def message_callback(client:mqtt_client.Client, userdata, msg:MQTTMessage):
     # print(f'Received `{msg.payload.decode()}` from `{msg.topic}` topic')
     print('Receiving odometry messages from MQTT client......')
-    json_dic = json.loads(msg.payload.decode())
-    timestamp = time.time()
-    px = json_dic['pose']['pose']['position']['x']
-    py = json_dic['pose']['pose']['position']['y']
-    pz = json_dic['pose']['pose']['position']['z']
-    ox = json_dic['pose']['pose']['orientation']['x']
-    oy = json_dic['pose']['pose']['orientation']['y']
-    oz = json_dic['pose']['pose']['orientation']['z']
-    ow = json_dic['pose']['pose']['orientation']['w']
-    frame_id = json_dic['header']['frame_id']
-    child_frame_id = json_dic['child_frame_id']
-    data.append([timestamp, 
-                 px, 
-                 py, 
-                 pz, 
-                 ox, 
-                 oy, 
-                 oz, 
-                 ow, 
-                 frame_id, 
-                 child_frame_id, 
-                 0.0])
+    global frameID, isUpdated, data_receiving
+    semaphore.acquire()
+    try:
+        json_dic = json.loads(msg.payload.decode())
+        timestamp = time.time()
+        px = json_dic['pose']['pose']['position']['x']
+        py = json_dic['pose']['pose']['position']['y']
+        pz = json_dic['pose']['pose']['position']['z']
+        ox = json_dic['pose']['pose']['orientation']['x']
+        oy = json_dic['pose']['pose']['orientation']['y']
+        oz = json_dic['pose']['pose']['orientation']['z']
+        ow = json_dic['pose']['pose']['orientation']['w']
+        frame_id = str(frameID)
+        # frame_id = json_dic['header']['frame_id']
+        child_frame_id = json_dic['child_frame_id']
+        data_receiving = [timestamp, px, py, pz, ox, oy, oz, ow, frame_id, child_frame_id, 0.0]
+        # data.append([timestamp, 
+        #             px, 
+        #             py, 
+        #             pz, 
+        #             ox, 
+        #             oy, 
+        #             oz, 
+        #             ow, 
+        #             frame_id, 
+        #             child_frame_id, 
+        #             0.0])
+        frameID += 1
+        isUpdated = True
+    finally:
+        semaphore.release()
     # with open('/home/mike/RobotLog/Odolog.csv', mode='aw', newline='') as f:
     #     writer = csv.writer(f, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
     #     writer.writerows(data)
@@ -157,8 +236,13 @@ def mqtt_main():
 
 
 def main(args=None):
-    Thread(target=mqtt_main).start()
-    Thread(target=ros2_main).start()
+    mqtt_thread = Thread(target=mqtt_main)
+    node_thread = Thread(target=ros2_main)
+    mqtt_thread.start()
+    node_thread.start()
+    mqtt_thread.join()
+    node_thread.join()
+
 
 
 if __name__ == '__main__':
