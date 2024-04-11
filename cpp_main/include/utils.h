@@ -76,6 +76,7 @@ struct GPS
     double latitude = 0.0;
     double longitude = 0.0;
     double altitude = 0.0;
+    int serial_number = 0;
 };
 
 
@@ -89,6 +90,7 @@ struct Odo
     double oy = 0.0;
     double oz = 0.0;
     double ow = 0.0;
+    int serial_number = 0;
 };
 
 
@@ -101,6 +103,7 @@ struct Vel
     double avx = 0.0;
     double avy = 0.0;
     double avz = 0.0;
+    int serial_number = 0;
 };
 
 
@@ -255,6 +258,7 @@ class Logging
 {
 public:
 
+    string main_folder;
     string img_folder;
     string traj_folder;
     string depth_folder;

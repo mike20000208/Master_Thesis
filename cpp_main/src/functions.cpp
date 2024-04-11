@@ -225,6 +225,7 @@ int replay_from_images(string folder_name)
 {
     // Initialize flag. 
     bool isPressed = false;
+    float speed = 100;  // milliseconds
 
     // Initialize counter. 
     int num_files = 0;
@@ -328,9 +329,8 @@ int replay_from_images(string folder_name)
 	    cv::moveWindow(win2, img_width + 70, 0);
         cv::imshow(win1, scene);
         cv::imshow(win2, trajectory);
-        char c = (char)cv::waitKey(100);
+        char c = (char)cv::waitKey(speed);
 
-        // if (c == 13 || TERMINATE == true)
         if (c == 32 || c == 13 || TERMINATE == true)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
@@ -349,6 +349,20 @@ int replay_from_images(string folder_name)
         {
             printf("\n\nKey [A] is pressed, 10 frames backward. \n\n");
             count -= 10;
+            isPressed = true;
+        }
+
+        if (c == 119)
+        {
+            printf("\n\nKey [W] is pressed, speed up 5 times. \n\n");
+            speed /= 5;
+            isPressed = true;
+        }
+
+        if (c == 115)
+        {
+            printf("\n\nKey [S] is pressed, slow down 5 times. \n\n");
+            speed *= 5;
             isPressed = true;
         }
 
@@ -1006,6 +1020,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 {
     // Initialize flag. 
     bool isPressed = false;
+    float speed = 100;  // milliseconds
     
     // initialize loading path. 
     string folder = REPLAY_FOLDER + folder_name;
@@ -1043,7 +1058,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 
     // initialize variables for data matching based on timestamp. 
     double currentTime = 0.0; // sec
-    double timeRange = 0.1; // sec
+    double timeRange = 0.3; // sec
 
     // read TimeLog.csv. 
     f.open(time_path, ios::in);
@@ -1077,13 +1092,21 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         }
 
         tempOdo.timestamp = stod(row[0]);
-        tempOdo.px = stod(row[1]);
-        tempOdo.py = stod(row[2]);
-        tempOdo.pz = stod(row[3]);
-        tempOdo.ox = stod(row[4]);
-        tempOdo.oy = stod(row[5]);
-        tempOdo.oz = stod(row[6]);
-        tempOdo.ow = stod(row[7]);
+        tempOdo.px = stod(row[2]);
+        tempOdo.py = stod(row[3]);
+        tempOdo.pz = stod(row[4]);
+        tempOdo.ox = stod(row[5]);
+        tempOdo.oy = stod(row[6]);
+        tempOdo.oz = stod(row[7]);
+        tempOdo.ow = stod(row[8]);
+
+        // tempOdo.px = stod(row[1]);
+        // tempOdo.py = stod(row[2]);
+        // tempOdo.pz = stod(row[3]);
+        // tempOdo.ox = stod(row[4]);
+        // tempOdo.oy = stod(row[5]);
+        // tempOdo.oz = stod(row[6]);
+        // tempOdo.ow = stod(row[7]);
 
         // odoLog[stod(row[0])] = tempOdo;
         odoLog.push_back(tempOdo);
@@ -1091,42 +1114,37 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 
     f.close();
 
-    // read info.csv. 
-    f.open(info_path, ios::in);
+    // // read info.csv. 
+    // f.open(info_path, ios::in);
 
-    while (getline(f, line))
-    {
-        row.clear();
-        stringstream linestream(line);
+    // while (getline(f, line))
+    // {
+    //     row.clear();
+    //     stringstream linestream(line);
 
-        while(getline(linestream, word, ','))
-        {
-            row.push_back(word);
-        }
+    //     while(getline(linestream, word, ','))
+    //     {
+    //         row.push_back(word);
+    //     }
 
-        infoLog["map_width_meter"] = stoi(row[0]);
-        infoLog["map_height_meter"] = stoi(row[1]);
-        infoLog["resolution"] = stoi(row[2]);
-        infoLog["map_width_pixel"] = stoi(row[3]);
-        infoLog["map_width_pixel"] = stoi(row[4]);
-        infoLog["image_width"] = stoi(row[5]);
-        infoLog["image_height"] = stoi(row[6]);
-        infoLog["depth_width"] = stoi(row[7]);
-        infoLog["depth_height"] = stoi(row[8]);
-    }
+    //     infoLog["map_width_meter"] = stoi(row[0]);
+    //     infoLog["map_height_meter"] = stoi(row[1]);
+    //     infoLog["resolution"] = stoi(row[2]);
+    //     infoLog["map_width_pixel"] = stoi(row[3]);
+    //     infoLog["map_width_pixel"] = stoi(row[4]);
+    //     infoLog["image_width"] = stoi(row[5]);
+    //     infoLog["image_height"] = stoi(row[6]);
+    //     infoLog["depth_width"] = stoi(row[7]);
+    //     infoLog["depth_height"] = stoi(row[8]);
+    // }
 
-    f.close();
+    // f.close();
 
     // initialize map drawing.
-    // printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-    // int map_width_meter, map_height_meter, map_res;
-    // cin >> map_width_meter >> map_height_meter >> map_res; 
-    // My_Map t(map_width_meter, map_height_meter, map_res);
     My_Map t(width, height, res);
 
-    // start replaying. 
+    // Main loop. Start replaying. 
     while (imgNum < num_files)
-    // for (; imgNum < num_files; imgNum++)
     {
         // prepare the color image. 
         img_suffix = "img_" + to_string(imgNum) + ".png";
@@ -1170,6 +1188,18 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         t.headingShow();
         t.mapShow();
 
+        // // Logging to debug. 
+        // ofstream f;
+        // f.open(DEBUG_FILE, ios::app | ios::out);
+        // f << to_string(imgNum) << ", " \
+        // << to_string(timeLog[imgNum]) << ", " \
+        // << to_string(mark) << ", " \
+        // << to_string(i) << ", " \
+        // << to_string(currentOdo.px) << ", " \
+        // << to_string(currentOdo.py) << ", " \
+        // << to_string(currentOdo.pz) << "\n";
+        // f.close();
+
         // Show the map and scene. 
         cv::putText(
             scene, 
@@ -1193,7 +1223,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 	    cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);
         cv::imshow(win2, t.tempMap);
-        char c = (char)cv::waitKey(100);
+        char c = (char)cv::waitKey(speed);
 
         if (c == 32 || c == 13 || TERMINATE == true)
         {
@@ -1202,15 +1232,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
             break;
         }
 
-        // reset the temporary map which is only used to display. 
-        t.tempMap = Mat();
-
-        if (c == 32 || c == 13 || TERMINATE == true)
-        {
-            printf("\n\nThe programme is terminated by keyboard. \n\n");
-            TERMINATE = true;
-            break;
-        }
+        // imgNum++;
 
         if (c == 100)
         {
@@ -1219,10 +1241,17 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
             isPressed = true;
         }
 
-        if (c == 97)
+        if (c == 119)
         {
-            printf("\n\nKey [A] is pressed, 10 frames backward. \n\n");
-            imgNum -= 10;
+            printf("\n\nKey [W] is pressed, speed up 5 times. \n\n");
+            speed /= 5;
+            isPressed = true;
+        }
+
+        if (c == 115)
+        {
+            printf("\n\nKey [S] is pressed, slow down 5 times. \n\n");
+            speed *= 5;
             isPressed = true;
         }
 
@@ -1737,6 +1766,7 @@ int delay_test(std::shared_ptr<Mike> node)
     std::ofstream f;
     Img ImgLog;
     double pc_time = 0.0, node_time = 0.0, camera_time = 0.0;
+    int serial_number = 0;
     
     // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
@@ -1842,13 +1872,15 @@ int delay_test(std::shared_ptr<Mike> node)
 
         mut.lock();
         node_time = node->odo_data.timestamp;
+        serial_number = node->odo_data.serial_number;
         mut.unlock();
 
         // Logging the delay. 
         f.open(l.debug_path, ios::app | ios::out);
         f << to_string(camera_time) << ", " \
         << to_string(pc_time) << ", " \
-        << to_string(node_time) << "\n";
+        << to_string(node_time) << ", " \
+        << to_string(serial_number) << "\n";
         f.close();
 
         // Draw the trajectory. 

@@ -89,6 +89,7 @@ void Mike::odolog()
     string path = Mike::log_path + "/OdoLog.csv";
     f.open(path, ios::out | ios::app);
     f << to_string(Mike::odo_data.timestamp) << ", " \
+	<< to_string(Mike::odo_data.serial_number) << ", " \
     << to_string(Mike::odo_data.px) << ", " << to_string(Mike::odo_data.py) << ", " \
     << to_string(Mike::odo_data.pz) << ", " << to_string(Mike::odo_data.ox) << ", " \
     << to_string(Mike::odo_data.oy) << ", " << to_string(Mike::odo_data.oz) << ", " \
@@ -110,6 +111,7 @@ void Mike::odo_callback(const nav_msgs::msg::Odometry &msg)
     Mike::odo_data.oy = msg.pose.pose.orientation.y;
     Mike::odo_data.oz = msg.pose.pose.orientation.z;
     Mike::odo_data.ow = msg.pose.pose.orientation.w;
+	Mike::odo_data.serial_number = stoi(msg.header.frame_id);
     odolog();
     mut.unlock();
 
@@ -202,6 +204,7 @@ Logging::Logging(std::shared_ptr<Mike> node)
     std::mutex mut;
     mut.lock();
 
+	main_folder = node->log_path;
 	img_folder = node->log_path + "/Images";
     traj_folder = node->log_path + "/Trajectories";
     depth_folder = node->log_path + "/Depth";
@@ -210,7 +213,6 @@ Logging::Logging(std::shared_ptr<Mike> node)
     info_path = node->log_path + "/Info.txt";
     bag_path = node->log_path + "/record.bag";
     time_path = node->log_path + "/TimeLog.csv";
-    string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
 
     traj_final_path = node->log_path + "/Trajectory_final.png";
     map_final_path = node->log_path + "/Map_final.png";
@@ -331,6 +333,8 @@ void Logging::createDir(string mode)
 			{
 				printf("\n\nDirectory creation is failed. \n\n");
 			}
+
+    		debug_path = Logging::main_folder + "/delay_test_scene_and_trajectory.csv";
             break;
         }
 

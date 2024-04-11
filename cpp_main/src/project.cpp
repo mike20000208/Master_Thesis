@@ -17,14 +17,65 @@ int main(int argc, char * argv[])
         {"map_demo", 9},
         {"delay_test", 10}, 
         {"field_trip", 11}};
+    vector<string> temp_commands{
+        "replay_from_images", 
+        "trajectory", 
+        "stream_map", 
+        "single_frame_map", 
+        "None", 
+        "debug",
+        "replay_from_odometry", 
+        "communication", 
+        "map_demo", 
+        "delay_test", 
+        "field_trip"};
     
     if (argc > 1)
     {
-        command = argv[1];
+        bool isWrong = true;
+
+        // check if the command is correct. 
+        for (int i = 0; i < temp_commands.size(); i++)
+        {
+            if (argv[1] == temp_commands[i])
+            {
+                isWrong = false;
+                break;
+            }
+        }
+
+        if (!isWrong)
+        {
+            command = argv[1];
+        }
+        else
+        {
+            printf("\n\nPlease select one of below commands after planner: \n\n");
+
+            for (int i = 0; i < temp_commands.size(); i++)
+            {
+                printf("%d  ->  %s \n\n", i, temp_commands[i].c_str());
+            }
+
+            int temp_command;
+            cin >> temp_command;
+            command = temp_commands[temp_command];
+        }
+
     }
     else
     {
-        command = "None";
+        // command = "None";
+        printf("\nPlease select one of below commands after planner: \n\n");
+
+        for (int i = 0; i < temp_commands.size(); i++)
+        {
+            printf("%d  ->  %s \n\n", i, temp_commands[i].c_str());
+        }
+
+        int temp_command;
+        cin >> temp_command;
+        command = temp_commands[temp_command];
     }
     
     switch (commands[command])
@@ -65,17 +116,11 @@ int main(int argc, char * argv[])
                     }
                     int folder;
                     cin >> folder;
-                    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-                    int map_width_meter, map_height_meter, map_res;
-                    cin >> map_width_meter >> map_height_meter >> map_res; 
-                    replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
+                    replay_from_images(folders[folder]);
                 }
                 else
                 {
-                    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-                    int map_width_meter, map_height_meter, map_res;
-                    cin >> map_width_meter >> map_height_meter >> map_res; 
-                    replay_from_odometry(argv[2], map_width_meter, map_height_meter, map_res);
+                    replay_from_images(argv[2]);
                 }
             }
             else
@@ -89,10 +134,7 @@ int main(int argc, char * argv[])
                 }
                 int folder;
                 cin >> folder;
-                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-                int map_width_meter, map_height_meter, map_res;
-                cin >> map_width_meter >> map_height_meter >> map_res; 
-                replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
+                replay_from_images(folders[folder]);
             }
 
             break;
@@ -252,13 +294,22 @@ int main(int argc, char * argv[])
         {
             // Test replay from odometry logs. 
             bool isWrong = true;
+            int i = 0;
+
+            // See how many folders are there in the destinaiton. 
+            vector<string> folders;
+            std::filesystem::path P {REPLAY_FOLDER};
+            for (auto& p : std::filesystem::directory_iterator(P))
+            {
+                folders.push_back(p.path().filename());
+            }
+
             if (argc > 2)
             {
-                std::filesystem::path P {REPLAY_FOLDER};
-
-                for (auto& p : std::filesystem::directory_iterator(P))
+                // Check if the input folder name is correct. 
+                for (i = 0; i < folders.size(); i++)
                 {
-                    if (argv[2] == p.path().filename())
+                    if (argv[2] == folders[i])
                     {
                         isWrong = false;
                         break;
@@ -269,14 +320,16 @@ int main(int argc, char * argv[])
                 {
                     printf("\n\nPlease type the correct folder name you want to replay! \n\n");
                     printf("The available folder names are shown below: \n\n");
-                    int cnt = 1;
-                    std::filesystem::path P {REPLAY_FOLDER};
-
-                    for (auto& p : std::filesystem::directory_iterator(P))
+                    for (i = 0; i < folders.size(); i++)
                     {
-                        printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
-                        cnt ++;
+                        printf("%d  ->  %s \n\n", i, folders[i].c_str());
                     }
+                    int folder;
+                    cin >> folder;
+                    printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                    int map_width_meter, map_height_meter, map_res;
+                    cin >> map_width_meter >> map_height_meter >> map_res; 
+                    replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
                 }
                 else
                 {
@@ -291,14 +344,16 @@ int main(int argc, char * argv[])
             {
                 printf("\n\nPlease specify which folder you want to replay! \n\n");
                 printf("The available folder names are shown below: \n\n");
-                int cnt = 1;
-                std::filesystem::path P {REPLAY_FOLDER};
-
-                for (auto& p : std::filesystem::directory_iterator(P))
+                for (i = 0; i < folders.size(); i++)
                 {
-                    printf("%d  ->  %s \n\n", cnt, p.path().filename().c_str());
-                    cnt ++;
+                    printf("%d  ->  %s \n\n", i, folders[i].c_str());
                 }
+                int folder;
+                cin >> folder;
+                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                int map_width_meter, map_height_meter, map_res;
+                cin >> map_width_meter >> map_height_meter >> map_res; 
+                replay_from_odometry(folders[folder], map_width_meter, map_height_meter, map_res);
             }
 
             break;
