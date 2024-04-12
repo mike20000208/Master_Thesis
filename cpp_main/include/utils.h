@@ -58,6 +58,8 @@ using namespace std::filesystem;
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define MICRO 1e-6
+#define MILLI 1e-3
+#define CENTI 1e-2
 #define ODO_TOPIC "/my_odo"
 #define GPS_TOPIC "/fix"
 #define VEL_TOPIC "/capra/remote/direct_velocity"
@@ -336,6 +338,9 @@ public:
     // 
     double start_z = 0.0;
 
+    //
+    double height_threshold = 0.05; // meters. 
+
     // Slices within specific z range
 	vector<Slice> slices;  
 
@@ -377,6 +382,9 @@ public:
 
     //
     bool get_roughness(double z);  // for debug. (temporarily)
+
+    // 
+    bool get_height(double z);
 
     //
 	bool find_best_path();

@@ -184,8 +184,11 @@ int main(int argc, char * argv[])
             }
             else
             {
+                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                int map_width_meter, map_height_meter, map_res;
+                cin >> map_width_meter >> map_height_meter >> map_res; 
                 thread thread1 (Communication, node);
-                thread thread2 (stream_map_test, node, 100, 100, 10);
+                thread thread2 (stream_map_test, node, map_width_meter, map_height_meter, map_res);
                 thread1.join();
                 thread2.join();
             }
@@ -214,8 +217,11 @@ int main(int argc, char * argv[])
             }
             else
             {
+                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+                int map_width_meter, map_height_meter, map_res;
+                cin >> map_width_meter >> map_height_meter >> map_res; 
                 thread thread1 (Communication, node);
-                thread thread2 (single_frame_map_test, node, 100, 100, 10);
+                thread thread2 (single_frame_map_test, node, map_width_meter, map_height_meter, map_res);
                 thread1.join();
                 thread2.join();
             }

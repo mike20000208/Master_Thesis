@@ -544,27 +544,27 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // filter the depth map with z-value. 
 		filter.setInputCloud(cloud);
 		filter.setFilterFieldName("z");
-		filter.setFilterLimits(0, 3);
+		filter.setFilterLimits(0, 4);
 		filter.filter(*cloud_filtered);
 
-        // create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
-        Eigen::VectorXf* coef = new Eigen::VectorXf;
-        pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-        pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-        ransac.setDistanceThreshold(.01);
-        ransac.setMaxIterations(2500);
-        ransac.setProbability(.60);  // default value is 0.99. 
-        ransac.computeModel();
-        ransac.getInliers(inliers);
-        ransac.getModelCoefficients(*coef);
+        // // create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
+        // Eigen::VectorXf* coef = new Eigen::VectorXf;
+        // pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
+        // pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
+        // ransac.setDistanceThreshold(.01);
+        // ransac.setMaxIterations(2500);
+        // ransac.setProbability(.60);  // default value is 0.99. 
+        // ransac.computeModel();
+        // ransac.getInliers(inliers);
+        // ransac.getModelCoefficients(*coef);
 
-        // show the plane in dark green. (SampleConsensusModelPlane)
-        for (int n = 0; n < inliers.size(); n++)
-        {
-            cloud_filtered->points[inliers[n]].r = 0;
-            cloud_filtered->points[inliers[n]].g = 127;
-            cloud_filtered->points[inliers[n]].b = 0;
-        }
+        // // show the plane in dark green. (SampleConsensusModelPlane)
+        // for (int n = 0; n < inliers.size(); n++)
+        // {
+        //     cloud_filtered->points[inliers[n]].r = 0;
+        //     cloud_filtered->points[inliers[n]].g = 127;
+        //     cloud_filtered->points[inliers[n]].b = 0;
+        // }
 
         // // use another RANSAC object (SACSegmentation) to segment the plane. 
         // pcl::ModelCoefficients::Ptr coef(new pcl::ModelCoefficients);
@@ -587,40 +587,70 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // 	cloud_filtered->points[(*inliers).indices[n]].b = 0;
         // }
 
-        // calculate the roughness. 
-        Roughness R(*coef);
-        R.get_Roughness(*cloud_filtered);
+        // // calculate the roughness. 
+        // Roughness R(*coef);
+        // R.get_Roughness(*cloud_filtered);
 
-        // show the roughness on the pointcloud in red gradient. 
-        for (int i = 0; i < R.outliers.size(); i++)
-        {
-            (*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
-            (*cloud_filtered).points[R.outliers[i]].g = 0;
-            (*cloud_filtered).points[R.outliers[i]].b = 0;
-        }
+        // // show the roughness on the pointcloud in red gradient. 
+        // for (int i = 0; i < R.outliers.size(); i++)
+        // {
+        //     (*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
+        //     (*cloud_filtered).points[R.outliers[i]].g = 0;
+        //     (*cloud_filtered).points[R.outliers[i]].b = 0;
+        // }
 
-        // // calculate the best path. 
-        // Score S(cloud_filtered); 
-        // S.setSearchRange(3.0);
-        // S.setSearchStep(0.70);
-        // S.setSize(0.60);
-        // S.setStride(0.5 * S.size);
+        // calculate the best path. 
+        cv::Scalar rendering;
+        Score S(cloud_filtered); 
+        S.setStartZ(0.3);
+        S.setSearchRange(4.0);
+        S.setSearchStep(0.70);
+        S.setSize(0.60);
+        S.setStride(0.5 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
         // S.setDisWeight(1.80);
         // S.setAngleWeight(0.1);
 
-        // for (double z = 0.0; z < S.search_range; z += S.search_step)
-        // {
-        //     S.get_boundary(z);
-        //     S.get_slices(z);
-        //     S.get_score(z);
-        //     m.mapUpdate(S);
-        //     S.find_best_path();
-        // }
+        // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+        for (double z = 0.0; z < S.search_range; z += S.search_step)
+        {
+            S.get_boundary(z);
+            S.get_slices(z);
+            // S.get_score(z);
+            S.get_height(z);
 
-        m.headingShow();
+            for (int i = 0; i < S.slices.size(); i++)
+            {
+                if (S.slices[i].score <= S.height_threshold)
+                {
+                    rendering = cv::Scalar(0, 127, 0);
+                }
+                else
+                {
+                    rendering = cv::Scalar(127, 0, 0);
+                }
+
+                for (int j = 0; j < S.slices[i].indices.size(); j++)
+                {
+                    (*S.cloud).points[S.slices[i].indices[j]].r = rendering[0];
+                    (*S.cloud).points[S.slices[i].indices[j]].g = rendering[1];
+                    (*S.cloud).points[S.slices[i].indices[j]].b = rendering[2];
+                }
+            }
+
+            if (m.isMap)
+            {
+                m.mapUpdate(S);
+            }
+            // S.find_best_path();
+        }
+
+        // m.headingShow();
+        m.originShow();
+        m.mapShow();
         t.headingShow();
+        t.mapShow();
 
         // // show the best path in the point cloud. 
         // for (int k = 0; k < S.best_paths.size(); k++)
@@ -648,7 +678,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imwrite(l.map_path, m.tempMap);
 
         // visualization. 
-        pc_layers.push_back(cloud_filtered);
+        pc_layers.push_back(S.cloud);
+        // pc_layers.push_back(cloud_filtered);
         for (int i = 0; i < pc_layers.size(); i++)
         {
 			viewer->addPointCloud(
@@ -749,10 +780,10 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     rs2::points points;
     int stream_color_width = 1280;
     int stream_color_height = 720;
-    int stream_depth_width = 848;
-    int stream_depth_height = 480;
-    // int stream_depth_width = 1280;
-    // int stream_depth_height = 720;
+    // int stream_depth_width = 848;
+    // int stream_depth_height = 480;
+    int stream_depth_width = 1280;
+    int stream_depth_height = 720;
     int frame_rate = 30;
 
     if (isEnableFromFile)
@@ -855,7 +886,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // Filter the depth map with z-value. 
     filter.setInputCloud(cloud);
     filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 3);
+    filter.setFilterLimits(0, 4);
     filter.filter(*cloud_filtered);
 
     // // debug
@@ -863,16 +894,16 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // f << to_string(cloud_filtered->points.size()) << "\n";
     // f.close();
 
-    // Create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
-    pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-    pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-    ransac.setDistanceThreshold(.01);
-	ransac.setMaxIterations(2500);
-	ransac.setProbability(.99);  // default value is 0.99. 
-    ransac.setNumberOfThreads(2);
-	ransac.computeModel();
-	ransac.getInliers(inliers);
-	ransac.getModelCoefficients(*coef);
+    // // Create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
+    // pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
+    // pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
+    // ransac.setDistanceThreshold(.01);
+	// ransac.setMaxIterations(2500);
+	// ransac.setProbability(.99);  // default value is 0.99. 
+    // ransac.setNumberOfThreads(2);
+	// ransac.computeModel();
+	// ransac.getInliers(inliers);
+	// ransac.getModelCoefficients(*coef);
 
     // // debug
     // f.open(DEBUG_FILE, ios::out | ios::app);
@@ -890,13 +921,13 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	// seg.setInputCloud(cloud_filtered);
 	// seg.segment(*inliers, *coef);
 
-    // Show the plane in dark green. (SampleConsensusModelPlane)
-	for (int n = 0; n < inliers.size(); n++)
-	{
-		cloud_filtered->points[inliers[n]].r = 0;
-		cloud_filtered->points[inliers[n]].g = 127;
-		cloud_filtered->points[inliers[n]].b = 0;
-	}
+    // // Show the plane in dark green. (SampleConsensusModelPlane)
+	// for (int n = 0; n < inliers.size(); n++)
+	// {
+	// 	cloud_filtered->points[inliers[n]].r = 0;
+	// 	cloud_filtered->points[inliers[n]].g = 127;
+	// 	cloud_filtered->points[inliers[n]].b = 0;
+	// }
 
     // // Show the plane in dark green. (SACSegmentation)
 	// for (int n = 0; n < (*inliers).indices.size(); n++)
@@ -919,35 +950,37 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 	// 	(*cloud_filtered).points[R.outliers[i]].b = 0;
 	// }
 
-    // // Calculate the best path. 
-	// Score S(cloud_filtered); 
-    // S.setStartZ(0.7);
-	// S.setSearchRange(3.0);
-	// S.setSearchStep(0.70);
-	// S.setSize(0.60);
-	// S.setStride(0.5 * S.size);
+    // Calculate the best path. 
+	Score S(cloud_filtered); 
+    S.setStartZ(0.7);
+	S.setSearchRange(4.0);
+	S.setSearchStep(0.70);
+	S.setSize(0.60);
+	S.setStride(1.0 * S.size);
 	// S.setInlierWeight(0.70);
 	// S.setOutlierWeight(1.80);
 	// S.setDisWeight(1.80);
 	// S.setAngleWeight(0.1);
 
+    for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
     // for (double z = S.start_z; z < S.search_range; z += S.search_step)
-	// {
-	// 	S.get_boundary(z);
-	// 	S.get_slices(z);
-	// 	S.get_score(z, false);
+	{
+		S.get_boundary(z);
+		S.get_slices(z);
+		// S.get_score(z, false);
+        S.get_height(z);
 
-    //     if (m.isMap)
-    //     {
-    //         m.mapUpdate(S);
-    //     }
+        if (m.isMap)
+        {
+            m.mapUpdate(S);
+        }
 
-	// 	S.find_best_path();
-	// }
+		// S.find_best_path();
+	}
 
     // Show the heading of the robot, also as an indicator of the robot. 
-    m.headingShow();
-    // m.originShow();
+    // m.headingShow();
+    m.originShow();
     m.mapShow();
 
 	// // Show the best path in the point cloud. 

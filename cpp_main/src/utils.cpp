@@ -582,42 +582,54 @@ void My_Map::sliceProject(Score S, int index)
 		top_left_img = My_Map::map2img(top_left_map);
 		bottom_right_img = My_Map::map2img(bottom_right_map);
 
-		// draw the area as a rectangle on the map. (rendering with the score in green-scale)
-		int lowG = 150;
-		int highG = 255;
-		int g = 0;
-		g = ((S.slices[index].score - S.minScore) / (S.maxScore - S.minScore)) * (highG - lowG) + lowG;
+		// // draw the area as a rectangle on the map. (rendering with the score in green-scale)
+		// int lowG = 130;
+		// int highG = 255;
+		// int g = 0;
+		// g = ((S.slices[index].score - S.maxScore) / (S.minScore - S.maxScore)) * (highG - lowG) + lowG;
+		// // g = ((S.slices[index].score - S.minScore) / (S.maxScore - S.minScore)) * (highG - lowG) + lowG;
+		// cv::rectangle(
+		// 	My_Map::map_,
+		// 	cv::Point(top_left_img.x, top_left_img.y),
+		// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
+		// 	cv::Scalar(0, g, 0),
+		// 	-1
+		// );
+
+		// draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
+		// double threshold = 0.05;
+		cv::Scalar color;
+
+		if (S.slices[index].score <= S.height_threshold)
+		{
+			color = cv::Scalar(0, 127, 0);
+			// cv::rectangle(
+			// 	My_Map::map_,
+			// 	cv::Point(top_left_img.x, top_left_img.y),
+			// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
+			// 	cv::Scalar(0, 127, 0),
+			// 	-1
+			// );
+		}
+		else
+		{
+			color = cv::Scalar(0, 0, 127);
+			// cv::rectangle(
+			// 	My_Map::map_,
+			// 	cv::Point(top_left_img.x, top_left_img.y),
+			// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
+			// 	cv::Scalar(0, 0, 127),
+			// 	-1
+			// );
+		}
+
 		cv::rectangle(
 			My_Map::map_,
 			cv::Point(top_left_img.x, top_left_img.y),
 			cv::Point(bottom_right_img.x, bottom_right_img.y),
-			cv::Scalar(0, g, 0),
+			color,
 			-1
 		);
-
-		// draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
-		double threshold = 0.5;
-
-		if (S.slices[index].score >= threshold)
-		{
-			cv::rectangle(
-				My_Map::map_,
-				cv::Point(top_left_img.x, top_left_img.y),
-				cv::Point(bottom_right_img.x, bottom_right_img.y),
-				cv::Scalar(0, 127, 0),
-				-1
-			);
-		}
-		else
-		{
-			cv::rectangle(
-				My_Map::map_,
-				cv::Point(top_left_img.x, top_left_img.y),
-				cv::Point(bottom_right_img.x, bottom_right_img.y),
-				cv::Scalar(0, 0, 127),
-				-1
-			);
-		}
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -920,7 +932,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 */
 void My_Map::mapUpdate(Score S)
 {
-	double scale = 1.5;
+	double scale = 1.0;
     for (int i = 0; i < S.slices.size(); i++)
 	{
 		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
@@ -1555,6 +1567,64 @@ bool Score::get_roughness(double z)
 
 
 /**
+ * @brief 
+ * @param z
+*/
+bool Score::get_height(double z)
+{
+	bool is_Zero = false;
+	double height = 0.0;
+
+	ofstream f;
+	f.open(DEBUG_FILE, ios::app | ios::out);
+
+	if (Score::slices.size() != 0)
+	{
+		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
+		{
+			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
+			{
+				height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
+			}
+
+			height /= (double)Score::slices[i].indices.size();  // take average height. 
+			Score::slices[i].score = height;
+			height = 0.0;  // reset. 
+
+			// update the minScore and maxScore. 
+			if (Score::slices[i].score > Score::maxScore)
+			{
+				Score::maxScore = Score::slices[i].score;
+			}
+
+			if (Score::slices[i].score < Score::minScore)
+			{
+				Score::minScore = Score::slices[i].score;
+			}
+
+			// logging the score data to debug. 
+			f << to_string(z) << ", " \
+			<< to_string(Score::minX) << ", " \
+			<< to_string(Score::maxX) << ", " \
+			<< to_string(i) << ", " \
+			<< to_string(Score::slices[i].centroid[0]) << ", " \
+			<< to_string(Score::slices[i].centroid[1]) << ", " \
+			<< to_string(Score::slices[i].centroid[2]) << ", " \
+			<< to_string(Score::slices[i].score) << ", " \
+			<< to_string(Score::slices[i].indices.size()) << "\n";
+		}
+		f.close();
+		return is_Zero;
+	}
+	else
+	{
+		return !is_Zero;
+	}
+}
+
+
+
+/**
  * @brief Find the best path in the second slices. 
 */
 bool Score::find_best_path()
@@ -1644,16 +1714,52 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 	cloud->is_dense = false;
 	cloud->points.resize(points.size());
 	auto vert = points.get_vertices();
+	double theta = deg2rad(14.42);  // inclination of camera. 
+	double temp_x = 0.0, temp_y = 0.0, temp_z = 0.0;  // temp values for coordinates transformation. 
+
+	// // Debug
+	// ofstream f;
 
 	for (auto& p : cloud->points)
 	{
+		// f.open(DEBUG_FILE, ios::app | ios::out);
 		p.x = vert->x * (-1);
 		p.y = vert->y * (-1);
 		p.z = vert->z;
+
+		temp_x = p.x;
+		temp_y = p.y;
+		temp_z = p.z;
+
+		// p.x = sin(theta) * temp_y + cos(theta) * temp_z + 15e-3;
+		// p.y = temp_x;
+		// p.z = cos(theta) * temp_y - sin(theta) * temp_z + 27e-3;
+
+		p.y = cos(theta) * temp_y - sin(theta) * temp_z;
+		p.z = sin(theta) * temp_y + cos(theta) * temp_z;
+
+		p.y += 60 * CENTI;
+		p.z += 15 * CENTI;
+
+		// f << to_string(p.x) << ", " \
+		// << to_string(p.y) << ", " \
+		// << to_string(p.z) << "\n";
+
+		// f << to_string(temp_x) << ", " \
+		// << to_string(temp_y) << ", " \
+		// << to_string(temp_z) << ", " \
+		// << to_string(p.x) << ", " \
+		// << to_string(p.y) << ", " \
+		// << to_string(p.z) << "\n";
+
+		// p.r = 0;
+		// p.g = 127;
+		// p.b = 0;
 		p.r = 255;
 		p.g = 255;
 		p.b = 255;
 		vert++;
+		// f.close();
 	}
 
 	return cloud;
