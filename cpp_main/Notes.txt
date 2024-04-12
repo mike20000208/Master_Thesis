@@ -2,6 +2,7 @@
 
     1. The current probleem is that the RANSAC DOESN'T WORK! 
 
+
 2024/04/06
 
     1. Looks like the distance threshold does effect the performance of RANSAC-based plane segmentation. 
@@ -9,3 +10,10 @@
     2. However, the RANSAC is really UNSTABLE!!!
 
     3. How to make RANSAC STABLE??????
+
+
+2024/04/12
+
+    1. The reset situation seems to be random. 
+
+    
