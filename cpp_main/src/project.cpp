@@ -197,7 +197,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command [" << argv[1] << "] is used. \n";
+            f << "Command [" << temp_commands[3] << "] is used. \n";
             f.close(); 
             break;
         }

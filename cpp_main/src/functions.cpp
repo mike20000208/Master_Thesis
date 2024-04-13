@@ -399,24 +399,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
     Logging l(node);
-    l.createDir("stream_test");
-    // string img_folder = node->log_path + "/Images";
-    // string traj_folder = node->log_path + "/Trajectories";
-    // string depth_folder = node->log_path + "/Depth";
-    // string map_folder = node->log_path + "/Map";
-    // string info_path = node->log_path + "/Info.txt";
-    // string bag_path = node->log_path + "/record.bag";
-    // string time_path = node->log_path + "/TimeLog.csv";
-    // string traj_final_path = node->log_path + "/Trajectory_final.png";
-    // string map_final_path = node->log_path + "/Map_final.png";
-    // string traj_suffix;
-    // string img_suffix;
-    // string depth_suffix;
-    // string map_suffix;
-    // string img_path;
-    // string traj_path;
-    // string depth_path;
-    // string map_path;
+    l.createDir("stream_map");
     
     // initialize rs2 objects. 
     rs2::pipeline p;
@@ -474,19 +457,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     Img ImgLog;
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
-
-    // // create the log folders. 
-    // if (create_directories(img_folder) && 
-    // create_directories(traj_folder) && 
-    // create_directories(depth_folder) && 
-    // create_directories(map_folder))
-    // {
-    //     printf("\n\nDirectories are created. \n\n");
-    // }
-    // else
-    // {
-    //     printf("\n\nDirectory creation is failed. \n\n");
-    // }
 
     // start the pipeline. 
     p.start(cfg);
@@ -547,64 +517,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 		filter.setFilterLimits(0, 4);
 		filter.filter(*cloud_filtered);
 
-        // // create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
-        // Eigen::VectorXf* coef = new Eigen::VectorXf;
-        // pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-        // pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-        // ransac.setDistanceThreshold(.01);
-        // ransac.setMaxIterations(2500);
-        // ransac.setProbability(.60);  // default value is 0.99. 
-        // ransac.computeModel();
-        // ransac.getInliers(inliers);
-        // ransac.getModelCoefficients(*coef);
-
-        // // show the plane in dark green. (SampleConsensusModelPlane)
-        // for (int n = 0; n < inliers.size(); n++)
-        // {
-        //     cloud_filtered->points[inliers[n]].r = 0;
-        //     cloud_filtered->points[inliers[n]].g = 127;
-        //     cloud_filtered->points[inliers[n]].b = 0;
-        // }
-
-        // // use another RANSAC object (SACSegmentation) to segment the plane. 
-        // pcl::ModelCoefficients::Ptr coef(new pcl::ModelCoefficients);
-	    // pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-        // pcl::SACSegmentation<pcl::PointXYZRGB> seg;
-        // seg.setModelType(pcl::SACMODEL_PLANE);
-        // seg.setMethodType(pcl::SAC_RRANSAC);
-        // // seg.setMethodType(pcl::SAC_RANSAC);
-        // seg.setDistanceThreshold(0.10);
-        // seg.setProbability(.80);
-        // seg.setMaxIterations(3000);
-        // seg.setInputCloud(cloud_filtered);
-        // seg.segment(*inliers, *coef);
-
-        // // Show the plane in dark green. (SACSegmentation)
-        // for (int n = 0; n < (*inliers).indices.size(); n++)
-        // {
-        // 	cloud_filtered->points[(*inliers).indices[n]].r = 0;
-        // 	cloud_filtered->points[(*inliers).indices[n]].g = 127;
-        // 	cloud_filtered->points[(*inliers).indices[n]].b = 0;
-        // }
-
-        // // calculate the roughness. 
-        // Roughness R(*coef);
-        // R.get_Roughness(*cloud_filtered);
-
-        // // show the roughness on the pointcloud in red gradient. 
-        // for (int i = 0; i < R.outliers.size(); i++)
-        // {
-        //     (*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
-        //     (*cloud_filtered).points[R.outliers[i]].g = 0;
-        //     (*cloud_filtered).points[R.outliers[i]].b = 0;
-        // }
-
         // calculate the best path. 
         cv::Scalar rendering;
         Score S(cloud_filtered); 
-        S.setStartZ(0.3);
-        S.setSearchRange(4.0);
-        S.setSearchStep(0.70);
+        S.setStartZ(0.0);
+        S.setSearchRange(3.5);
+        S.setSearchStep(0.50);
         S.setSize(0.60);
         S.setStride(0.5 * S.size);
         // S.setInlierWeight(0.70);
@@ -612,39 +530,53 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // S.setDisWeight(1.80);
         // S.setAngleWeight(0.1);
 
-        // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-        for (double z = 0.0; z < S.search_range; z += S.search_step)
+        S.rendering();
+
+        for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
         {
             S.get_boundary(z);
             S.get_slices(z);
-            // S.get_score(z);
-            S.get_height(z);
-
-            for (int i = 0; i < S.slices.size(); i++)
-            {
-                if (S.slices[i].score <= S.height_threshold)
-                {
-                    rendering = cv::Scalar(0, 127, 0);
-                }
-                else
-                {
-                    rendering = cv::Scalar(127, 0, 0);
-                }
-
-                for (int j = 0; j < S.slices[i].indices.size(); j++)
-                {
-                    (*S.cloud).points[S.slices[i].indices[j]].r = rendering[0];
-                    (*S.cloud).points[S.slices[i].indices[j]].g = rendering[1];
-                    (*S.cloud).points[S.slices[i].indices[j]].b = rendering[2];
-                }
-            }
-
+            S.get_score(z);
             if (m.isMap)
             {
                 m.mapUpdate(S);
             }
-            // S.find_best_path();
+
         }
+
+        // // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+        // for (double z = 0.0; z < S.search_range; z += S.search_step)
+        // {
+        //     S.get_boundary(z);
+        //     S.get_slices(z);
+        //     // S.get_score(z);
+        //     S.get_height(z);
+
+        //     for (int i = 0; i < S.slices.size(); i++)
+        //     {
+        //         if (S.slices[i].score <= S.height_threshold)
+        //         {
+        //             rendering = cv::Scalar(0, 127, 0);
+        //         }
+        //         else
+        //         {
+        //             rendering = cv::Scalar(127, 0, 0);
+        //         }
+
+        //         for (int j = 0; j < S.slices[i].indices.size(); j++)
+        //         {
+        //             (*S.cloud).points[S.slices[i].indices[j]].r = rendering[0];
+        //             (*S.cloud).points[S.slices[i].indices[j]].g = rendering[1];
+        //             (*S.cloud).points[S.slices[i].indices[j]].b = rendering[2];
+        //         }
+        //     }
+
+        //     if (m.isMap)
+        //     {
+        //         m.mapUpdate(S);
+        //     }
+        //     // S.find_best_path();
+        // }
 
         // m.headingShow();
         m.originShow();

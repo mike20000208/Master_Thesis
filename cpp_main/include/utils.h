@@ -12,6 +12,7 @@
 #include <mutex>
 #include <cmath>
 #include <ctime>
+#include <algorithm>
 
 #include "time.h"
 #include "math.h"
@@ -321,6 +322,9 @@ public:
     // Stride along x-direction, window size
 	double stride = 0.3, size = 0.6;  
 
+    // 
+    double start_z = 0.0;
+
     // Step along z-direction
 	double search_step = 1.0;  
 
@@ -330,16 +334,19 @@ public:
     // Number of slice along x-direction
 	double num_slices = 0;  
 
-    // Flag to check whether the prerequisitions are fulfilled. 
-	bool found_boundary = false, found_roi = false;
+    // Flag to check whether the prerequisition is fulfilled. 
+	bool found_boundary = false;
+
+    // Tunable parameter of the scoring system. 
 	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr roi;
 
-    // 
-    double start_z = 0.0;
+    // Threshold of height that can be seen as traversable. (in meters)
+    double height_threshold = 0.05;
 
-    //
-    double height_threshold = 0.05; // meters. 
+    // Pointcloud basic statistics. 
+    vector<double> height;
+    double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
+    double maxHeight = 0.0, minHeight = 0.0;
 
     // Slices within specific z range
 	vector<Slice> slices;  
@@ -385,6 +392,21 @@ public:
 
     // 
     bool get_height(double z);
+
+    //
+    void get_maxMin();
+
+    //
+    void rendering();
+
+    //
+    static double get_mean(vector<double> data);
+
+    //
+    static double get_median(vector<double> data);
+
+    //
+    static double get_mode(vector<double> data);
 
     //
 	bool find_best_path();

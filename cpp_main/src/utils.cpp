@@ -600,28 +600,22 @@ void My_Map::sliceProject(Score S, int index)
 		// double threshold = 0.05;
 		cv::Scalar color;
 
-		if (S.slices[index].score <= S.height_threshold)
+		if (S.slices[index].score != 0.0)
 		{
-			color = cv::Scalar(0, 127, 0);
-			// cv::rectangle(
-			// 	My_Map::map_,
-			// 	cv::Point(top_left_img.x, top_left_img.y),
-			// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
-			// 	cv::Scalar(0, 127, 0),
-			// 	-1
-			// );
+			if (S.slices[index].score >= 0.8)
+			{
+				color = cv::Scalar(0, 127, 0);
+			}
+			else
+			{
+				color = cv::Scalar(0, 0, 127);
+			}
 		}
 		else
 		{
-			color = cv::Scalar(0, 0, 127);
-			// cv::rectangle(
-			// 	My_Map::map_,
-			// 	cv::Point(top_left_img.x, top_left_img.y),
-			// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
-			// 	cv::Scalar(0, 0, 127),
-			// 	-1
-			// );
+			color = cv::Scalar(0, 0, 0);
 		}
+
 
 		cv::rectangle(
 			My_Map::map_,
@@ -1132,15 +1126,18 @@ Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
 {
 	cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::copyPointCloud(*incloud, *cloud);
-	vector<int> X;
 
-	// // calculate the boudary for get_slice_1(). 
-	// for (auto& p : (*cloud).points)
-	// {
-	// 	X.push_back(p.x);
-	// }
+	// Calculate the height statistics. 
+	for (auto& p : (*cloud).points)
+	{
+		Score::height.push_back(p.y);
+	}
 
-	// initialize the maximum and minimum score of the whole scanned region. 
+	Score::height_mean = Score::get_mean(Score::height);
+	Score::height_median = Score::get_median(Score::height);
+	Score::height_mode = Score::get_mode(Score::height);
+
+	// Initialize the maximum and minimum score of the whole scanned region. 
 	Score::minScore = 999999;
 	Score::maxScore = -999999;
 }
@@ -1389,9 +1386,9 @@ bool Score::get_score(double z, bool have_dst)
 	int num_inliers = 0, num_outliers = 0;
 	double percentage = 0.0;
 
-	// want to log the score data. 
-	std::ofstream f;
-	f.open(DEBUG_FILE, ios::out | ios::app);
+	// // want to log the score data. 
+	// std::ofstream f;
+	// f.open(DEBUG_FILE, ios::out | ios::app);
 
 	if (Score::slices.size() != 0)
 	{
@@ -1401,10 +1398,10 @@ bool Score::get_score(double z, bool have_dst)
 			{
 				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
 				{
-					Score::slices[i].score += Score::inlier_weight;
+					// Score::slices[i].score += Score::inlier_weight;
 
-					// // test new score system. 
-					// num_inliers++;
+					// test new score system. 
+					num_inliers++;
 				}
 				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
 					(*Score::cloud).points[Score::slices[i].indices[j]].b == 0)  // outliers
@@ -1412,11 +1409,11 @@ bool Score::get_score(double z, bool have_dst)
 					// // the oldest version. 
 					// Score::slices[i].score -= 0.3;
 
-					Score::slices[i].score +=
-						((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
+					// Score::slices[i].score +=
+					// 	((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
 					
-					// // test new score system. 
-					// num_outliers++;
+					// test new score system. 
+					num_outliers++;
 				}
 				else
 				{
@@ -1425,9 +1422,12 @@ bool Score::get_score(double z, bool have_dst)
 				}
 			}
 
-			// // check the percentage of inliers. 
-			// percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
-			// Score::slices[i].score = percentage;
+			// check the percentage of inliers. 
+			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
+			Score::slices[i].score = percentage;
+			num_inliers = 0;
+			num_outliers = 0;
+			percentage = 0.0;
 
 			// // ckeck if it's the first iteration in z range. 
 			// if (z == Score::start_z + Score::search_step)
@@ -1438,49 +1438,49 @@ bool Score::get_score(double z, bool have_dst)
 			// 	}
 			// }
 
-			// normalize the score by the number of points. 
-			Score::slices[i].score = (Score::slices[i].score) / (Score::slices[i].indices.size());
+			// // normalize the score by the number of points. 
+			// Score::slices[i].score = (Score::slices[i].score) / (Score::slices[i].indices.size());
 
-			// check the distance between currrnt slice and the best slice from the last search. 
-			if (Score::best_paths.size() != 0)
-			{
-				double distance = get_distance(Score::best_paths[Score::best_paths.size() - 1].centroid, Score::slices[i].centroid);
-				double maxD = sqrt(pow(Score::search_step, 2) + pow(Score::x_len, 2));
-				double minD = Score::search_step;
-				distance = (distance - minD) / (maxD - minD);
-				Score::slices[i].score -= distance * Score::dis_weight;
-			}
+			// // check the distance between currrnt slice and the best slice from the last search. 
+			// if (Score::best_paths.size() != 0)
+			// {
+			// 	double distance = get_distance(Score::best_paths[Score::best_paths.size() - 1].centroid, Score::slices[i].centroid);
+			// 	double maxD = sqrt(pow(Score::search_step, 2) + pow(Score::x_len, 2));
+			// 	double minD = Score::search_step;
+			// 	distance = (distance - minD) / (maxD - minD);
+			// 	Score::slices[i].score -= distance * Score::dis_weight;
+			// }
 
-			// if have destination to go, then take it into consideration when calculating the score. 
-			if (have_dst)
-			{
-				double angle = get_angle(Score::slices[i].centroid);
-				Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
-			}
+			// // if have destination to go, then take it into consideration when calculating the score. 
+			// if (have_dst)
+			// {
+			// 	double angle = get_angle(Score::slices[i].centroid);
+			// 	Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
+			// }
 
-			// update the minScore and maxScore. 
-			if (Score::slices[i].score > Score::maxScore)
-			{
-				Score::maxScore = Score::slices[i].score;
-			}
+			// // update the minScore and maxScore. 
+			// if (Score::slices[i].score > Score::maxScore)
+			// {
+			// 	Score::maxScore = Score::slices[i].score;
+			// }
 
-			if (Score::slices[i].score < Score::minScore)
-			{
-				Score::minScore = Score::slices[i].score;
-			}
+			// if (Score::slices[i].score < Score::minScore)
+			// {
+			// 	Score::minScore = Score::slices[i].score;
+			// }
 
-			// logging the score data to debug. 
-			f << to_string(z) << ", " \
-			<< to_string(Score::minX) << ", " \
-			<< to_string(Score::maxX) << ", " \
-			<< to_string(i) << ", " \
-			<< to_string(Score::slices[i].centroid[0]) << ", " \
-			<< to_string(Score::slices[i].centroid[1]) << ", " \
-			<< to_string(Score::slices[i].centroid[2]) << ", " \
-			<< to_string(Score::slices[i].score) << ", " \
-			<< to_string(Score::slices[i].indices.size()) << "\n";
+			// // logging the score data to debug. 
+			// f << to_string(z) << ", " \
+			// << to_string(Score::minX) << ", " \
+			// << to_string(Score::maxX) << ", " \
+			// << to_string(i) << ", " \
+			// << to_string(Score::slices[i].centroid[0]) << ", " \
+			// << to_string(Score::slices[i].centroid[1]) << ", " \
+			// << to_string(Score::slices[i].centroid[2]) << ", " \
+			// << to_string(Score::slices[i].score) << ", " \
+			// << to_string(Score::slices[i].indices.size()) << "\n";
 		}
-		f.close();
+		// f.close();
 		return is_Zero;
 	}
 	else
@@ -1573,7 +1573,9 @@ bool Score::get_roughness(double z)
 bool Score::get_height(double z)
 {
 	bool is_Zero = false;
-	double height = 0.0;
+	// double height = 0.0;
+	vector<double> height;
+	double median = 0.0;
 
 	ofstream f;
 	f.open(DEBUG_FILE, ios::app | ios::out);
@@ -1584,12 +1586,24 @@ bool Score::get_height(double z)
 		{
 			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
 			{
-				height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
+				// height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
+				height.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
 			}
 
-			height /= (double)Score::slices[i].indices.size();  // take average height. 
-			Score::slices[i].score = height;
-			height = 0.0;  // reset. 
+			// height /= (double)Score::slices[i].indices.size();  // take average height.
+			sort(height.begin(), height.end());
+			if (height.size() % 2 == 0)
+			{
+				median = (height[height.size() / 2] + height[height.size() / 2 + 1]) / 2;
+			} 
+			else
+			{
+				median = height[height.size() / 2 + 1];
+			}
+			// Score::slices[i].score = height;
+			// height = 0.0;  // reset. 
+			Score::slices[i].score = median;
+			height.clear();
 
 			// update the minScore and maxScore. 
 			if (Score::slices[i].score > Score::maxScore)
@@ -1622,6 +1636,104 @@ bool Score::get_height(double z)
 	}
 }
 
+
+/**
+ * @brief Find the mean of a set of data saved in a vector. 
+ * @param
+*/
+double Score::get_mean(vector<double> data)
+{
+	double mean = 0.0;
+	double len = static_cast<double>(data.size());
+	double sum = reduce(data.begin(), data.end(), 0.0);
+	mean = sum / len;
+	return mean;
+}
+
+
+/**
+ * @brief Find the median of a set of data saved in a vector. 
+ * @param
+*/
+double Score::get_median(vector<double> data)
+{
+	double median = 0.0;
+	int len = static_cast<int>(data.size());
+	sort(data.begin(), data.end());
+
+	if (len % 2 == 0)
+	{
+		median = (data[len / 2] + data[len / 2 + 1]) / 2.0;
+	}
+	else
+	{
+		median = data[len / 2 + 1];
+	}
+
+	return median;
+}
+
+
+/**
+ * @brief Find the mode of a set of data saved in a vector. 
+ * @param
+*/
+double Score::get_mode(vector<double> data)
+{
+	double mode = 0.0;
+	unordered_map<double, int> frequency;
+	int maxFrequency = 0;
+
+	for (int i = 0; i < data.size(); i++)
+	{
+		frequency[data[i]]++;
+	}
+
+	for (auto& pair : frequency)
+	{
+		if (pair.second > maxFrequency)
+		{
+			maxFrequency = pair.second;
+			mode = pair.first;
+		}
+	}
+
+	return mode;
+}
+
+
+/**
+ * @brief Find the max and min height of the pointcloud. 
+*/
+void Score::get_maxMin()
+{
+	sort(Score::height.begin(), Score::height.end());
+	Score::maxHeight = height[height.size() - 1];
+	Score::minHeight = height[0];
+}
+
+
+/**
+ * @brief Find the max and min height of the pointcloud. 
+*/
+void Score::rendering()
+{
+	for (auto& p : (*Score::cloud).points)
+	{
+		if (p.y >= -0.10 && p.y <= 0.10)
+		{
+			p.r = 0;
+			p.g = 127;
+			p.b = 0;
+		}
+		else
+		{
+			p.r = 127;
+			p.g = 0;
+			p.b = 0;
+		}
+	}
+}
 
 
 /**
@@ -1738,7 +1850,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 		p.y = cos(theta) * temp_y - sin(theta) * temp_z;
 		p.z = sin(theta) * temp_y + cos(theta) * temp_z;
 
-		p.y += 60 * CENTI;
+		p.y += 65 * CENTI;
 		p.z += 15 * CENTI;
 
 		// f << to_string(p.x) << ", " \
