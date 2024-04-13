@@ -30,3 +30,7 @@ int delay_test(std::shared_ptr<Mike> node);
 
 
 int field_trip(std::shared_ptr<Mike> node, int width, int height, int res);
+
+
+int simple_test();
+ 

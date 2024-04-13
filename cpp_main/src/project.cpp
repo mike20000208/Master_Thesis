@@ -273,26 +273,29 @@ int main(int argc, char * argv[])
             // // pointcloud debug
             // pointcloud_debug(stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
 
-            // map projection debug
-            rclcpp::init(argc, argv);
-            std::shared_ptr<Mike> node = std::make_shared<Mike>();
-            printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-            int map_width_meter, map_height_meter, map_res;
-            cin >> map_width_meter >> map_height_meter >> map_res; 
-            printf("\n\nPlease enter which projection mode you want to use: \n\n");
-            string mode;
-            cin >> mode;
-            thread thread1 (Communication, node);
-            thread thread2 (map_projection_debug, node, map_width_meter, map_height_meter, map_res, mode);
-            thread1.join();
-            thread2.join();
+            // // map projection debug
+            // rclcpp::init(argc, argv);
+            // std::shared_ptr<Mike> node = std::make_shared<Mike>();
+            // printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+            // int map_width_meter, map_height_meter, map_res;
+            // cin >> map_width_meter >> map_height_meter >> map_res; 
+            // printf("\n\nPlease enter which projection mode you want to use: \n\n");
+            // string mode;
+            // cin >> mode;
+            // thread thread1 (Communication, node);
+            // thread thread2 (map_projection_debug, node, map_width_meter, map_height_meter, map_res, mode);
+            // thread1.join();
+            // thread2.join();
 
-            // Write a note to specify which command is executed in this folder. 
-            string node_path = node->log_path + "/Mode.txt";
-            fstream f;
-            f.open(node_path, ios::out | ios::app);
-            f << "Command [" << argv[1] << "] is used. \n";
-            f.close(); 
+            // simple test 
+            simple_test();
+
+            // // Write a note to specify which command is executed in this folder. 
+            // string node_path = node->log_path + "/Mode.txt";
+            // fstream f;
+            // f.open(node_path, ios::out | ios::app);
+            // f << "Command [" << argv[1] << "] is used. \n";
+            // f.close(); 
             break;
         }
 

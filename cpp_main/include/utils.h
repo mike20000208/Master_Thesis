@@ -446,8 +446,13 @@ public:
     // Corners of projection area. Will be in camera frame first, then converted to map frame. follewed by being converted to image frame. 
     cv::Vec3d bottom_right_cam;
     cv::Vec3d top_left_cam;
+    cv::Vec3d center_cam;
     cv::Vec3d bottom_right_map;
     cv::Vec3d top_left_map;
+    cv::Vec3d center_map;
+    cv::Vec3d bottom_right_robot;
+    cv::Vec3d top_left_robot;
+    cv::Vec3d center_robot;
     // cv::Vec3i bottom_right_img;
     // cv::Vec3i top_left_img;
 

@@ -409,6 +409,10 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		width_pixel, 
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
+	if (isMap)
+	{
+		;
+	}
 	My_Map::isMap = isMap;
 }
 
@@ -490,27 +494,51 @@ Point2D My_Map::map2img(Point2D p)
 */
 void My_Map::cam2map()
 {
-	// convert the relative location of the corners into the map frame. 
-	My_Map::top_left_map[0] = My_Map::top_left_cam[2];
-	My_Map::top_left_map[1] = My_Map::top_left_cam[0];
-	My_Map::top_left_map[2] = My_Map::top_left_cam[1];
-	My_Map::bottom_right_map[0] = bottom_right_cam[2];
-	My_Map::bottom_right_map[1] = bottom_right_cam[0];
-	My_Map::bottom_right_map[2] = bottom_right_cam[1];
+	// Convert the corners from camera frame to robot frame. (in meter)
+	My_Map::top_left_robot[0] = My_Map::top_left_cam[2];
+	My_Map::top_left_robot[1] = My_Map::top_left_cam[0];
+	My_Map::top_left_robot[2] = My_Map::top_left_cam[1];
+	My_Map::bottom_right_robot[0] = My_Map::bottom_right_cam[2];
+	My_Map::bottom_right_robot[1] = My_Map::bottom_right_cam[0];
+	My_Map::bottom_right_robot[2] = My_Map::bottom_right_cam[1];
+	// My_Map::center_robot[0] = My_Map::center_cam[2];
+	// My_Map::center_robot[1] = My_Map::center_cam[0];
+	// My_Map::center_robot[2] = My_Map::center_cam[1];
 
-	// make the unit consistant. from meter to pixel. 
+	// Convert the corners from robot frame to map frame. (in meter)
+	My_Map::top_left_map[0] = cos(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
+	sin(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	(My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
+
+	My_Map::top_left_map[1] = -sin(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
+	cos(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	(My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
+
+	My_Map::top_left_map[2] = My_Map::top_left_robot[2];
+
+	My_Map::bottom_right_map[0] = cos(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
+	sin(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
+	(My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
+
+	My_Map::bottom_right_map[1] = -sin(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
+	cos(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
+	(My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
+
+	My_Map::bottom_right_map[2] = My_Map::bottom_right_robot[2];
+
+	// Make the unit consistant. from meter to pixel. 
 	My_Map::top_left_map *= My_Map::res;
 	My_Map::bottom_right_map *= My_Map::res;
 
-	// make it an absolute location in the map frame. 
-	My_Map::top_left_map += cv::Vec3d(
-		My_Map::currentPoint.x_pixel_map, 
-		My_Map::currentPoint.y_pixel_map, 
-		0);
-	My_Map::bottom_right_map += cv::Vec3d(
-		My_Map::currentPoint.x_pixel_map, 
-		My_Map::currentPoint.y_pixel_map, 
-		0);
+	// // Make it an absolute location in the map frame. 
+	// My_Map::top_left_map += cv::Vec3d(
+	// 	My_Map::currentPoint.x_pixel_map, 
+	// 	My_Map::currentPoint.y_pixel_map, 
+	// 	0);
+	// My_Map::bottom_right_map += cv::Vec3d(
+	// 	My_Map::currentPoint.x_pixel_map, 
+	// 	My_Map::currentPoint.y_pixel_map, 
+	// 	0);
 
 	// confirm the transformation is done. 
 	My_Map::isTransformed = true;
@@ -578,7 +606,7 @@ void My_Map::sliceProject(Score S, int index)
 			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
 		}
 
-		// transform the coordinates of the corners to image frame. 
+		// Convert the corners from map frame to image frame. 
 		top_left_img = My_Map::map2img(top_left_map);
 		bottom_right_img = My_Map::map2img(bottom_right_map);
 
@@ -602,7 +630,7 @@ void My_Map::sliceProject(Score S, int index)
 
 		if (S.slices[index].score != 0.0)
 		{
-			if (S.slices[index].score >= 0.8)
+			if (S.slices[index].score >= 0.6)
 			{
 				color = cv::Scalar(0, 127, 0);
 			}
@@ -616,11 +644,20 @@ void My_Map::sliceProject(Score S, int index)
 			color = cv::Scalar(0, 0, 0);
 		}
 
+		// cv::rectangle(
+		// 	My_Map::map_,
+		// 	cv::Point(top_left_img.x, top_left_img.y),
+		// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
+		// 	color,
+		// 	-1
+		// );
 
-		cv::rectangle(
+		cv::circle(
 			My_Map::map_,
-			cv::Point(top_left_img.x, top_left_img.y),
-			cv::Point(bottom_right_img.x, bottom_right_img.y),
+			cv::Point(
+				(top_left_img.x + bottom_right_img.x) / 2, 
+				(top_left_img.y + bottom_right_img.y) / 2),
+			1,
 			color,
 			-1
 		);
@@ -929,9 +966,15 @@ void My_Map::mapUpdate(Score S)
 	double scale = 1.0;
     for (int i = 0; i < S.slices.size(); i++)
 	{
+		// Still in camera frame. 
+		// My_Map::center_cam = S.slices[i].centroid;
 		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
 		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
+
+		// Convert to map frame. 
 		My_Map::cam2map();
+
+		// Convert to image frame. 
 		My_Map::sliceProject(S, i);
 	}
 }

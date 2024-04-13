@@ -523,7 +523,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         S.setStartZ(0.0);
         S.setSearchRange(3.5);
         S.setSearchStep(0.50);
-        S.setSize(0.60);
+        S.setSize(0.30);
         S.setStride(0.5 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
@@ -623,10 +623,14 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
                 to_string(i));
         }
 
-        cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
+        cv::resizeWindow(win1, cv::Size(image.cols / 2, image.rows / 2));
+        // cv::resizeWindow(win2, cv::Size(200, 200));
+        // cv::resizeWindow(win3, cv::Size(200, 200));
         cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
         cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
         cv::moveWindow(win1, 0, 0);
+        // cv::moveWindow(win2, 1000, 0);
+        // cv::moveWindow(win3, 1000, 500);
         cv::moveWindow(win2, (image.cols + 70), 0);
         cv::moveWindow(win3, (image.cols + 70), (m.map_.rows + 250));
         cv::imshow(win1, image);
@@ -2047,5 +2051,18 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         }
     }
 
+    return 0;
+}
+
+
+int simple_test()
+{
+    cv::Vec3d n = cv::Vec3d(1, 2, 3);
+    n += cv::Vec3d(2, 4, 6);
+    cout << "\n\n" << n << endl;
+    printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
+    n *= 3;
+    cout << "\n\n" << n << endl;
+    printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
     return 0;
 }
