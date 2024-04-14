@@ -450,9 +450,11 @@ public:
     cv::Vec3d bottom_right_cam;
     cv::Vec3d top_left_cam;
     cv::Vec3d center_cam;
+
     cv::Vec3d bottom_right_map;
     cv::Vec3d top_left_map;
     cv::Vec3d center_map;
+
     cv::Vec3d bottom_right_robot;
     cv::Vec3d top_left_robot;
     cv::Vec3d center_robot;
@@ -465,6 +467,12 @@ public:
 
     //
     bool isHeadingShown = false;
+
+    //
+    bool isRendered = false;
+
+    // 
+    bool isPosShown = false;
 
     // Constructor. 
     My_Map();
@@ -508,8 +516,17 @@ public:
     // Show the origin. 
     void originShow();
 
+    //
+    void renderingFromMiniMap();
+
+    // 
+    void posShow();
+
     // Show the map.
     void mapShow();
+
+    // 
+    void flagReset();
 
 };
 
@@ -574,4 +591,7 @@ Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
 
 
 int getFilesNum(string folder);
+
+
+double getDistance(vector<double> data);
 

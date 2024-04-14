@@ -221,7 +221,7 @@ int time_files_test()
  * 
  * @param folder_name the name of the recording folder. 
  */
-int replay_from_images(string folder_name)
+int replay_from_images(string folder_name, string mode)
 {
     // Initialize flag. 
     bool isPressed = false;
@@ -243,17 +243,26 @@ int replay_from_images(string folder_name)
     string folder = REPLAY_FOLDER + folder_name;
     string img_folder = folder + "/Images/";
     string traj_folder = folder + "/Trajectories/";
+    string map_folder = folder + "/Map/";
     string time_path = folder + "/TimeLog.csv";
-    string img_suffix, traj_suffix, img_full_path, traj_full_path;
+    string img_suffix, traj_suffix, map_suffix, img_full_path, traj_full_path, map_full_path;
 
     // initialize cv objects.
     cv::Mat scene;
     cv::Mat trajectory;
+    cv::Mat map;
     string win1 = "Scene";
     string win2 = "Trajectory";
+    string win3 = "Map";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
-    int img_width, traj_width, img_height, traj_height;
+    int img_width, traj_width, img_height, traj_height, map_width, map_height;
+
+    if (mode == "map")
+    {
+        cv::namedWindow(win3, WINDOW_NORMAL);
+        int map_width, map_height;
+    }
 
     // read TimeLog.csv. 
     f.open(time_path, ios::in);
@@ -293,14 +302,23 @@ int replay_from_images(string folder_name)
         scene = cv::imread(img_full_path, cv::IMREAD_COLOR);
         trajectory = cv::imread(traj_full_path, cv::IMREAD_COLOR);
 
-        if (scene.empty() || trajectory.empty())
+        if (mode == "map")
         {
-            printf("\n\nReading Error!  \n\n");
-            printf("\n\nCannot read images from directories [%s] or [%s]. \n\n", 
-            img_full_path.c_str(), 
-            traj_full_path.c_str());
-            break;
+            map_suffix = "map_" + to_string(count) + ".png";
+            map_full_path = map_folder + map_suffix;
+            map = cv::imread(map_full_path, cv::IMREAD_COLOR);
+            map_height = map.rows;
+            map_width = map.cols;
         }
+
+        // if (scene.empty() || trajectory.empty() || map.empty())
+        // {
+        //     printf("\n\nReading Error!  \n\n");
+        //     // printf("\n\nCannot read images from directories [%s] or [%s]. \n\n", 
+        //     // img_full_path.c_str(), 
+        //     // traj_full_path.c_str());
+        //     break;
+        // }
 
         // Visualization. 
         img_width = scene.cols;
@@ -329,6 +347,13 @@ int replay_from_images(string folder_name)
 	    cv::moveWindow(win2, img_width + 70, 0);
         cv::imshow(win1, scene);
         cv::imshow(win2, trajectory);
+
+        if (mode == "map")
+        {        
+            cv::resizeWindow(win3, map_width, map_height);
+            cv::moveWindow(win3, (img_width + 70), (traj_height + 250));
+            cv::imshow(win3, map);
+        }
         char c = (char)cv::waitKey(speed);
 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -458,7 +483,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
     // initialize other variables.
     Img ImgLog;
-    vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
     // start the pipeline. 
@@ -525,8 +549,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         Score S(cloud_filtered); 
         S.setStartZ(0.0);
         S.setSearchRange(3.5);
-        S.setSearchStep(0.50);
-        S.setSize(0.30);
+        S.setSearchStep(0.40);
+        S.setSize(0.40);
         S.setStride(0.5 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
@@ -539,7 +563,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         {
             S.get_boundary(z);
             S.get_slices(z);
-            S.get_score(z);
+            S.get_height(z);
+            // S.get_score(z);
             if (m.isMap)
             {
                 m.mapUpdate(S);
@@ -582,10 +607,14 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // }
 
         // m.headingShow();
+        m.renderingFromMiniMap();
         m.originShow();
+        m.posShow();
         m.mapShow();
+        m.flagReset();
         t.headingShow();
         t.mapShow();
+        t.flagReset();
 
         // // show the best path in the point cloud. 
         // for (int k = 0; k < S.best_paths.size(); k++)
@@ -652,7 +681,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         }
 
         // reset. 
-        inliers.clear();
         pc_layers.clear();
 		viewer->removeAllPointClouds();
     }
@@ -693,22 +721,6 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
     Logging l(node);
     l.createDir("single_frame_map");
-    // string img_folder = node->log_path + "/Images";
-    // string traj_folder = node->log_path + "/Trajectories";
-    // string depth_folder = node->log_path + "/Depth";
-    // string map_folder = node->log_path + "/Map";
-    // string info_path = node->log_path + "/Info.txt";
-    // string time_path = node->log_path + "/TimeLog.csv";
-    // string traj_final_path = node->log_path + "/Trajectory_final.png";
-    // string map_final_path = node->log_path + "/Map_final.png";
-    // string traj_suffix;
-    // string img_suffix;
-    // string depth_suffix;
-    // string map_suffix;
-    // string img_path;
-    // string traj_path;
-    // string depth_path;
-    // string map_path;
 
     // Initialize rs2 objects. 
     rs2::pipeline p;
@@ -755,24 +767,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Initialize other variables.
     Img ImgLog;
-    vector<int> inliers;
-    Eigen::VectorXf* coef = new Eigen::VectorXf;
-    // pcl::ModelCoefficients::Ptr coef(new pcl::ModelCoefficients);
-	// pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
-
-    // // Create the log folders. 
-    // if (create_directories(img_folder) && 
-    // create_directories(traj_folder) && 
-    // create_directories(depth_folder) && 
-    // create_directories(map_folder))
-    // {
-    //     printf("\n\nDirectories are created. \n\n");
-    // }
-    // else
-    // {
-    //     printf("\n\nDirectory creation is failed. \n\n");
-    // }
 
     // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
     p.start(cfg);
@@ -828,109 +823,57 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     filter.setFilterLimits(0, 4);
     filter.filter(*cloud_filtered);
 
-    // // debug
-    // f.open(DEBUG_FILE, ios::out | ios::app);
-    // f << to_string(cloud_filtered->points.size()) << "\n";
-    // f.close();
+    // calculate the best path. 
+    cv::Scalar rendering;
+    Score S(cloud_filtered); 
+    S.setStartZ(0.0);
+    S.setSearchRange(3.5);
+    S.setSearchStep(0.40);
+    S.setSize(0.40);
+    S.setStride(0.5 * S.size);
+    // S.setInlierWeight(0.70);
+    // S.setOutlierWeight(1.80);
+    // S.setDisWeight(1.80);
+    // S.setAngleWeight(0.1);
+       
+    S.rendering();
 
-    // // Create RANSAC object and compute. (SampleConsensusModelPlane and RandomSampleConsensus)
-    // pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>::Ptr model(new pcl::SampleConsensusModelPlane<pcl::PointXYZRGB>(cloud_filtered));
-    // pcl::RandomSampleConsensus<pcl::PointXYZRGB> ransac(model);
-    // ransac.setDistanceThreshold(.01);
-	// ransac.setMaxIterations(2500);
-	// ransac.setProbability(.99);  // default value is 0.99. 
-    // ransac.setNumberOfThreads(2);
-	// ransac.computeModel();
-	// ransac.getInliers(inliers);
-	// ransac.getModelCoefficients(*coef);
-
-    // // debug
-    // f.open(DEBUG_FILE, ios::out | ios::app);
-    // f << to_string(inliers.size()) << "\n";
-    // f.close();
-
-    // // use another RANSAC object (SACSegmentation) to segment the plane. 
-    // pcl::SACSegmentation<pcl::PointXYZRGB> seg;
-    // seg.setModelType(pcl::SACMODEL_PLANE);
-	// seg.setMethodType(pcl::SAC_RRANSAC);
-	// // seg.setMethodType(pcl::SAC_RANSAC);
-	// seg.setDistanceThreshold(0.10);
-    // seg.setProbability(.80);
-	// seg.setMaxIterations(3000);
-	// seg.setInputCloud(cloud_filtered);
-	// seg.segment(*inliers, *coef);
-
-    // // Show the plane in dark green. (SampleConsensusModelPlane)
-	// for (int n = 0; n < inliers.size(); n++)
+    // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+    // // for (double z = S.start_z; z < S.search_range; z += S.search_step)
 	// {
-	// 	cloud_filtered->points[inliers[n]].r = 0;
-	// 	cloud_filtered->points[inliers[n]].g = 127;
-	// 	cloud_filtered->points[inliers[n]].b = 0;
+	// 	S.get_boundary(z);
+	// 	S.get_slices(z);
+	// 	// S.get_score(z, false);
+    //     S.get_height(z);
+
+    //     if (m.isMap)
+    //     {
+    //         m.mapUpdate(S);
+    //     }
+
+	// 	// S.find_best_path();
 	// }
-
-    // // Show the plane in dark green. (SACSegmentation)
-	// for (int n = 0; n < (*inliers).indices.size(); n++)
-	// {
-	// 	cloud_filtered->points[(*inliers).indices[n]].r = 0;
-	// 	cloud_filtered->points[(*inliers).indices[n]].g = 127;
-	// 	cloud_filtered->points[(*inliers).indices[n]].b = 0;
-	// }
-
-
-    // // Calculate the roughness. 
-	// Roughness R(*coef);
-	// R.get_Roughness(*cloud_filtered);
-
-    // // Show the roughness on the pointcloud in red gradient. 
-	// for (int i = 0; i < R.outliers.size(); i++)
-	// {
-	// 	(*cloud_filtered).points[R.outliers[i]].r = R.rough[i];
-	// 	(*cloud_filtered).points[R.outliers[i]].g = 0;
-	// 	(*cloud_filtered).points[R.outliers[i]].b = 0;
-	// }
-
-    // Calculate the best path. 
-	Score S(cloud_filtered); 
-    S.setStartZ(0.7);
-	S.setSearchRange(4.0);
-	S.setSearchStep(0.70);
-	S.setSize(0.60);
-	S.setStride(1.0 * S.size);
-	// S.setInlierWeight(0.70);
-	// S.setOutlierWeight(1.80);
-	// S.setDisWeight(1.80);
-	// S.setAngleWeight(0.1);
 
     for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-    // for (double z = S.start_z; z < S.search_range; z += S.search_step)
-	{
-		S.get_boundary(z);
-		S.get_slices(z);
-		// S.get_score(z, false);
+    {
+        S.get_boundary(z);
+        S.get_slices(z);
+        // S.get_score(z);
         S.get_height(z);
-
         if (m.isMap)
         {
             m.mapUpdate(S);
         }
 
-		// S.find_best_path();
-	}
+    }
 
     // Show the heading of the robot, also as an indicator of the robot. 
     // m.headingShow();
     m.originShow();
+    m.renderingFromMiniMap();
+    m.posShow();
     m.mapShow();
-
-	// // Show the best path in the point cloud. 
-	// for (int k = 0; k < S.best_paths.size(); k++)
-	// {
-	// 	for (int n = 0; n < S.best_paths[k].indices.size(); n++)
-	// 	{
-	// 		(*cloud_filtered).points[S.best_paths[k].indices[n]].r = 0;
-	// 		(*cloud_filtered).points[S.best_paths[k].indices[n]].g = 255;
-	// 	}
-	// }
+    m.flagReset();
 
     // Depth info logging. 
     l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
@@ -944,6 +887,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // Visualization. 
     pc_layers.push_back(cloud_filtered);
+    pc_layers.push_back(S.cloud);
     cv::Scalar bg_color(0, 0, 0);
     pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
         pc_layers, 
@@ -972,7 +916,6 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
 
     // reset. 
     cv::destroyAllWindows();
-    inliers.clear();
     pc_layers.clear();
     viewer->removeAllPointClouds();
     p.stop();

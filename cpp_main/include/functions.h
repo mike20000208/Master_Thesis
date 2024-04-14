@@ -8,7 +8,7 @@ int stream_test(std::shared_ptr<Mike> node, int width=30, int height=30, int res
 int time_files_test();
 
 
-int replay_from_images(string folder_name);
+int replay_from_images(string folder_name, string mode="trajectory");
 
 
 int stream_map_test(std::shared_ptr<Mike> node, int width=30, int height=30, int res=10);

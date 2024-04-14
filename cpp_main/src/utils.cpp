@@ -5,7 +5,7 @@ bool TERMINATE = false;
 
 bool isEnableFromFile = false;
 
-bool isRecording = true;
+bool isRecording = false;
 
 
 /**
@@ -208,7 +208,7 @@ Logging::Logging(std::shared_ptr<Mike> node)
 	img_folder = node->log_path + "/Images";
     traj_folder = node->log_path + "/Trajectories";
     depth_folder = node->log_path + "/Depth";
-    map_folder = node->log_path + "/Map";
+    map_folder = node->log_path + "/Maps";
 
     info_path = node->log_path + "/Info.txt";
     bag_path = node->log_path + "/record.bag";
@@ -439,7 +439,7 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 			for (int j = 0; j < My_Map::miniMap.cols; j++)
 			{
 				My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * j + 1) / 2.0;
-				My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * i + 1) / 2.0;
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[1] = (4 * i + 1) / 2.0;
 			}
 		}
 	}
@@ -525,40 +525,51 @@ Point2D My_Map::map2img(Point2D p)
 void My_Map::cam2map()
 {
 	// Convert the corners from camera frame to robot frame. (in meter)
-	My_Map::top_left_robot[0] = My_Map::top_left_cam[2];
-	My_Map::top_left_robot[1] = My_Map::top_left_cam[0];
-	My_Map::top_left_robot[2] = My_Map::top_left_cam[1];
-	My_Map::bottom_right_robot[0] = My_Map::bottom_right_cam[2];
-	My_Map::bottom_right_robot[1] = My_Map::bottom_right_cam[0];
-	My_Map::bottom_right_robot[2] = My_Map::bottom_right_cam[1];
-	// My_Map::center_robot[0] = My_Map::center_cam[2];
-	// My_Map::center_robot[1] = My_Map::center_cam[0];
-	// My_Map::center_robot[2] = My_Map::center_cam[1];
+	// My_Map::top_left_robot[0] = My_Map::top_left_cam[2];
+	// My_Map::top_left_robot[1] = My_Map::top_left_cam[0];
+	// My_Map::top_left_robot[2] = My_Map::top_left_cam[1];
+	// My_Map::bottom_right_robot[0] = My_Map::bottom_right_cam[2];
+	// My_Map::bottom_right_robot[1] = My_Map::bottom_right_cam[0];
+	// My_Map::bottom_right_robot[2] = My_Map::bottom_right_cam[1];
+	My_Map::center_robot[0] = My_Map::center_cam[2];
+	My_Map::center_robot[1] = My_Map::center_cam[0];
+	My_Map::center_robot[2] = My_Map::center_cam[1];
 
 	// Convert the corners from robot frame to map frame. (in meter)
-	My_Map::top_left_map[0] = cos(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
-	sin(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	// My_Map::top_left_map[0] = cos(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
+	// sin(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	// (My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
+
+	// My_Map::top_left_map[1] = -sin(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
+	// cos(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	// (My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
+
+	// My_Map::top_left_map[2] = My_Map::top_left_robot[2];
+
+	// My_Map::bottom_right_map[0] = cos(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
+	// sin(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
+	// (My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
+
+	// My_Map::bottom_right_map[1] = -sin(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
+	// cos(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
+	// (My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
+
+	// My_Map::bottom_right_map[2] = My_Map::bottom_right_robot[2];
+
+	My_Map::center_map[0] = cos(-My_Map::currentPoint.yaw) * center_robot[0] + \
+	sin(-My_Map::currentPoint.yaw) * center_robot[1] + \
 	(My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
 
-	My_Map::top_left_map[1] = -sin(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
-	cos(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
+	My_Map::center_map[1] = -sin(-My_Map::currentPoint.yaw) * center_robot[0] + \
+	cos(-My_Map::currentPoint.yaw) * center_robot[1] + \
 	(My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
 
-	My_Map::top_left_map[2] = My_Map::top_left_robot[2];
-
-	My_Map::bottom_right_map[0] = cos(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
-	sin(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
-	(My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
-
-	My_Map::bottom_right_map[1] = -sin(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
-	cos(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
-	(My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
-
-	My_Map::bottom_right_map[2] = My_Map::bottom_right_robot[2];
+	My_Map::center_map[2] = My_Map::center_robot[2];
 
 	// Make the unit consistant. from meter to pixel. 
-	My_Map::top_left_map *= My_Map::res;
-	My_Map::bottom_right_map *= My_Map::res;
+	// My_Map::top_left_map *= My_Map::res;
+	// My_Map::bottom_right_map *= My_Map::res;
+	My_Map::center_map *= My_Map::res;
 
 	// // Make it an absolute location in the map frame. 
 	// My_Map::top_left_map += cv::Vec3d(
@@ -596,49 +607,69 @@ void My_Map::cam2map()
 */
 void My_Map::sliceProject(Score S, int index)
 {
-	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
+	Point2D top_left_map, bottom_right_map, center_map, top_left_img, bottom_right_img, center_img;
 	if (My_Map::isTransformed)
 	{
 		// make sure the numebers will be integers. but still in the map frame  
-		if (My_Map::top_left_map[0] >= 0)
+		// if (My_Map::top_left_map[0] >= 0)
+		// {
+		// 	top_left_map.x = ceil(My_Map::top_left_map[0]);
+		// }
+		// else
+		// {
+		// 	top_left_map.x = floor(My_Map::top_left_map[0]);
+		// }
+
+		// if (My_Map::top_left_map[1] >= 0)
+		// {
+		// 	top_left_map.y = ceil(My_Map::top_left_map[1]);
+		// }
+		// else
+		// {
+		// 	top_left_map.y = floor(My_Map::top_left_map[1]);
+		// }
+
+		// if (My_Map::bottom_right_map[0] >= 0)
+		// {
+		// 	bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
+		// }
+		// else
+		// {
+		// 	bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
+		// }
+
+		// if (My_Map::bottom_right_map[1] >= 0)
+		// {
+		// 	bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
+		// }
+		// else
+		// {
+		// 	bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
+		// }
+
+		if (My_Map::center_map[0] >= 0)
 		{
-			top_left_map.x = ceil(My_Map::top_left_map[0]);
+			center_map.x = ceil(My_Map::center_map[0]);
 		}
 		else
 		{
-			top_left_map.x = floor(My_Map::top_left_map[0]);
+			center_map.x = floor(My_Map::center_map[0]);
 		}
 
-		if (My_Map::top_left_map[1] >= 0)
+		if (My_Map::center_map[1] >= 0)
 		{
-			top_left_map.y = ceil(My_Map::top_left_map[1]);
+			center_map.y = ceil(My_Map::center_map[1]);
 		}
 		else
 		{
-			top_left_map.y = floor(My_Map::top_left_map[1]);
-		}
-
-		if (My_Map::bottom_right_map[0] >= 0)
-		{
-			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
-		}
-		else
-		{
-			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
-		}
-
-		if (My_Map::bottom_right_map[1] >= 0)
-		{
-			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
-		}
-		else
-		{
-			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
+			center_map.y = floor(My_Map::center_map[1]);
 		}
 
 		// Convert the corners from map frame to image frame. 
-		top_left_img = My_Map::map2img(top_left_map);
-		bottom_right_img = My_Map::map2img(bottom_right_map);
+		// top_left_img = My_Map::map2img(top_left_map);
+		// bottom_right_img = My_Map::map2img(bottom_right_map);
+		center_img = My_Map::map2img(center_map);
+
 
 		// // draw the area as a rectangle on the map. (rendering with the score in green-scale)
 		// int lowG = 130;
@@ -657,22 +688,27 @@ void My_Map::sliceProject(Score S, int index)
 		// draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
 		// double threshold = 0.05;
 		cv::Scalar color;
+		double dis = 0.0;
+		vector<double> coors;
+		bool isFound = false;
+		ofstream f;
+		f.open("/home/mike/Debug/center.csv", ios::app | ios::out);
 
-		if (S.slices[index].score != 0.0)
-		{
-			if (S.slices[index].score >= 0.6)
-			{
-				color = cv::Scalar(0, 127, 0);
-			}
-			else
-			{
-				color = cv::Scalar(0, 0, 127);
-			}
-		}
-		else
-		{
-			color = cv::Scalar(0, 0, 0);
-		}
+		// if (S.slices[index].score != 0.0)
+		// {
+		// 	if (S.slices[index].score >= 0.6)
+		// 	{
+		// 		color = cv::Scalar(0, 127, 0);
+		// 	}
+		// 	else
+		// 	{
+		// 		color = cv::Scalar(0, 0, 127);
+		// 	}
+		// }
+		// else
+		// {
+		// 	color = cv::Scalar(0, 0, 0);
+		// }
 
 		// cv::rectangle(
 		// 	My_Map::map_,
@@ -682,18 +718,63 @@ void My_Map::sliceProject(Score S, int index)
 		// 	-1
 		// );
 
-		cv::circle(
-			My_Map::map_,
-			cv::Point(
-				(top_left_img.x + bottom_right_img.x) / 2, 
-				(top_left_img.y + bottom_right_img.y) / 2),
-			1,
-			color,
-			-1
-		);
+		// cv::circle(
+		// 	My_Map::map_,
+		// 	cv::Point(
+		// 		(top_left_img.x + bottom_right_img.x) / 2, 
+		// 		(top_left_img.y + bottom_right_img.y) / 2),
+		// 	1,
+		// 	color,
+		// 	-1
+		// );
+
+
+		// Project the slice on the mini map, avoiding the overlap problem. 
+		for (int i = 0; i < My_Map::miniMap.rows; i++)
+		{
+			for (int j = 0; j < My_Map::miniMap.cols; j++)
+			{
+				coors.push_back(center_img.x);
+				coors.push_back(center_img.y);
+				coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]);
+				coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]);
+				dis = getDistance(coors);
+				coors.clear();
+
+				f << to_string(i) << ", " << to_string(j) << ", " \
+				<< to_string(center_img.x) << ", " \
+				<< to_string(center_img.y) << ", " \
+				<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
+				<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
+				<< to_string(dis) << "\n";
+
+				if (dis <= (sqrt(2) + 1e-3))  // in pixel
+				{
+					if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
+					{
+						My_Map::miniMap.at<cv::Vec4d>(i, j)[2] = 1.0;
+					}
+					// else
+					// {
+					// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] += S.slices[index].score;
+					// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] /= 2;
+					// }
+					My_Map::miniMap.at<cv::Vec4d>(i, j)[3] = S.slices[index].score;
+					isFound = true;
+					break;
+				}
+			}
+
+			if (isFound)
+			{
+				break;
+			}
+		}
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
+
+		f.close();
 	}
 	else
 	{
@@ -997,9 +1078,9 @@ void My_Map::mapUpdate(Score S)
     for (int i = 0; i < S.slices.size(); i++)
 	{
 		// Still in camera frame. 
-		// My_Map::center_cam = S.slices[i].centroid;
-		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
-		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
+		My_Map::center_cam = S.slices[i].centroid;
+		// My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
+		// My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
 
 		// Convert to map frame. 
 		My_Map::cam2map();
@@ -1037,7 +1118,7 @@ void My_Map::headingShow()
 {
 	My_Map::isHeadingShown = true;
 
-	if (!My_Map::isOriginShown)
+	if (!My_Map::isOriginShown && !My_Map::isRendered)
 	{
 		My_Map::tempMap = My_Map::map_.clone();
 	}
@@ -1091,7 +1172,7 @@ void My_Map::originShow()
 {
 	My_Map::isOriginShown = true;
 
-	if (!My_Map::isHeadingShown)
+	if (!My_Map::isHeadingShown && !My_Map::isRendered)
 	{
 		My_Map::tempMap = My_Map::map_.clone();
 	}
@@ -1099,10 +1180,105 @@ void My_Map::originShow()
 	cv::circle(
 		My_Map::tempMap,
 		cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
-		(int)(0.6 * My_Map::res * 0.5),
+		1,
 		cv::Scalar(255, 0, 0),
 		FILLED);
+
+	// cv::circle(
+	// 	My_Map::tempMap,
+	// 	cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
+	// 	(int)(0.6 * My_Map::res * 0.5),
+	// 	cv::Scalar(255, 0, 0),
+	// 	FILLED);
 }
+
+
+/**
+ * @brief
+*/
+void My_Map::renderingFromMiniMap()
+{
+	My_Map::isRendered = true;
+	cv::Scalar color;
+	ofstream f;
+	f.open(DEBUG_FILE, ios::out);
+
+	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
+	{
+		My_Map::tempMap = My_Map::map_.clone();
+	}
+
+	for (int i = 0; i < My_Map::miniMap.rows; i++)
+	{
+		for (int j = 0; j < My_Map::miniMap.rows; j++)
+		{
+			// Debug
+			f << to_string(i) << ", " << to_string(j) << ", " \
+			<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
+			<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
+			<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[2]) << ", " \
+			<< to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[3]) << "\n";
+			
+			if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
+			{
+				continue;
+			}
+			else
+			{
+				if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= -0.10 && 
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[3] <= 0.10)
+				// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
+				{
+					color = cv::Scalar(0, 127, 0);
+				}
+				else
+				{
+					color = cv::Scalar(0, 0, 127);
+				}
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[2] = color[2];
+			}
+		}
+	}
+	f.close();
+}
+
+
+/**
+ * @brief
+*/
+void My_Map::posShow()
+{
+	if (!My_Map::isHeadingShown && 
+	!My_Map::isOriginShown && 
+	!My_Map::isRendered)
+	{
+		My_Map::tempMap = My_Map::map_.clone();
+	}
+
+	cv::circle(
+		My_Map::tempMap,
+		cv::Point(My_Map::currentPoint.x_pixel_img, My_Map::currentPoint.y_pixel_img),
+		1,
+		cv::Scalar(0, 0, 0),
+		-1
+	);
+}
+
+
 
 
 /**
@@ -1110,11 +1286,27 @@ void My_Map::originShow()
 */
 void My_Map::mapShow()
 {
-	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
+	if (!My_Map::isHeadingShown && 
+	!My_Map::isOriginShown && 
+	!My_Map::isRendered && 
+	!My_Map::isRendered)
 	{
 		My_Map::tempMap = My_Map::map_.clone();
 	}
 }
+
+
+/**
+ * @brief 
+*/
+void My_Map::flagReset()
+{
+    isOriginShown = false;
+    isHeadingShown = false;
+    isRendered = false;
+	isPosShown = false;
+}
+
 
 
 /**
@@ -1646,7 +1838,6 @@ bool Score::get_roughness(double z)
 bool Score::get_height(double z)
 {
 	bool is_Zero = false;
-	// double height = 0.0;
 	vector<double> height;
 	double median = 0.0;
 
@@ -1662,19 +1853,7 @@ bool Score::get_height(double z)
 				// height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
 				height.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
 			}
-
-			// height /= (double)Score::slices[i].indices.size();  // take average height.
-			sort(height.begin(), height.end());
-			if (height.size() % 2 == 0)
-			{
-				median = (height[height.size() / 2] + height[height.size() / 2 + 1]) / 2;
-			} 
-			else
-			{
-				median = height[height.size() / 2 + 1];
-			}
-			// Score::slices[i].score = height;
-			// height = 0.0;  // reset. 
+			median = Score::get_median(height);
 			Score::slices[i].score = median;
 			height.clear();
 
@@ -2029,5 +2208,24 @@ int getFilesNum(string folder)
 
     return num_files;
 }
+
+
+/**
+ * @brief Get distance between two points. 
+ * @param data a vector saving the coordinates of two points. 
+ * 
+ * 1st element is x1. 
+ * 2nd element is y1. 
+ * 3rd element is x2. 
+ * 4th element is y2. 
+ * 
+*/
+double getDistance(vector<double> data)
+{
+	double dis = 0.0;
+	dis = sqrt(pow((data[0] - data[2]), 2) + pow((data[1] - data[3]), 2));
+	return dis;
+}
+
 
 
