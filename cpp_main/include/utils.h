@@ -438,6 +438,9 @@ public:
     // Temporary map for drawing an arrow indicating the heading. 
     cv::Mat tempMap;
 
+    // Mini map that stores the projection info. 
+    cv::Mat miniMap;
+
     // Poses. 
     Pose startPoint;
     Pose previousPoint;
@@ -453,8 +456,6 @@ public:
     cv::Vec3d bottom_right_robot;
     cv::Vec3d top_left_robot;
     cv::Vec3d center_robot;
-    // cv::Vec3i bottom_right_img;
-    // cv::Vec3i top_left_img;
 
     // Flag to check whether the area is already transformed to map frame.
     bool isTransformed = false;

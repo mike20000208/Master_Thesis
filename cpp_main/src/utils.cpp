@@ -221,6 +221,10 @@ Logging::Logging(std::shared_ptr<Mike> node)
 }
 
 
+/**
+ * @brief Create folders for logging. 
+ * @param mode determine which folders are going to be created. 
+*/
 void Logging::createDir(string mode)
 {
 	switch (Logging::commands[mode])
@@ -411,7 +415,33 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		cv::Scalar(150, 150, 150));
 	if (isMap)
 	{
-		;
+		/*
+		Create a mini map that can store the necessary info for projection. 
+
+		There are 4 channels of this mini map. 
+
+		1st means the x coordinates. 
+
+		2nd means the y coordinates. 
+
+		3rd means if this region is explored. 
+
+		4th means the data of this region. (mostly is the height. sometimes the score)
+		*/
+		My_Map::miniMap = cv::Mat(
+			height_pixel / 2, 
+			width_pixel / 2, 
+			CV_64FC4, 
+			cv::Scalar(0.0, 0.0, 0.0));
+		
+		for (int i = 0; i < My_Map::miniMap.rows; i++)
+		{
+			for (int j = 0; j < My_Map::miniMap.cols; j++)
+			{
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * j + 1) / 2.0;
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * i + 1) / 2.0;
+			}
+		}
 	}
 	My_Map::isMap = isMap;
 }

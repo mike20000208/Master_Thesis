@@ -426,7 +426,10 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
     }
 
-    // cfg.enable_record_to_file(bag_path);
+    if (isRecording)
+    {
+        cfg.enable_record_to_file(l.bag_path);
+    }
 
     // initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -1901,26 +1904,6 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
     Logging l(node);
     l.createDir("field_trip");
-    // string img_folder = node->log_path + "/Images";
-    // string traj_folder = node->log_path + "/Trajectories";
-    // string depth_folder = node->log_path + "/Depth";
-    // string map_folder = node->log_path + "/Map";
-    
-    // string info_path = node->log_path + "/Info.txt";
-    // string bag_path = node->log_path + "/record.bag";
-    // string time_path = node->log_path + "/TimeLog.csv";
-    // string traj_final_path = node->log_path + "/Trajectory_final.png";
-    // string map_final_path = node->log_path + "/Map_final.png";
-    
-    // string traj_suffix;
-    // string img_suffix;
-    // string depth_suffix;
-    // string map_suffix;
-    
-    // string img_path;
-    // string traj_path;
-    // string depth_path;
-    // string map_path;
     
     // Initialize rs2 objects. 
     rs2::pipeline p;
@@ -1967,19 +1950,6 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     std::mutex mut;
     std::ofstream f;
     Img ImgLog;
-    
-    // // Create the log folders. 
-    // if (create_directories(img_folder) && 
-    // create_directories(traj_folder) && 
-    // create_directories(depth_folder) && 
-    // create_directories(map_folder))
-    // {
-    //     printf("\n\nDirectories are created. \n\n");
-    // }
-    // else
-    // {
-    //     printf("\n\nDirectory creation is failed. \n\n");
-    // }
 
     // Start the pipeline. 
     p.start(cfg);
