@@ -243,7 +243,7 @@ int replay_from_images(string folder_name, string mode)
     string folder = REPLAY_FOLDER + folder_name;
     string img_folder = folder + "/Images/";
     string traj_folder = folder + "/Trajectories/";
-    string map_folder = folder + "/Map/";
+    string map_folder = folder + "/Maps/";
     string time_path = folder + "/TimeLog.csv";
     string img_suffix, traj_suffix, map_suffix, img_full_path, traj_full_path, map_full_path;
 
@@ -256,11 +256,14 @@ int replay_from_images(string folder_name, string mode)
     string win3 = "Map";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+    cv::resizeWindow(win2, 500, 500);
     int img_width, traj_width, img_height, traj_height, map_width, map_height;
 
     if (mode == "map")
     {
         cv::namedWindow(win3, WINDOW_NORMAL);
+        cv::resizeWindow(win3, 500, 500);
         int map_width, map_height;
     }
 
@@ -341,19 +344,38 @@ int replay_from_images(string folder_name, string mode)
 		    1.0,
 		    cv::Scalar(0, 0, 255),
 		    1);
-        cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
-        cv::resizeWindow(win2, traj_width, traj_height);
-        cv::moveWindow(win1, 0, 0);
-	    cv::moveWindow(win2, img_width + 70, 0);
-        cv::imshow(win1, scene);
-        cv::imshow(win2, trajectory);
+        // cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
+        // cv::resizeWindow(win2, traj_width, traj_height);
+        // cv::moveWindow(win1, 0, 0);
+	    // cv::moveWindow(win2, img_width + 70, 0);
+        // cv::imshow(win1, scene);
+        // cv::imshow(win2, trajectory);
 
         if (mode == "map")
-        {        
-            cv::resizeWindow(win3, map_width, map_height);
-            cv::moveWindow(win3, (img_width + 70), (traj_height + 250));
+        {       
+            // cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
+            // cv::resizeWindow(win3, map_width, map_height);
+            // cv::resizeWindow(win2, traj_width, traj_height);
+            cv::moveWindow(win1, 0, 0);
+            cv::moveWindow(win3, img_width / 2 + 75, 0);
+            cv::moveWindow(win2, (img_width / 2 + 580), 0);
+            cv::imshow(win1, scene);
+            cv::imshow(win2, trajectory); 
             cv::imshow(win3, map);
         }
+        else
+        {
+            cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
+            cv::resizeWindow(win2, traj_width, traj_height);
+            // cv::resizeWindow(win3, map_width, map_height);
+            cv::moveWindow(win1, 0, 0);
+            cv::moveWindow(win2, img_width + 70, 0);
+            // cv::moveWindow(win3, (img_width + 70), (traj_height + 250));
+            cv::imshow(win1, scene);
+            cv::imshow(win2, trajectory); 
+            // cv::imshow(win3, map);
+        }
+
         char c = (char)cv::waitKey(speed);
 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -572,41 +594,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         }
 
-        // // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-        // for (double z = 0.0; z < S.search_range; z += S.search_step)
-        // {
-        //     S.get_boundary(z);
-        //     S.get_slices(z);
-        //     // S.get_score(z);
-        //     S.get_height(z);
-
-        //     for (int i = 0; i < S.slices.size(); i++)
-        //     {
-        //         if (S.slices[i].score <= S.height_threshold)
-        //         {
-        //             rendering = cv::Scalar(0, 127, 0);
-        //         }
-        //         else
-        //         {
-        //             rendering = cv::Scalar(127, 0, 0);
-        //         }
-
-        //         for (int j = 0; j < S.slices[i].indices.size(); j++)
-        //         {
-        //             (*S.cloud).points[S.slices[i].indices[j]].r = rendering[0];
-        //             (*S.cloud).points[S.slices[i].indices[j]].g = rendering[1];
-        //             (*S.cloud).points[S.slices[i].indices[j]].b = rendering[2];
-        //         }
-        //     }
-
-        //     if (m.isMap)
-        //     {
-        //         m.mapUpdate(S);
-        //     }
-        //     // S.find_best_path();
-        // }
-
-        // m.headingShow();
         m.renderingFromMiniMap();
         m.originShow();
         m.posShow();

@@ -94,6 +94,7 @@ int main(int argc, char * argv[])
             {
                 folders.push_back(p.path().filename());
             }
+            sort(folders.begin(), folders.end());
 
             // Choose subfolder to get in. 
             printf("Please select which folder you want to get in. The availbale options are shown below: \n\n");
@@ -111,6 +112,7 @@ int main(int argc, char * argv[])
             {
                 subFolders.push_back(p.path().filename());
             }
+            sort(subFolders.begin(), subFolders.end());
             printf("\n\nPlease select which folder you want to replay. The availbale options are shown below: \n\n");
             for (i = 0; i < subFolders.size(); i++)
             {
@@ -362,6 +364,7 @@ int main(int argc, char * argv[])
             {
                 folders.push_back(p.path().filename());
             }
+            sort(folders.begin(), folders.end());
 
             if (argc > 2)
             {
@@ -471,7 +474,7 @@ int main(int argc, char * argv[])
             string node_path = node->log_path + "/Mode.txt";
             fstream f;
             f.open(node_path, ios::out | ios::app);
-            f << "Command [" << argv[1] << "] is used. \n";
+            f << "Command [" << temp_commands[9] << "] is used. \n";
             f.close(); 
             break;
         }
