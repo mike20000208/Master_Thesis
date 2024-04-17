@@ -199,6 +199,30 @@ int Communication(std::shared_ptr<Mike> node)
 }
 
 
+/**
+ * @brief Constructor of class Logging.
+*/
+Logging::Logging()
+{
+	main_folder = LOG_FOLDER + getTime();
+	img_folder = main_folder + "/Images";
+    traj_folder = main_folder + "/Trajectories";
+    depth_folder = main_folder + "/Depth";
+    map_folder = main_folder + "/Maps";
+
+    info_path = main_folder + "/Info.txt";
+    bag_path = main_folder + "/record.bag";
+    time_path = main_folder + "/TimeLog.csv";
+
+    traj_final_path = main_folder + "/Trajectory_final.png";
+    map_final_path = main_folder + "/Map_final.png";
+}
+
+
+/**
+ * @brief Constructor of class Logging. 
+ * @param node aa ROS node responsible for communicating with the Capra robot. 
+*/
 Logging::Logging(std::shared_ptr<Mike> node)
 {
     std::mutex mut;
@@ -358,6 +382,20 @@ void Logging::createDir(string mode)
 			}
             break;
         }
+
+		case 12:
+		{
+			// Only recording. 
+			if (create_directories(img_folder))
+			{
+				printf("\n\nDirectories is created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
+			break;
+		}
 
         default:
         {

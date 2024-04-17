@@ -52,10 +52,12 @@ using namespace std::filesystem;
 
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
 #define DEVICE "Intel RealSense D455"
+#define LOG_FOLDER "/home/mike/RobotLog/"
 #define REPLAY_FOLDER "/home/mike/DatatoAnalyze/"
 #define REPLAY_DATE "2024-03-17-18:26:07"
 #define DEBUG_FILE "/home/mike/Debug/debug.csv"
-#define RECORDING_PATH "/home/mike/Recording/Room005.bag"
+// #define RECORDING_PATH "/home/mike/Recording/Room005.bag"
+#define RECORDING_FOLDER "/home/mike/Recording/"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define MICRO 1e-6
@@ -295,9 +297,12 @@ public:
         {"communication", 8}, 
         {"map_demo", 9},
         {"delay_test", 10}, 
-        {"field_trip", 11}};
+        {"field_trip", 11},
+        {"recording", 12},
+        {"stream_map_from_recording", 13}};
 
     Logging(std::shared_ptr<Mike> node);
+    Logging();
 
     void createDir(string mode);
 

@@ -935,7 +935,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     bool isPressed = false;
     float speed = 100;  // milliseconds
     
-    // initialize loading path. 
+    // Initialize loading path. 
     string folder = REPLAY_FOLDER + folder_name;
     string img_folder = folder + "/Images/";
     string time_path = folder + "/TimeLog.csv";
@@ -944,13 +944,13 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     string img_suffix;
     string img_path;
 
-    // initialize counter. 
+    // Initialize counter. 
     int imgNum = 0;
     int num_files = getFilesNum(img_folder);
     int i = 0;
     int mark = 0;
 
-    // initialize cv objects. 
+    // Initialize cv objects. 
     const string win1 = "Color Image";
     const string win2 = "Trajectory";
 	cv::namedWindow(win1, WINDOW_NORMAL);
@@ -958,22 +958,22 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     cv::Mat scene;
     cv::Mat trajectory;
 
-    // initialize log containers. 
+    // Initialize log containers. 
     vector<Odo> odoLog;
     map<string, int> infoLog;
     vector<double> timeLog;
 
-    // initialize object and variables for file reading. 
+    // Initialize object and variables for file reading. 
     fstream f;
     vector<string> row;
     string line, word, temp;
     Odo tempOdo;
 
-    // initialize variables for data matching based on timestamp. 
+    // Initialize variables for data matching based on timestamp. 
     double currentTime = 0.0; // sec
     double timeRange = 0.3; // sec
 
-    // read TimeLog.csv. 
+    // Read TimeLog.csv. 
     f.open(time_path, ios::in);
 
     while (getline(f, line))
@@ -1982,6 +1982,180 @@ int simple_test()
     // n = cv::Scalar(10, 20, 30);
     // cout << "\n\n" << n << endl;
     // printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
+
+    return 0;
+}
+
+
+/**
+ * @brief Record everything necessary for working offline. 
+ *
+ * Specifically, this function only creates: 
+ * 
+ * OdoLog.csv, 
+ * 
+ * GPSLog.csv, 
+ * 
+ * VelLog.csv,
+ * 
+ * record.bag.
+*/
+int recording(std::shared_ptr<Mike> node)
+{
+    // Prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    Logging l(node);
+
+    // Initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frameset frames;
+    rs2::frame color, depth;
+    rs2::config cfg;
+    int stream_color_width = 1280;
+    int stream_color_height = 720;
+    int stream_depth_width = 1280;
+    int stream_depth_height = 720;
+    int frame_rate = 30;
+
+    // Configure the Intel camera. 
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_record_to_file(l.bag_path);
+
+    // Initialize cv objects. 
+    const string win1 = "Color Image";
+    cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::Mat image;
+
+    // Start the pipeline. 
+    p.start(cfg);
+
+    // Start streaming. 
+    while (1)
+    {
+        // Get frame. 
+        frames = p.wait_for_frames();
+        color = frames.get_color_frame();
+
+        // Create color image and save it. 
+        const int w = color.as<rs2::video_frame>().get_width();
+        const int h = color.as<rs2::video_frame>().get_height();
+        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+        // Visualization. 
+        cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
+        cv::moveWindow(win1, 0, 0);
+        cv::imshow(win1, image);
+        char c = cv::waitKey(10);
+
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+    }
+    return 0;
+}
+
+
+/**
+ * @brief Create the map with environment infomation while streaming and robot moving. (from recording)
+ * 
+ * This is for working offline. 
+ * 
+ * @param file folder name that contains all necessary recording and logs. 
+ * @param width width of the map in meter. 
+ * @param height height of the map in meter.
+ * @param res resolution of the map. 
+*/
+int stream_map_test_from_recording(string folder, int width, int height, int res)
+{
+    // Prepare folders and other paths.  
+    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    Logging l;
+    l.createDir("stream_map");
+
+    // Initialize rs2 objects. 
+    rs2::pipeline p;
+    rs2::frameset frames;
+    rs2::frame color, depth;
+    rs2::config cfg;
+    rs2::pointcloud pointcloud;
+    rs2::points points;
+    // string temp = folder + "record.bag";
+    cfg.enable_device_from_file(folder + "record.bag");
+
+    // Initialize pcl objects.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PassThrough<pcl::PointXYZRGB> filter;
+
+    // Initialize cv objects. 
+    const string win1 = "Color Image";
+    const string win2 = "Map";
+    const string win3 = "Trajectory";
+    cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win2, WINDOW_NORMAL);
+    cv::namedWindow(win3, WINDOW_NORMAL);
+    cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+    cv::resizeWindow(win2, 500, 500);
+    cv::resizeWindow(win3, 500, 500);
+    cv::Mat image;
+
+    // Initialize general objects.
+    My_Map m(width, height, res, true);
+    My_Map t(width, height, res);
+
+    // Initialize general variables.
+    Img ImgLog;
+    vector<Odo> odoLog;
+    Odo tempOdo;
+    fstream f;
+    vector<string> row;
+    string line, word, temp;
+    string odo_path = folder + "OdoLog.csv";
+    int i = 0;
+    int mark = 0;
+    double currentTime = 0.0; // sec
+    double timeRange = 0.3; // sec
+
+    // Read OdoLog.csv. 
+    f.open(odo_path, ios::in);
+
+    while (getline(f, line))
+    {
+        row.clear();
+        stringstream linestream(line);
+
+        while(getline(linestream, word, ','))
+        {
+            row.push_back(word);
+        }
+
+        tempOdo.timestamp = stod(row[0]);
+        tempOdo.serial_number = stoi(row[1]);
+        tempOdo.px = stod(row[2]);
+        tempOdo.py = stod(row[3]);
+        tempOdo.pz = stod(row[4]);
+        tempOdo.ox = stod(row[5]);
+        tempOdo.oy = stod(row[6]);
+        tempOdo.oz = stod(row[7]);
+        tempOdo.ow = stod(row[8]);
+        odoLog.push_back(tempOdo);
+    }
+
+    f.close();
+
+    // Start the pipeline. 
+    p.start(cfg);
+
+    // Start streaming. 
+    while (1)
+    {
+        ;
+    }
 
     return 0;
 }
