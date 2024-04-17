@@ -481,12 +481,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    viewer->setBackgroundColor(0, 0, 0);
-	viewer->setPosition(50, 70);
-	viewer->addCoordinateSystem(5, "global");
-	viewer->initCameraParameters();
+    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    // viewer->setBackgroundColor(0, 0, 0);
+	// viewer->setPosition(50, 70);
+	// viewer->addCoordinateSystem(5, "global");
+	// viewer->initCameraParameters();
 
     // initialize cv objects. 
     const string win1 = "Color Image";
@@ -495,6 +495,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
+    cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+    cv::resizeWindow(win2, 500, 500);
+    cv::resizeWindow(win3, 500, 500);
     cv::Mat image;
 
     // initialize other objects.
@@ -567,13 +570,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 		filter.filter(*cloud_filtered);
 
         // calculate the best path. 
-        cv::Scalar rendering;
+        // cv::Scalar rendering;
         Score S(cloud_filtered); 
         S.setStartZ(0.0);
         S.setSearchRange(3.5);
-        S.setSearchStep(0.40);
-        S.setSize(0.40);
-        S.setStride(0.5 * S.size);
+        S.setSearchStep(0.20);
+        S.setSize(0.20);
+        S.setStride(1.0 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
         // S.setDisWeight(1.80);
@@ -629,35 +632,43 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imwrite(l.map_path, m.tempMap);
 
         // visualization. 
-        pc_layers.push_back(S.cloud);
-        // pc_layers.push_back(cloud_filtered);
-        for (int i = 0; i < pc_layers.size(); i++)
-        {
-			viewer->addPointCloud(
-                pc_layers[i], 
-                to_string(i));
-			viewer->setPointCloudRenderingProperties(
-                pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 
-                4, 
-                to_string(i));
-        }
+        // pc_layers.push_back(S.cloud);
+        // // pc_layers.push_back(cloud_filtered);
+        // for (int i = 0; i < pc_layers.size(); i++)
+        // {
+		// 	viewer->addPointCloud(
+        //         pc_layers[i], 
+        //         to_string(i));
+		// 	viewer->setPointCloudRenderingProperties(
+        //         pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 
+        //         4, 
+        //         to_string(i));
+        // }
 
-        cv::resizeWindow(win1, cv::Size(image.cols / 2, image.rows / 2));
-        // cv::resizeWindow(win2, cv::Size(200, 200));
-        // cv::resizeWindow(win3, cv::Size(200, 200));
-        cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
-        cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
+        // cv::resizeWindow(win1, cv::Size(image.cols / 2, image.rows / 2));
+        // // cv::resizeWindow(win2, cv::Size(200, 200));
+        // // cv::resizeWindow(win3, cv::Size(200, 200));
+        // cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
+        // cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
         cv::moveWindow(win1, 0, 0);
         // cv::moveWindow(win2, 1000, 0);
         // cv::moveWindow(win3, 1000, 500);
-        cv::moveWindow(win2, (image.cols + 70), 0);
-        cv::moveWindow(win3, (image.cols + 70), (m.map_.rows + 250));
+        cv::moveWindow(win2, (image.cols / 2 + 75), 0);
+        cv::moveWindow(win3, (image.cols / 2 + 580), 0);
+        cv::putText(
+            image, 
+            to_string(ImgLog.timestamp),
+		    cv::Point(50, 50),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
         cv::imshow(win1, image);
         cv::imshow(win2, m.tempMap);
         cv::imshow(win3, t.tempMap);
         char c = cv::waitKey(10);
 
-        viewer->spinOnce(10);
+        // viewer->spinOnce(10);
 
         // check whether to terminate the programme. 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -667,9 +678,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             break;
         }
 
-        // reset. 
-        pc_layers.clear();
-		viewer->removeAllPointClouds();
+        // // reset. 
+        // pc_layers.clear();
+		// viewer->removeAllPointClouds();
     }
 
     // document the general info.
@@ -1959,10 +1970,18 @@ int simple_test()
 {
     cv::Vec3d n = cv::Vec3d(1, 2, 3);
     n += cv::Vec3d(2, 4, 6);
+
     cout << "\n\n" << n << endl;
     printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
+    
     n *= 3;
+
     cout << "\n\n" << n << endl;
     printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
+
+    // n = cv::Scalar(10, 20, 30);
+    // cout << "\n\n" << n << endl;
+    // printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
+
     return 0;
 }
