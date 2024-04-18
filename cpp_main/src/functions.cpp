@@ -223,9 +223,11 @@ int time_files_test()
  */
 int replay_from_images(string folder_name, string mode)
 {
-    // Initialize flag. 
+    // Initialize variables to control replay. 
     bool isPressed = false;
-    float speed = 100;  // milliseconds
+    float speed = 100.0;  // milliseconds
+    int pauseCnt = 0;
+    float currentSpeed = 100.0, previousSpeed = 100.0;
 
     // Initialize counter. 
     int num_files = 0;
@@ -385,6 +387,21 @@ int replay_from_images(string folder_name, string mode)
             break;
         }
 
+        if (c == 112)
+        {
+            printf("\n\nKey [P] is pressed. \n\n");
+            if (pauseCnt % 2 == 0)
+            {
+                speed = 0;
+            }
+            else
+            {
+                speed = previousSpeed;
+            }
+            pauseCnt++;
+            isPressed = true;
+        }
+
         if (c == 100)
         {
             printf("\n\nKey [D] is pressed, 15 frames forward. \n\n");
@@ -417,7 +434,8 @@ int replay_from_images(string folder_name, string mode)
         {
             count++;
         }
-        
+        previousSpeed = currentSpeed;
+        currentSpeed = speed;
         isPressed = false;
     }
 
@@ -471,6 +489,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     {
         cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
         cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+        cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
+        cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     }
 
     if (isRecording)
@@ -574,8 +594,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         Score S(cloud_filtered); 
         S.setStartZ(0.0);
         S.setSearchRange(3.5);
-        S.setSearchStep(0.20);
-        S.setSize(0.20);
+        S.setSearchStep(0.40);
+        S.setSize(0.40);
         S.setStride(1.0 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
@@ -631,7 +651,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
 
-        // visualization. 
+        // // Visualization. 
         // pc_layers.push_back(S.cloud);
         // // pc_layers.push_back(cloud_filtered);
         // for (int i = 0; i < pc_layers.size(); i++)
@@ -2020,6 +2040,8 @@ int recording(std::shared_ptr<Mike> node)
     // Configure the Intel camera. 
     cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     cfg.enable_record_to_file(l.bag_path);
 
     // Initialize cv objects. 
@@ -2046,6 +2068,14 @@ int recording(std::shared_ptr<Mike> node)
         // Visualization. 
         cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
         cv::moveWindow(win1, 0, 0);
+        cv::putText(
+            image, 
+            to_string(color.get_timestamp() / 1000),
+		    cv::Point(50, 50),
+		    FONT_HERSHEY_DUPLEX,
+		    1.0,
+		    cv::Scalar(0, 0, 255),
+		    1);
         cv::imshow(win1, image);
         char c = cv::waitKey(10);
 

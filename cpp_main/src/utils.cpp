@@ -453,48 +453,48 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		cv::Scalar(150, 150, 150));
 	if (isMap)
 	{
-		// /*
-		// Create a mini map that can store the necessary info for projection. (lower resolution)
-
-		// There are 4 channels of this mini map. 
-
-		// 1st means the x coordinates. 
-
-		// 2nd means the y coordinates. 
-
-		// 3rd means if this region is explored. 
-
-		// 4th means the data of this region. (mostly is the height. sometimes the score)
-		// */
-		// My_Map::miniMap = cv::Mat(
-		// 	height_pixel / 2, 
-		// 	width_pixel / 2, 
-		// 	CV_64FC4, 
-		// 	cv::Scalar(0.0, 0.0, 0.0, 0.0));
-		
-		// for (int i = 0; i < My_Map::miniMap.rows; i++)
-		// {
-		// 	for (int j = 0; j < My_Map::miniMap.cols; j++)
-		// 	{
-		// 		My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * j + 1) / 2.0;
-		// 		My_Map::miniMap.at<cv::Vec4d>(i, j)[1] = (4 * i + 1) / 2.0;
-		// 	}
-		// }
-
 		/*
-		Create a mini map that can store the necessary info for projection. (higher resolution)
+		Create a mini map that can store the necessary info for projection. (lower resolution)
 
-		There are 2 channels of this mini map. 
+		There are 4 channels of this mini map. 
 
-		1st means if this region is explored. 
+		1st means the x coordinates. 
 
-		2nd means the data of this region. (mostly is the height. sometimes the score) 
+		2nd means the y coordinates. 
+
+		3rd means if this region is explored. 
+
+		4th means the data of this region. (mostly is the height. sometimes the score)
 		*/
 		My_Map::miniMap = cv::Mat(
-			height_pixel, 
-			width_pixel, 
-			CV_64FC2, 
-			cv::Scalar(0.0, 0.0));
+			height_pixel / 2, 
+			width_pixel / 2, 
+			CV_64FC4, 
+			cv::Scalar(0.0, 0.0, 0.0, 0.0));
+		
+		for (int i = 0; i < My_Map::miniMap.rows; i++)
+		{
+			for (int j = 0; j < My_Map::miniMap.cols; j++)
+			{
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * j + 1) / 2.0;
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[1] = (4 * i + 1) / 2.0;
+			}
+		}
+
+		// /*
+		// Create a mini map that can store the necessary info for projection. (higher resolution)
+
+		// There are 2 channels of this mini map. 
+
+		// 1st means if this region is explored. 
+
+		// 2nd means the data of this region. (mostly is the height. sometimes the score) 
+		// */
+		// My_Map::miniMap = cv::Mat(
+		// 	height_pixel, 
+		// 	width_pixel, 
+		// 	CV_64FC2, 
+		// 	cv::Scalar(0.0, 0.0));
 	}
 	My_Map::isMap = isMap;
 }
@@ -782,57 +782,57 @@ void My_Map::sliceProject(Score S, int index)
 		// );
 
 		// Project the slice on the mini map, avoiding the overlap problem. 
-		// // Lower resolution case. 
-		// for (int i = 0; i < My_Map::miniMap.rows; i++)
-		// {
-		// 	for (int j = 0; j < My_Map::miniMap.cols; j++)
-		// 	{
-		// 		coors.push_back(center_img.x);
-		// 		coors.push_back(center_img.y);
-		// 		coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]);
-		// 		coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]);
-		// 		dis = getDistance(coors);
-		// 		coors.clear();
+		// Lower resolution case. 
+		for (int i = 0; i < My_Map::miniMap.rows; i++)
+		{
+			for (int j = 0; j < My_Map::miniMap.cols; j++)
+			{
+				coors.push_back(center_img.x);
+				coors.push_back(center_img.y);
+				coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]);
+				coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]);
+				dis = getDistance(coors);
+				coors.clear();
 
-		// 		// f << to_string(i) << ", " << to_string(j) << ", " \
-		// 		// << to_string(center_img.x) << ", " \
-		// 		// << to_string(center_img.y) << ", " \
-		// 		// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
-		// 		// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
-		// 		// << to_string(dis) << "\n";
+				// f << to_string(i) << ", " << to_string(j) << ", " \
+				// << to_string(center_img.x) << ", " \
+				// << to_string(center_img.y) << ", " \
+				// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
+				// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
+				// << to_string(dis) << "\n";
 
 				
-		// 		if (dis <= (sqrt(2) + 1e-3))  // in pixel
-		// 		{
+				if (dis <= (sqrt(2) + 1e-3))  // in pixel
+				{
 					
-		// 			if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
-		// 			{
-		// 				My_Map::miniMap.at<cv::Vec4d>(i, j)[2] = 1.0;
-		// 			}
-		// 			// else
-		// 			// {
-		// 			// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] += S.slices[index].score;
-		// 			// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] /= 2;
-		// 			// }
-		// 			My_Map::miniMap.at<cv::Vec4d>(i, j)[3] = S.slices[index].score;
-		// 			isFound = true;
-		// 			break;
-		// 		}
-		// 	}
+					if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
+					{
+						My_Map::miniMap.at<cv::Vec4d>(i, j)[2] = 1.0;
+					}
+					// else
+					// {
+					// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] += S.slices[index].score;
+					// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] /= 2;
+					// }
+					My_Map::miniMap.at<cv::Vec4d>(i, j)[3] = S.slices[index].score;
+					isFound = true;
+					break;
+				}
+			}
 
-		// 	if (isFound)
-		// 	{
-		// 		break;
-		// 	}
-		// }
-
-		// Higher resolution case. 
-		if (My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
-		{
-			My_Map::miniMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
+			if (isFound)
+			{
+				break;
+			}
 		}
 
-		My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.slices[index].score;
+		// // Higher resolution case. 
+		// if (My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
+		// {
+		// 	My_Map::miniMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
+		// }
+
+		// My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.slices[index].score;
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -1282,51 +1282,16 @@ void My_Map::renderingFromMiniMap()
 			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[2]) << ", " \
 			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[3]) << "\n";
 			
-			// // Lower resolution case. 
-			// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
-			// {
-			// 	continue;
-			// }
-			// else
-			// {
-			// 	// lower solution case
-			// 	if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= -0.10 && 
-			// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] <= 0.10)
-			// 	// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
-			// 	{
-			// 		color = cv::Scalar(0, 127, 0);
-			// 	}
-			// 	else
-			// 	{
-			// 		color = cv::Scalar(0, 0, 127);
-			// 	}
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[0] = color[0];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[1] = color[1];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[2] = color[2];
-
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[0] = color[0];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[1] = color[1];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[2] = color[2];
-
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[0] = color[0];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[1] = color[1];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[2] = color[2];
-
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[0] = color[0];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[1] = color[1];
-			// 	My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[2] = color[2];
-			// }
-
-			// Higher resolution case.
-			if (My_Map::miniMap.at<cv::Vec2d>(i, j)[0] == 0.0)
+			// Lower resolution case. 
+			if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
 			{
 				continue;
 			}
 			else
 			{
 				// lower solution case
-				if (My_Map::miniMap.at<cv::Vec2d>(i, j)[1] >= -0.10 && 
-				My_Map::miniMap.at<cv::Vec2d>(i, j)[1] <= 0.10)
+				if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= -0.10 && 
+				My_Map::miniMap.at<cv::Vec4d>(i, j)[3] <= 0.10)
 				// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
 				{
 					color = cv::Scalar(0, 127, 0);
@@ -1335,10 +1300,45 @@ void My_Map::renderingFromMiniMap()
 				{
 					color = cv::Scalar(0, 0, 127);
 				}
-				My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
-				My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
-				My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[2] = color[2];
+
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[2] = color[2];
 			}
+
+			// // Higher resolution case.
+			// if (My_Map::miniMap.at<cv::Vec2d>(i, j)[0] == 0.0)
+			// {
+			// 	continue;
+			// }
+			// else
+			// {
+			// 	// lower solution case
+			// 	if (My_Map::miniMap.at<cv::Vec2d>(i, j)[1] >= -0.10 && 
+			// 	My_Map::miniMap.at<cv::Vec2d>(i, j)[1] <= 0.10)
+			// 	// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
+			// 	{
+			// 		color = cv::Scalar(0, 127, 0);
+			// 	}
+			// 	else
+			// 	{
+			// 		color = cv::Scalar(0, 0, 127);
+			// 	}
+			// 	My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
+			// 	My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
+			// 	My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+			// }
 		}
 	}
 	// f.close();
