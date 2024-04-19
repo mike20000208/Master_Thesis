@@ -510,10 +510,6 @@ int main(int argc, char * argv[])
             // Only recording. 
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
-            thread thread1 (Communication, node);
-            thread thread2 (recording, node);
-            thread1.join();
-            thread2.join();
 
             // Write a note to specify which command is executed in this folder. 
             string node_path = node->log_path + "/Mode.txt";
@@ -521,6 +517,19 @@ int main(int argc, char * argv[])
             f.open(node_path, ios::out | ios::app);
             f << "Command [" << temp_commands[11] << "] is used. \n";
             f.close(); 
+
+            // Start threading. 
+            thread thread1 (Communication, node);
+            thread thread2 (recording, node);
+            thread1.join();
+            thread2.join();
+
+            // // Write a note to specify which command is executed in this folder. 
+            // string node_path = node->log_path + "/Mode.txt";
+            // ofstream f;
+            // f.open(node_path, ios::out | ios::app);
+            // f << "Command [" << temp_commands[11] << "] is used. \n";
+            // f.close(); 
             break;
         }
 
@@ -530,7 +539,7 @@ int main(int argc, char * argv[])
             vector<string> folders;
             
             // See how many folders are there in the main folder. 
-            std::filesystem::path P {REPLAY_FOLDER};
+            std::filesystem::path P {RECORDING_FOLDER};
             for (auto& p : std::filesystem::directory_iterator(P))
             {
                 folders.push_back(p.path().filename());
