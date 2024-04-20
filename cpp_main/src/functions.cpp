@@ -359,19 +359,19 @@ int replay_from_images(string folder_name, string mode)
             // cv::resizeWindow(win3, map_width, map_height);
             // cv::resizeWindow(win2, traj_width, traj_height);
             cv::moveWindow(win1, 0, 0);
-            cv::moveWindow(win3, img_width / 2 + 75, 0);
-            cv::moveWindow(win2, (img_width / 2 + 580), 0);
+            cv::moveWindow(win3, 1280 / 2 + 75, 0);
+            cv::moveWindow(win2, (1280 / 2 + 580), 0);
             cv::imshow(win1, scene);
             cv::imshow(win2, trajectory); 
             cv::imshow(win3, map);
         }
         else
         {
-            cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
+            cv::resizeWindow(win1, (int)1280 / 2, (int)720 / 2);
             cv::resizeWindow(win2, traj_width, traj_height);
             // cv::resizeWindow(win3, map_width, map_height);
             cv::moveWindow(win1, 0, 0);
-            cv::moveWindow(win2, img_width + 70, 0);
+            cv::moveWindow(win2, 1280 + 70, 0);
             // cv::moveWindow(win3, (img_width + 70), (traj_height + 250));
             cv::imshow(win1, scene);
             cv::imshow(win2, trajectory); 
@@ -419,14 +419,14 @@ int replay_from_images(string folder_name, string mode)
         if (c == 119)
         {
             printf("\n\nKey [W] is pressed, speed up 5 times. \n\n");
-            speed /= 5;
+            speed /= 2.5;
             isPressed = true;
         }
 
         if (c == 115)
         {
             printf("\n\nKey [S] is pressed, slow down 5 times. \n\n");
-            speed *= 5;
+            speed *= 2.5;
             isPressed = true;
         }
 
@@ -461,24 +461,26 @@ int replay_from_images(string folder_name, string mode)
 */
 int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
-    // prepare folders and other paths.  
+    // Prepare folders and other paths.  
     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
     Logging l(node);
     l.createDir("stream_map");
     
-    // initialize rs2 objects. 
+    // Initialize rs2 objects. 
     rs2::pipeline p;
     rs2::frameset frames;
     rs2::frame color, depth;
     rs2::config cfg;
     rs2::pointcloud pointcloud;
     rs2::points points;
-    int stream_color_width = 1280;
-    int stream_color_height = 720;
-    int stream_depth_width = 1280;
-    int stream_depth_height = 720;
-    // int stream_depth_width = 848;
-    // int stream_depth_height = 480;
+    int stream_color_width = 848;
+    int stream_color_height = 480;
+    // int stream_color_width = 1280;
+    // int stream_color_height = 720;
+    // int stream_depth_width = 1280;
+    // int stream_depth_height = 720;
+    int stream_depth_width = 848;
+    int stream_depth_height = 480;
     int frame_rate = 30;
 
     if (isEnableFromFile)
@@ -489,8 +491,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     {
         cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
         cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
-        cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
-        cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
+        // cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
+        // cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     }
 
     if (isRecording)
@@ -498,17 +500,18 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cfg.enable_record_to_file(l.bag_path);
     }
 
-    // initialize pcl objects.
+    // Initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
-    // viewer->setBackgroundColor(0, 0, 0);
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+	viewer->setPosition(0, 450);
 	// viewer->setPosition(50, 70);
-	// viewer->addCoordinateSystem(5, "global");
-	// viewer->initCameraParameters();
+	viewer->addCoordinateSystem(5, "global");
+	viewer->initCameraParameters();
 
-    // initialize cv objects. 
+    // Initialize cv objects. 
     const string win1 = "Color Image";
     const string win2 = "Map";
     const string win3 = "Trajectory";
@@ -520,20 +523,20 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     cv::resizeWindow(win3, 500, 500);
     cv::Mat image;
 
-    // initialize other objects.
+    // Initialize other objects.
     My_Map m(width, height, res, true);
     My_Map t(width, height, res);
     std::mutex mut;
     std::ofstream f;
 
-    // initialize other variables.
+    // Initialize other variables.
     Img ImgLog;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // start the pipeline. 
+    // Start the pipeline. 
     p.start(cfg);
 
-    // start streaming. 
+    // Start streaming. 
     while (1)
     {
         // Get frame. 
@@ -589,13 +592,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 		filter.setFilterLimits(0, 4);
 		filter.filter(*cloud_filtered);
 
-        // Calculate the best path. 
-        // cv::Scalar rendering;
+        // Project the pointcloud to the map. 
         Score S(cloud_filtered); 
         S.setStartZ(0.0);
-        S.setSearchRange(3.5);
-        S.setSearchStep(0.40);
-        S.setSize(0.40);
+        S.setSearchRange(4.0);
+        S.setSearchStep(0.20);
+        S.setSize(0.20);
         S.setStride(1.0 * S.size);
         // S.setInlierWeight(0.70);
         // S.setOutlierWeight(1.80);
@@ -603,10 +605,25 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // S.setAngleWeight(0.1);
         S.rendering();
 
-        for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+        // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+        for (double z = S.start_z; z < S.search_range; z += S.search_step)
         {
             S.get_boundary(z);
             S.get_slices(z);
+
+            // // Debug. To see the coordinates of each slice in each step. 
+            // f.open(DEBUG_FILE, ios::app | ios::out);
+            // for (int i = 0; i < S.slices.size(); i++)
+            // {
+            //     f << to_string(z) << ", " \
+            //     << to_string(S.minX) << ", " \
+            //     << to_string(S.maxX) << ", " \
+            //     << to_string(S.slices[i].centroid[0]) << ", " \
+            //     << to_string(S.slices[i].centroid[1]) << ", " \
+            //     << to_string(S.slices[i].centroid[2]) << "\n";
+            // }
+            // f.close();
+
             S.get_height(z);
             // S.get_score(z);
             if (m.isMap)
@@ -625,44 +642,34 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         t.mapShow();
         t.flagReset();
 
-        // // show the best path in the point cloud. 
-        // for (int k = 0; k < S.best_paths.size(); k++)
-        // {
-        //     for (int n = 0; n < S.best_paths[k].indices.size(); n++)
-        //     {
-        //         (*cloud_filtered).points[S.best_paths[k].indices[n]].r = 0;
-        //         (*cloud_filtered).points[S.best_paths[k].indices[n]].g = 255;
-        //     }
-        // }
-
-        // // depth info logging. 
+        // // Depth info logging. 
         // depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
         // depth_path = depth_folder + depth_suffix;
         // PCL2PLY(cloud_filtered, depth_path);
 
-        // trajectory logging. 
+        // Trajectory logging. 
         l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         l.traj_path = l.traj_folder + l.traj_suffix;
         cv::imwrite(l.traj_path, t.tempMap);
 
-        // map logging. 
+        // Map logging. 
         l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
 
-        // // Visualization. 
-        // pc_layers.push_back(S.cloud);
-        // // pc_layers.push_back(cloud_filtered);
-        // for (int i = 0; i < pc_layers.size(); i++)
-        // {
-		// 	viewer->addPointCloud(
-        //         pc_layers[i], 
-        //         to_string(i));
-		// 	viewer->setPointCloudRenderingProperties(
-        //         pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 
-        //         4, 
-        //         to_string(i));
-        // }
+        // Visualization. 
+        pc_layers.push_back(S.cloud);
+        // pc_layers.push_back(cloud_filtered);
+        for (int i = 0; i < pc_layers.size(); i++)
+        {
+			viewer->addPointCloud(
+                pc_layers[i], 
+                to_string(i));
+			viewer->setPointCloudRenderingProperties(
+                pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 
+                4, 
+                to_string(i));
+        }
 
         // cv::resizeWindow(win1, cv::Size(image.cols / 2, image.rows / 2));
         // // cv::resizeWindow(win2, cv::Size(200, 200));
@@ -672,8 +679,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::moveWindow(win1, 0, 0);
         // cv::moveWindow(win2, 1000, 0);
         // cv::moveWindow(win3, 1000, 500);
-        cv::moveWindow(win2, (image.cols / 2 + 75), 0);
-        cv::moveWindow(win3, (image.cols / 2 + 580), 0);
+        cv::moveWindow(win2, (1280 / 2 + 75), 0);
+        cv::moveWindow(win3, (1280 / 2 + 580), 0);
         cv::putText(
             image, 
             to_string(ImgLog.timestamp),
@@ -687,7 +694,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imshow(win3, t.tempMap);
         char c = cv::waitKey(10);
 
-        // viewer->spinOnce(10);
+        viewer->spinOnce(10);
 
         // Check whether to terminate the programme. 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -697,9 +704,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             break;
         }
 
-        // // reset. 
-        // pc_layers.clear();
-		// viewer->removeAllPointClouds();
+        // reset. 
+        pc_layers.clear();
+		viewer->removeAllPointClouds();
     }
 
     // document the general info.
