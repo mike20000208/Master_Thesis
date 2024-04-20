@@ -16,4 +16,9 @@
 
     1. The reset situation seems to be random. 
 
-    
+
+2024/04/20
+
+    1. One of the bugs is the type of coordinates. Should be double instead of integer. 
+
+    2. Another bug is the round of the numbers, happening in the conversion from 3D space to pixel space. 
