@@ -51,15 +51,13 @@ double deg2rad(double deg)
 
 void Mike::gpslog()
 {
-    std::ofstream f;
+    std::fstream f;
     string path = Mike::log_path + "/GPSLog.csv";
     f.open(path, ios::out | ios::app);
-    // mut.lock();
     f << to_string(Mike::gps_data.timestamp) << ", " \
     << to_string(Mike::gps_data.latitude) << ", " \
     << to_string(Mike::gps_data.longitude) << ", " \
     << to_string(Mike::gps_data.altitude) << "\n"; 
-    // mut.unlock();
     f.close();
 }
 
@@ -85,7 +83,7 @@ void Mike::gps_callback(const sensor_msgs::msg::NavSatFix &msg)
 
 void Mike::odolog()
 {
-    std::ofstream f;
+    std::fstream f;
     string path = Mike::log_path + "/OdoLog.csv";
     f.open(path, ios::out | ios::app);
     f << to_string(Mike::odo_data.timestamp) << ", " \
@@ -124,7 +122,7 @@ void Mike::odo_callback(const nav_msgs::msg::Odometry &msg)
 
 void Mike::vellog()
 {
-    std::ofstream f;
+    std::fstream f;
     string path = Mike::log_path + "/VelLog.csv";
     f.open(path, ios::out | ios::app);
     f << to_string(Mike::vel_data.timestamp) << ", " \
@@ -164,12 +162,13 @@ void Mike::vel_timer_callback()
 }
 
 
+/**
+ * @brief Create the main folder to save all the logging data. 
+*/
 void Mike::createDir()
 {
     string time = getTime();
     string main_path = "/home/mike/RobotLog/";
-    // string GSP_file_name = "GPSLog-" + time + ".csv";
-    // string Odo_file_name = "OdoLog-" + time + ".csv";
     string file_path = main_path + time;
     Mike::log_path = file_path;
 
@@ -184,17 +183,14 @@ void Mike::createDir()
 }
 
 
+/**
+ * @brief A main function to start a ROS node and perform the communication with the Capra robot. 
+*/
 int Communication(std::shared_ptr<Mike> node)
 {
-    // rclcpp::init(argc, argv);
-    // std::shared_ptr<Mike> node = std::make_shared<Mike>();
-    // node->createDir();
     rclcpp::spin(node);
-    // rclcpp::spin(make_shared<Mike>());
     rclcpp::shutdown();
-
     TERMINATE = true;
-
     return 0;
 }
 
@@ -221,7 +217,7 @@ Logging::Logging()
 
 /**
  * @brief Constructor of class Logging. 
- * @param node aa ROS node responsible for communicating with the Capra robot. 
+ * @param node A ROS node responsible for communicating with the Capra robot. 
 */
 Logging::Logging(std::shared_ptr<Mike> node)
 {
@@ -247,7 +243,7 @@ Logging::Logging(std::shared_ptr<Mike> node)
 
 /**
  * @brief Create folders for logging. 
- * @param mode determine which folders are going to be created. 
+ * @param mode Determine which folders are going to be created. 
 */
 void Logging::createDir(string mode)
 {
@@ -509,14 +505,14 @@ EulerAngle_ My_Map::Quater2Euler(Quaternion_ q)
 {
     EulerAngle_ e;
 
-    // calculate rotation matrix elements;
+    // Calculate rotation matrix elements;
     double r11 = 1 - 2 * (pow(q.y, 2) + pow(q.z, 2));
     double r21 = 2 * (q.x * q.y + q.w * q.z);
     double r31 = 2 * (q.x * q.z + q.w * q.y);
     double r32 = 2 * (q.w * q.x + q.y * q.z);
     double r33 = 1 - 2 * (pow(q.x, 2) + pow(q.y, 2));
 
-    // get the Euler angle. 
+    // Get the Euler angle. 
     e.yaw = atan2(r21, r11);
     e.roll = atan2(r32, r33);
     e.pitch = -asin(r31);
@@ -545,9 +541,8 @@ Heading My_Map::getHeading(EulerAngle_ e)
 
 
 /**
- * @brief Transform the odometry data into 2D position. (frame map to frame image)
- * @param p .
- * @return current the current pose.
+ * @brief Transform the odometry data into 2D position. (map frame to image frame)
+ * @param p the pose the hasn't had the coordinates in image frame. 
 */
 void My_Map::map2img(Pose& p)
 {
@@ -557,9 +552,9 @@ void My_Map::map2img(Pose& p)
 
 
 /**
- * @brief
- * @param p
- * @return 
+ * @brief Perform the transformation from map frame to image frame. (the image used to display the map)
+ * @param p the 2D point in map frame. 
+ * @return the transformed 2D point. (in image frame)
 */
 Point2D My_Map::map2img(Point2D p)
 {
@@ -572,8 +567,6 @@ Point2D My_Map::map2img(Point2D p)
 
 /**
  * @brief Transform the point in camera frame into map frame. 
- * 
- * Especially, transform the class member top_left and bottom_right into map frame. 
 */
 void My_Map::cam2map()
 {
@@ -624,16 +617,6 @@ void My_Map::cam2map()
 	// My_Map::bottom_right_map *= My_Map::res;
 	My_Map::center_map *= My_Map::res;
 
-	// // Make it an absolute location in the map frame. 
-	// My_Map::top_left_map += cv::Vec3d(
-	// 	My_Map::currentPoint.x_pixel_map, 
-	// 	My_Map::currentPoint.y_pixel_map, 
-	// 	0);
-	// My_Map::bottom_right_map += cv::Vec3d(
-	// 	My_Map::currentPoint.x_pixel_map, 
-	// 	My_Map::currentPoint.y_pixel_map, 
-	// 	0);
-
 	// confirm the transformation is done. 
 	My_Map::isTransformed = true;
 }
@@ -655,7 +638,7 @@ void My_Map::cam2map()
 
 /**
  * @brief Project the slice area on the map and show it. 
- * @param S the instance of class Score which is running the scoring currently. 
+ * @param S the instance of class Score which is running the slicing and assessment currently. 
  * @param index the index of current slice which is going to be projected on the map. 
 */
 void My_Map::sliceProject(Score S, int index)
@@ -663,129 +646,24 @@ void My_Map::sliceProject(Score S, int index)
 	Point2D top_left_map, bottom_right_map, center_map, top_left_img, bottom_right_img, center_img;
 	if (My_Map::isTransformed)
 	{
-		// make sure the numebers will be integers. but still in the map frame  
-		// if (My_Map::top_left_map[0] >= 0)
-		// {
-		// 	top_left_map.x = ceil(My_Map::top_left_map[0]);
-		// }
-		// else
-		// {
-		// 	top_left_map.x = floor(My_Map::top_left_map[0]);
-		// }
-
-		// if (My_Map::top_left_map[1] >= 0)
-		// {
-		// 	top_left_map.y = ceil(My_Map::top_left_map[1]);
-		// }
-		// else
-		// {
-		// 	top_left_map.y = floor(My_Map::top_left_map[1]);
-		// }
-
-		// if (My_Map::bottom_right_map[0] >= 0)
-		// {
-		// 	bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
-		// }
-		// else
-		// {
-		// 	bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
-		// }
-
-		// if (My_Map::bottom_right_map[1] >= 0)
-		// {
-		// 	bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
-		// }
-		// else
-		// {
-		// 	bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
-		// }
-
-		// if (My_Map::center_map[0] >= 0)
-		// {
-		// 	center_map.x = ceil(My_Map::center_map[0]);
-		// }
-		// else
-		// {
-		// 	center_map.x = floor(My_Map::center_map[0]);
-		// }
-
-		// if (My_Map::center_map[1] >= 0)
-		// {
-		// 	center_map.y = ceil(My_Map::center_map[1]);
-		// }
-		// else
-		// {
-		// 	center_map.y = floor(My_Map::center_map[1]);
-		// }
-
+		// Make sure the numebers will be integers. but still in the map frame  
 		center_map.x = round(My_Map::center_map[0]);
 		center_map.y = round(My_Map::center_map[1]);
 
 		// Convert the corners from map frame to image frame. 
-		// top_left_img = My_Map::map2img(top_left_map);
-		// bottom_right_img = My_Map::map2img(bottom_right_map);
 		center_img = My_Map::map2img(center_map);
-		
 
-
-		// // draw the area as a rectangle on the map. (rendering with the score in green-scale)
-		// int lowG = 130;
-		// int highG = 255;
-		// int g = 0;
-		// g = ((S.slices[index].score - S.maxScore) / (S.minScore - S.maxScore)) * (highG - lowG) + lowG;
-		// // g = ((S.slices[index].score - S.minScore) / (S.maxScore - S.minScore)) * (highG - lowG) + lowG;
-		// cv::rectangle(
-		// 	My_Map::map_,
-		// 	cv::Point(top_left_img.x, top_left_img.y),
-		// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
-		// 	cv::Scalar(0, g, 0),
-		// 	-1
-		// );
-
-		// draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
-		// double threshold = 0.05;
-		cv::Scalar color;
+		// Draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
 		double dis = 0.0;
 		vector<double> coors;
 		bool isFound = false;
+
+		// // Debug. 
 		// fstream f;
 		// f.open(DEBUG_FILE, ios::app | ios::out);
 		// f.open("/home/mike/Debug/center.csv", ios::app | ios::out);
 
-		// if (S.slices[index].score != 0.0)
-		// {
-		// 	if (S.slices[index].score >= 0.6)
-		// 	{
-		// 		color = cv::Scalar(0, 127, 0);
-		// 	}
-		// 	else
-		// 	{
-		// 		color = cv::Scalar(0, 0, 127);
-		// 	}
-		// }
-		// else
-		// {
-		// 	color = cv::Scalar(0, 0, 0);
-		// }
-
-		// cv::rectangle(
-		// 	My_Map::map_,
-		// 	cv::Point(top_left_img.x, top_left_img.y),
-		// 	cv::Point(bottom_right_img.x, bottom_right_img.y),
-		// 	color,
-		// 	-1
-		// );
-
-		// cv::circle(
-		// 	My_Map::map_,
-		// 	cv::Point(
-		// 		(top_left_img.x + bottom_right_img.x) / 2, 
-		// 		(top_left_img.y + bottom_right_img.y) / 2),
-		// 	1,
-		// 	color,
-		// 	-1
-		// );
-
+		// // Mark the center of the slice on the map. (for debug)
 		// cv::circle(
 		// 	My_Map::map_,
 		// 	cv::Point(center_img.x, center_img.y),
@@ -877,48 +755,17 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
 	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
 	if (My_Map::isTransformed)
 	{
-		// make sure the numebers will be integers. but still in the map frame  
-		if (My_Map::top_left_map[0] >= 0)
-		{
-			top_left_map.x = ceil(My_Map::top_left_map[0]);
-		}
-		else
-		{
-			top_left_map.x = floor(My_Map::top_left_map[0]);
-		}
+		// Make sure the numebers will be integers. but still in the map frame  
+		top_left_map.x = round(My_Map::top_left_map[0]);
+		top_left_map.y = round(My_Map::top_left_map[1]);
+		bottom_right_map.x = round(My_Map::bottom_right_map[0]);
+		bottom_right_map.y = round(My_Map::bottom_right_map[1]);
 
-		if (My_Map::top_left_map[1] >= 0)
-		{
-			top_left_map.y = ceil(My_Map::top_left_map[1]);
-		}
-		else
-		{
-			top_left_map.y = floor(My_Map::top_left_map[1]);
-		}
-
-		if (My_Map::bottom_right_map[0] >= 0)
-		{
-			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
-		}
-		else
-		{
-			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
-		}
-
-		if (My_Map::bottom_right_map[1] >= 0)
-		{
-			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
-		}
-		else
-		{
-			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
-		}
-
-		// transform the coordinates of the corners to image frame. 
+		// Transform the coordinates of the corners to image frame. 
 		top_left_img = My_Map::map2img(top_left_map);
 		bottom_right_img = My_Map::map2img(bottom_right_map);
 
-		// draw the area as a rectangle on the map. 
+		// Draw the area as a rectangle on the map. 
 		cv::rectangle(
 			My_Map::map_,
 			cv::Point(top_left_img.x, top_left_img.y),
@@ -927,7 +774,7 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
 			-1
 		);
 
-		// reset the flag. 
+		// Reset the flag. 
 		My_Map::isTransformed = false;
 	}
 	else
@@ -954,48 +801,17 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
 	if (My_Map::isTransformed)
 	{
-		// make sure the numebers will be integers. but still in the map frame  
-		if (My_Map::top_left_map[0] >= 0)
-		{
-			top_left_map.x = ceil(My_Map::top_left_map[0]);
-		}
-		else
-		{
-			top_left_map.x = floor(My_Map::top_left_map[0]);
-		}
+		// Make sure the numebers will be integers. but still in the map frame  
+		top_left_map.x = round(My_Map::top_left_map[0]);
+		top_left_map.y = round(My_Map::top_left_map[1]);
+		bottom_right_map.x = round(My_Map::bottom_right_map[0]);
+		bottom_right_map.y = round(My_Map::bottom_right_map[1]);
 
-		if (My_Map::top_left_map[1] >= 0)
-		{
-			top_left_map.y = ceil(My_Map::top_left_map[1]);
-		}
-		else
-		{
-			top_left_map.y = floor(My_Map::top_left_map[1]);
-		}
-
-		if (My_Map::bottom_right_map[0] >= 0)
-		{
-			bottom_right_map.x = ceil(My_Map::bottom_right_map[0]);
-		}
-		else
-		{
-			bottom_right_map.x = floor(My_Map::bottom_right_map[0]);
-		}
-
-		if (My_Map::bottom_right_map[1] >= 0)
-		{
-			bottom_right_map.y = ceil(My_Map::bottom_right_map[1]);
-		}
-		else
-		{
-			bottom_right_map.y = floor(My_Map::bottom_right_map[1]);
-		}
-
-		// transform the coordinates of the corners to image frame. 
+		// Transform the coordinates of the corners to image frame. 
 		top_left_img = My_Map::map2img(top_left_map);
 		bottom_right_img = My_Map::map2img(bottom_right_map);
 
-		// draw the area as a rectangle on the map. 
+		// Draw the area as a rectangle on the map. 
 		cv::rectangle(
 			My_Map::map_,
 			cv::Point(top_left_img.x, top_left_img.y),
@@ -1004,7 +820,7 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 			-1
 		);
 
-		// print the number of slice on the map. 
+		// Print the number of slice on the map. 
 		cv::putText(
 			My_Map::map_,
 			to_string(i),
@@ -1016,7 +832,7 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 			cv::Scalar(0, 0, 0)
 		);
 
-		// put a circle on the center of the slice. 
+		// Put a circle on the center of the slice. 
 		cv::circle(
 			My_Map::map_,
 			cv::Point(
@@ -1027,7 +843,7 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
 			-1
 		);
 
-		// reset the flag. 
+		// Reset the flag. 
 		My_Map::isTransformed = false;
 	}
 	else
@@ -1043,7 +859,7 @@ void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
  * @param e Euler angle extracted from the orientation in quaternion format. 
- * @return current the current pose.
+ * @return the current pose.
 */
 Pose My_Map::getCurrent(double x, double y, EulerAngle_ e)
 {
@@ -1054,30 +870,14 @@ Pose My_Map::getCurrent(double x, double y, EulerAngle_ e)
     current.pitch = e.pitch;
     current.yaw = e.yaw;
 	current.heading = My_Map::getHeading(e);
+
+	// Convert the coordinate from meter to pixel. but still in map frame. 
     double dx = x - My_Map::startPoint.x_meter;
     double dy = y - My_Map::startPoint.y_meter;
-
-    // if (dx >= 0)
-    // {
-    //     current.x_pixel_map = ceil(dx * My_Map::res);
-    // }
-    // else
-    // {
-    //     current.x_pixel_map = floor(dx * My_Map::res);
-    // }
-
-    // if (dy >= 0)
-    // {
-    //     current.y_pixel_map = ceil(dy * My_Map::res);
-    // }
-    // else
-    // {
-    //     current.y_pixel_map = floor(dy * My_Map::res);
-    // }
-
 	current.x_pixel_map = round(dx * My_Map::res);
 	current.y_pixel_map = round(dy * My_Map::res);
-	
+
+	// Transformation from map frame to image frame. (the image used to display the map)
 	My_Map::map2img(current);
 	return current;
 }
@@ -1091,10 +891,10 @@ Pose My_Map::getCurrent(double x, double y, EulerAngle_ e)
 */
 void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 {
-    // get the current Euler angles 
+    // Get the current Euler angles 
     EulerAngle_ e = My_Map::Quater2Euler(q);
 
-	// get the corresponding heading. 
+	// Get the corresponding heading. 
 	Heading h = My_Map::getHeading(e);
 
     if (number == 0)
@@ -1111,31 +911,13 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 		startPoint.heading = h;
         previousPoint = startPoint;
         currentPoint = startPoint;
-        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[0] = 255;  // b
-        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[1] = 255;  // g
-        // m.map.at<cv::Vec3b>(m.startPoint.y_pixel_img, m.startPoint.x_pixel_img).val[2] = 255;  // r
-        // cv::circle(
-        //     My_Map::map_,
-        //     cv::Point(startPoint.x_pixel_img, startPoint.y_pixel_img),
-        //     (int)(0.6 * My_Map::res),
-        //     cv::Scalar(255, 0, 0),
-        //     FILLED);
-        // cv::putText(
-        //     My_Map::map_, 
-        //     "Start Point", 
-        //     cv::Point(startPoint.x_pixel_img, 
-        //     startPoint.y_pixel_img), 
-        //     cv::FONT_HERSHEY_PLAIN, 
-        //     1.0, 
-        //     cv::Scalar(0, 0, 0), 
-        //     1);
     }
     else
     {
         previousPoint = currentPoint;
         currentPoint = My_Map::getCurrent(x, y, e);
 
-		// show the trajcectory if it's trajectory mode.
+		// Show the trajcectory if it's in trajectory mode.
 		if (!My_Map::isMap)
 		{
 			cv::line(
@@ -1155,18 +937,20 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 */
 void My_Map::mapUpdate(Score S)
 {
-	double scale = 1.0;
+	// Assign the height threshold. 
+	My_Map::height_threshold = S.height_threshold;
+
     for (int i = 0; i < S.slices.size(); i++)
 	{
-		// Still in camera frame. 
+		// Get the coordinates of the slice (region, grid), but still in camera frame. 
 		My_Map::center_cam = S.slices[i].centroid;
 		// My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
 		// My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
 
-		// Convert to map frame. 
+		// Transformation from camera frame to map frame. 
 		My_Map::cam2map();
 
-		// Convert to image frame. 
+		// Transformation from map frame to image frame. (the image used to display the map)
 		My_Map::sliceProject(S, i);
 	}
 }
@@ -1204,42 +988,29 @@ void My_Map::headingShow()
 		My_Map::tempMap = My_Map::map_.clone();
 	}
 
-	// // only for debug
+	// // Only for debug
 	// printf(
 	// 	"The heading of current scene = %f [degree], and the corresponding vector = [%.2f, %.2f]", 
 	// 	currentPoint.yaw,
 	// 	currentPoint.heading.x,
 	// 	currentPoint.heading.y);
 
+	// Get the tip of the arrowed line, but still in map frame. 
 	double endX = currentPoint.x_pixel_map + currentPoint.heading.x;
 	double endY = currentPoint.y_pixel_map + currentPoint.heading.y;
+
+	// Round the coordinates of the tip in order to display on the image. 
 	int endX_int, endY_int;
-
-	// if (endX >= 0)
-	// {
-	// 	endX_int = ceil(endX);
-	// }
-	// else
-	// {
-	// 	endX_int = floor(endX);
-	// }
-
-	// if (endY >= 0)
-	// {
-	// 	endY_int = ceil(endY);
-	// }
-	// else
-	// {
-	// 	endY_int = floor(endY);
-	// }
-
 	endX_int = round(endX);
 	endY_int = round(endY);
 
+	// Transformation from map frame to image frame. 
 	Point2D point_map, point_img;
 	point_map.x = endX_int;
 	point_map.y = endY_int;
 	point_img = My_Map::map2img(point_map);
+
+	// Display it on the map. 
     cv::arrowedLine(
         My_Map::tempMap,
         cv::Point(currentPoint.x_pixel_img, currentPoint.y_pixel_img),
@@ -1278,13 +1049,13 @@ void My_Map::originShow()
 
 
 /**
- * @brief
+ * @brief Render the map with the mini map. 
 */
 void My_Map::renderingFromMiniMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	// ofstream f;
+	// fstream f;
 	// f.open(DEBUG_FILE, ios::out);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
@@ -1346,8 +1117,8 @@ void My_Map::renderingFromMiniMap()
 			else
 			{
 				// lower solution case
-				if (My_Map::miniMap.at<cv::Vec2d>(i, j)[1] >= -0.10 && 
-				My_Map::miniMap.at<cv::Vec2d>(i, j)[1] <= 0.10)
+				if (My_Map::miniMap.at<cv::Vec2d>(i, j)[1] >= -My_Map::height_threshold && 
+				My_Map::miniMap.at<cv::Vec2d>(i, j)[1] <= My_Map::height_threshold)
 				// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
 				{
 					color = cv::Scalar(0, 127, 0);
@@ -1367,9 +1138,9 @@ void My_Map::renderingFromMiniMap()
 
 
 /**
- * @brief
+ * @brief Show the current location. 
 */
-void My_Map::posShow()
+void My_Map::locShow()
 {
 	if (!My_Map::isHeadingShown && 
 	!My_Map::isOriginShown && 
@@ -1388,8 +1159,6 @@ void My_Map::posShow()
 }
 
 
-
-
 /**
  * @brief Copy the map information to the one meant to display. 
 */
@@ -1406,7 +1175,7 @@ void My_Map::mapShow()
 
 
 /**
- * @brief 
+ * @brief Reset all the flags inside the class My_Map. 
 */
 void My_Map::flagReset()
 {
@@ -1415,7 +1184,6 @@ void My_Map::flagReset()
     isRendered = false;
 	isPosShown = false;
 }
-
 
 
 /**
@@ -1441,6 +1209,7 @@ Roughness::Roughness(Eigen::VectorXf& coefficients)
 	c = coefficients[2];
 	d = coefficients[3];
 }
+
 
 /**
  * @brief Constructor of class Roughness.
@@ -1495,6 +1264,7 @@ void Roughness::get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud)
 
 /**
  * @brief Constructor of class Score. 
+ * @param incloud a filtered pointcloud which covers the ROI. 
 */
 Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
 {
@@ -1568,6 +1338,16 @@ void Score::setSize(double insize)
 
 
 /**
+ * @brief Set the height threshold to determine the traversability. 
+ * @param ht the height threshold. 
+*/
+void Score::setHeightThreshold(double ht)
+{
+	Score::height_threshold = ht;
+}
+
+
+/**
  * @brief Set the inlier-weight parameter of path planning. 
  * @param iw inlier-weight parameter. 
 */
@@ -1622,7 +1402,7 @@ void Score::setAngleWeight(double aw)
 */
 void Score::get_boundary(double z)
 {
-	// use the conventional iteration way.
+	// Use the conventional iteration way.
 	vector<double> X;
 
 	for (int i = 0; i < Score::cloud->points.size(); i++)
@@ -1638,14 +1418,14 @@ void Score::get_boundary(double z)
 	Score::x_len = Score::maxX - Score::minX;
 	Score::num_slices = floor(Score::x_len / Score::stride) - 1;
 
-		// // debug 
-		// std::ofstream f;
-		// f.open(DEBUG_FILE, ios::out | ios::app);
-		// f << to_string(Score::cloud->size()) << "\n";
-		// f << to_string(X.size()) << "\n";
-		// f.close();
+	// // Debug 
+	// std::fstream f;
+	// f.open(DEBUG_FILE, ios::out | ios::app);
+	// f << to_string(Score::cloud->size()) << "\n";
+	// f << to_string(X.size()) << "\n";
+	// f.close();
 
-	// set the flag
+	// Set the flag
 	Score::found_boundary = true;
 }
 
@@ -1711,7 +1491,7 @@ void Score::get_slices(double z)
 			slice.centroid = cv::Vec3d(double(cx[0] / len), double(cy[0] / len), double(cz[0] / len));
 			Score::slices.push_back(slice);
 
-			// reset. 
+			// Reset. 
 			X.clear();
 			Y.clear();
 			Z.clear();
@@ -1763,7 +1543,7 @@ bool Score::get_score(double z, bool have_dst)
 	double percentage = 0.0;
 
 	// // want to log the score data. 
-	// std::ofstream f;
+	// std::fstream f;
 	// f.open(DEBUG_FILE, ios::out | ios::app);
 
 	if (Score::slices.size() != 0)
@@ -1878,7 +1658,7 @@ bool Score::get_roughness(double z)
 	double percentage = 0.0;
 
 	// want to log the score data. 
-	std::ofstream f;
+	std::fstream f;
 	f.open(DEBUG_FILE, ios::out | ios::app);
 	f << "\n\n";
 
@@ -1943,16 +1723,20 @@ bool Score::get_roughness(double z)
 
 
 /**
- * @brief 
- * @param z
+ * @brief Get the height of slices (grid or region). 
+ * 
+ * Especially, the median value is taken as the height of that region. 
+ * 
+ * @param z the specified range along the z-axis. (in camera frame)
 */
 bool Score::get_height(double z)
 {
 	bool is_Zero = false;
-	vector<double> height;
-	double median = 0.0;
+	vector<double> heights;
+	double height = 0.0;
 
-	// ofstream f;
+	// // Debug. 
+	// fstream f;
 	// f.open(DEBUG_FILE, ios::app | ios::out);
 
 	if (Score::slices.size() != 0)
@@ -1962,13 +1746,15 @@ bool Score::get_height(double z)
 			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
 			{
 				// height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
-				height.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
+				heights.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
 			}
-			median = Score::get_median(height);
-			Score::slices[i].score = median;
-			height.clear();
 
-			// update the minScore and maxScore. 
+			// height = Score::get_mean(heights);
+			height = Score::get_median(heights);
+			Score::slices[i].score = height;
+			heights.clear();
+
+			// Update the minScore and maxScore. 
 			if (Score::slices[i].score > Score::maxScore)
 			{
 				Score::maxScore = Score::slices[i].score;
@@ -1990,6 +1776,7 @@ bool Score::get_height(double z)
 			// << to_string(Score::slices[i].score) << ", " \
 			// << to_string(Score::slices[i].indices.size()) << "\n";
 		}
+
 		// f.close();
 		return is_Zero;
 	}
@@ -2002,7 +1789,8 @@ bool Score::get_height(double z)
 
 /**
  * @brief Find the mean of a set of data saved in a vector. 
- * @param
+ * @param data a vector save the statistics. 
+ * @return the mean of the given set of data. 
 */
 double Score::get_mean(vector<double> data)
 {
@@ -2016,7 +1804,8 @@ double Score::get_mean(vector<double> data)
 
 /**
  * @brief Find the median of a set of data saved in a vector. 
- * @param
+ * @param data a vector save the statistics. 
+ * @return the median of the given set of data. 
 */
 double Score::get_median(vector<double> data)
 {
@@ -2039,7 +1828,8 @@ double Score::get_median(vector<double> data)
 
 /**
  * @brief Find the mode of a set of data saved in a vector. 
- * @param
+ * @param data a vector save the statistics. 
+ * @return the mode of the given set of data. 
 */
 double Score::get_mode(vector<double> data)
 {
@@ -2083,7 +1873,7 @@ void Score::rendering()
 {
 	for (auto& p : (*Score::cloud).points)
 	{
-		if (p.y >= -0.10 && p.y <= 0.10)
+		if (p.y >= -Score::height_threshold && p.y <= Score::height_threshold)
 		{
 			p.r = 0;
 			p.g = 127;
@@ -2193,7 +1983,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 	double temp_x = 0.0, temp_y = 0.0, temp_z = 0.0;  // temp values for coordinates transformation. 
 
 	// // Debug
-	// ofstream f;
+	// fstream f;
 
 	for (auto& p : cloud->points)
 	{
@@ -2243,7 +2033,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 
 void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud)
 {
-    std::ofstream f;
+    std::fstream f;
     f.open(path, ios::app | ios::out);
     
     for (auto& p : cloud->points)

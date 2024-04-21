@@ -70,7 +70,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // initialize other objects.
     My_Map m(width, height, res);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
 
     // initialize some variables. 
     Img ImgLog;
@@ -259,13 +259,13 @@ int replay_from_images(string folder_name, string mode)
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::resizeWindow(win1, 1280 / 2, 720 / 2);
-    cv::resizeWindow(win2, 500, 500);
+    cv::resizeWindow(win2, 600, 600);
     int img_width, traj_width, img_height, traj_height, map_width, map_height;
 
     if (mode == "map")
     {
         cv::namedWindow(win3, WINDOW_NORMAL);
-        cv::resizeWindow(win3, 500, 500);
+        cv::resizeWindow(win3, 600, 600);
         int map_width, map_height;
     }
 
@@ -359,8 +359,8 @@ int replay_from_images(string folder_name, string mode)
             // cv::resizeWindow(win3, map_width, map_height);
             // cv::resizeWindow(win2, traj_width, traj_height);
             cv::moveWindow(win1, 0, 0);
-            cv::moveWindow(win3, 1280 / 2 + 75, 0);
-            cv::moveWindow(win2, (1280 / 2 + 580), 0);
+            cv::moveWindow(win3, 0, 720 / 2 + 75);
+            cv::moveWindow(win2, 680, 720 / 2 + 75);
             cv::imshow(win1, scene);
             cv::imshow(win2, trajectory); 
             cv::imshow(win3, map);
@@ -527,7 +527,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     My_Map m(width, height, res, true);
     My_Map t(width, height, res);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
 
     // Initialize other variables.
     Img ImgLog;
@@ -561,7 +561,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
-        // draw the map. 
+        // Draw the map. 
         mut.lock();
 
         Quaternion_ q;
@@ -596,13 +596,17 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         Score S(cloud_filtered); 
         S.setStartZ(0.0);
         S.setSearchRange(4.0);
-        S.setSearchStep(0.20);
-        S.setSize(0.20);
+
+        // // Lower resolution. 
+        // S.setSearchStep(.40);
+        // S.setSize(.40);
+
+        // Higher resolution. 
+        S.setSearchStep(pow(res, -1));
+        S.setSize(pow(res, -1));
+
         S.setStride(1.0 * S.size);
-        // S.setInlierWeight(0.70);
-        // S.setOutlierWeight(1.80);
-        // S.setDisWeight(1.80);
-        // S.setAngleWeight(0.1);
+        S.setHeightThreshold(.10);
         S.rendering();
 
         // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
@@ -625,7 +629,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             // f.close();
 
             S.get_height(z);
-            // S.get_score(z);
             if (m.isMap)
             {
                 m.mapUpdate(S);
@@ -635,7 +638,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         m.renderingFromMiniMap();
         m.originShow();
-        m.posShow();
+        m.locShow();
         m.mapShow();
         m.flagReset();
         t.headingShow();
@@ -692,9 +695,9 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imshow(win1, image);
         cv::imshow(win2, m.tempMap);
         cv::imshow(win3, t.tempMap);
-        char c = cv::waitKey(10);
+        char c = cv::waitKey(1);
 
-        viewer->spinOnce(10);
+        viewer->spinOnce(1);
 
         // Check whether to terminate the programme. 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -787,7 +790,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // Initialize other objects.
     My_Map m(width, height, res, true);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
 
     // Initialize other variables.
     Img ImgLog;
@@ -895,7 +898,7 @@ int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int
     // m.headingShow();
     m.originShow();
     m.renderingFromMiniMap();
-    m.posShow();
+    m.locShow();
     m.mapShow();
     m.flagReset();
 
@@ -1128,7 +1131,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         t.mapShow();
 
         // // Logging to debug. 
-        // ofstream f;
+        // fstream f;
         // f.open(DEBUG_FILE, ios::app | ios::out);
         // f << to_string(imgNum) << ", " \
         // << to_string(timeLog[imgNum]) << ", " \
@@ -1231,7 +1234,7 @@ int pointcloud_debug(int width, int height, int res)
     pcl::PassThrough<pcl::PointXYZRGB> filter;
 
     // Initialize other variables and objects.
-    ofstream f;
+    fstream f;
     f.open(DEBUG_FILE, ios::out);
     vector<int> inliers;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
@@ -1442,7 +1445,7 @@ int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int 
     My_Map m(width, height, res, true);
     // My_Map t(width, height, res);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
 
     // initialize other variables.
     Img ImgLog;
@@ -1702,7 +1705,7 @@ int delay_test(std::shared_ptr<Mike> node)
     My_Map t(10, 10, 5);
     // My_Map t(width, height, res);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
     Img ImgLog;
     double pc_time = 0.0, node_time = 0.0, camera_time = 0.0;
     int serial_number = 0;
@@ -1915,7 +1918,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     // My_Map m(width, height, res, true);
     My_Map t(width, height, res);
     std::mutex mut;
-    std::ofstream f;
+    std::fstream f;
     Img ImgLog;
 
     // Start the pipeline. 
@@ -2298,7 +2301,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         m.renderingFromMiniMap();
         m.originShow();
-        m.posShow();
+        m.locShow();
         m.mapShow();
         m.flagReset();
         t.headingShow();

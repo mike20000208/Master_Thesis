@@ -4,36 +4,38 @@
 
 int main(int argc, char * argv[])
 {
+    // Initialize the variables for commands. 
     string command;
     map<string, int> commands = {
         {"replay_from_images", 1}, 
-        {"trajectory", 2}, 
+        // {"trajectory", 2}, 
         {"stream_map", 3},
         {"single_frame_map", 4}, 
-        {"None", 5},
-        {"debug", 6},
+        // {"None", 5},
+        // {"debug", 6},
         {"replay_from_odometry", 7},
-        {"communication", 8}, 
-        {"map_demo", 9},
-        {"delay_test", 10}, 
+        // {"communication", 8}, 
+        // {"map_demo", 9},
+        // {"delay_test", 10}, 
         {"field_trip", 11},
         {"recording", 12},
         {"stream_map_from_recording", 13}};
     vector<string> temp_commands{
         "replay_from_images", 
-        "trajectory", 
+        // "trajectory", 
         "stream_map", 
         "single_frame_map", 
-        "None", 
-        "debug",
+        // "None", 
+        // "debug",
         "replay_from_odometry", 
-        "communication", 
-        "map_demo", 
-        "delay_test", 
+        // "communication", 
+        // "map_demo", 
+        // "delay_test", 
         "field_trip",
         "recording",
         "stream_map_from_recording"};
     
+    // Get into the command selection menu. 
     if (argc > 1)
     {
         bool isWrong = true;
@@ -65,7 +67,6 @@ int main(int argc, char * argv[])
             cin >> temp_command;
             command = temp_commands[temp_command];
         }
-
     }
     else
     {
@@ -94,113 +95,66 @@ int main(int argc, char * argv[])
             vector<string> subFolders;
             vector<string> modes{"trajectory", "map"};
             std::filesystem::path P {REPLAY_FOLDER};
+            
             for (auto& p : std::filesystem::directory_iterator(P))
             {
                 folders.push_back(p.path().filename());
             }
+
             sort(folders.begin(), folders.end());
 
             // Choose subfolder to get in. 
             printf("Please select which folder you want to get in. The availbale options are shown below: \n\n");
+            
             for (i = 0; i < folders.size(); i++)
             {
                 printf("%d  ->  %s \n\n", i, folders[i].c_str());
             }
+
             int folder;
             cin >> folder;
             string temp = REPLAY_FOLDER + folders[folder];
 
             // See how many folders are there in the sub folder. 
             std::filesystem::path P1 {temp};
+
             for (auto& p : std::filesystem::directory_iterator(P1))
             {
                 subFolders.push_back(p.path().filename());
             }
+
             sort(subFolders.begin(), subFolders.end());
             printf("\n\nPlease select which folder you want to replay. The availbale options are shown below: \n\n");
+            
             for (i = 0; i < subFolders.size(); i++)
             {
                 printf("%d  ->  %s \n\n", i, subFolders[i].c_str());
             }
+
             int subFolder;
             cin >> subFolder;
 
             // select replay mode.
             printf("\n\nPlease select which mode you want to use, the available options are shown below: \n\n");
+            
             for (int i = 0; i < modes.size(); i++)
             {
                 printf("%d  ->  %s \n\n", i, modes[i].c_str());
             }
+
             int mode;
             cin >> mode;
             temp = folders[folder] + "/" + subFolders[subFolder];
             replay_from_images(temp, modes[mode]);
-
-            // if (argc > 2)
-            // {
-            //     // Check if the input folder name is correct. 
-            //     for (i = 0; i < folders.size(); i++)
-            //     {
-            //         if (argv[2] == folders[i])
-            //         {
-            //             isWrong = false;
-            //             break;
-            //         }
-            //     }
-
-            //     if (isWrong)
-            //     {
-            //         printf("\n\nPlease type the correct folder name you want to replay! \n\n");
-            //         printf("The available folder names are shown below: \n\n");
-            //         for (i = 0; i < folders.size(); i++)
-            //         {
-            //             printf("%d  ->  %s \n\n", i, folders[i].c_str());
-            //         }
-            //         int folder;
-            //         cin >> folder;
-            //         printf("Please select which mode you want to use, the available options are shown below: ");
-            //         for (int i = 0; i < modes.size(); i++)
-            //         {
-            //             printf("%d  ->  %s \n\n", i, modes[i].c_str());
-            //         }
-            //         int mode;
-            //         cin >> mode;
-            //         replay_from_images(folders[folder]);
-            //     }
-            //     else
-            //     {
-            //         replay_from_images(argv[2], argv[3]);
-            //     }
-            // }
-            // else
-            // {
-            //     printf("\n\nPlease specify which folder you want to replay! \n\n");
-            //     printf("The available folder names are shown below: \n\n");
-
-            //     for (i = 0; i < folders.size(); i++)
-            //     {
-            //         printf("%d  ->  %s \n\n", i, folders[i].c_str());
-            //     }
-            //     int folder;
-            //     cin >> folder;
-            //     printf("Please select which mode you want to use, the available options are shown below: \n\n");
-            //     for (int i = 0; i < modes.size(); i++)
-            //     {
-            //         printf("%d  ->  %s \n\n", i, modes[i].c_str());
-            //     }
-            //     int mode;
-            //     cin >> mode;
-            //     replay_from_images(folders[folder], modes[mode]);
-            // }
-
             break;
         }
 
         case 2:
         {
-            // test trajectory building. 
+            // Test trajectory building. 
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
+
             if (argc > 2)
             {
                 thread thread1 (Communication, node);

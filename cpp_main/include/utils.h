@@ -312,25 +312,25 @@ public:
 class Score
 {
 public:
-    // Pointcloud to score. 
+    // Pointcloud to process. 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
-    // maximum and minimum score of the whole region.
+    // Maximum and minimum score of the whole region.
     double maxScore = 0.0, minScore = 0.0;
 
-    // X border. 
+    // X border in the specified depth range. 
 	double maxX = 0, minX = 0;  
 
-    // Length of X
+    // Lateral length in the specified depth range. 
 	double x_len = 0;  
 
-    // Stride along x-direction, window size
+    // Stride along x-direction and window size
 	double stride = 0.3, size = 0.6;  
 
-    // 
+    // The start to divide the pointcloud along z-axis. 
     double start_z = 0.0;
 
-    // Step along z-direction
+    // Search step along z-direction
 	double search_step = 1.0;  
 
     // Search range within z-direction
@@ -345,8 +345,8 @@ public:
     // Tunable parameter of the scoring system. 
 	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
 
-    // Threshold of height that can be seen as traversable. (in meters)
-    double height_threshold = 0.05;
+    // Threshold of height to determine the traversability. 
+    double height_threshold = .10;  // in meter. 
 
     // Pointcloud basic statistics. 
     vector<double> height;
@@ -371,6 +371,7 @@ public:
 	void setSearchStep(double step);
 	void setStride(double instride);
 	void setSize(double insize);
+    void setHeightThreshold(double ht);
 	void setInlierWeight(double iw);
 	void setOutlierWeight(double ow);
 	void setDisWeight(double dw);
@@ -445,6 +446,9 @@ public:
 
     // Mini map that stores the projection info. 
     cv::Mat miniMap;
+
+    // Threshold of height to determine the traversability. 
+    double height_threshold = .10;  // in meter. 
 
     // Poses. 
     Pose startPoint;
@@ -521,16 +525,16 @@ public:
     // Show the origin. 
     void originShow();
 
-    //
+    // Render the map with the mini map. 
     void renderingFromMiniMap();
 
-    // 
-    void posShow();
+    // Show the current location. 
+    void locShow();
 
     // Show the map.
     void mapShow();
 
-    // 
+    // Reset all the flags. 
     void flagReset();
 
 };
