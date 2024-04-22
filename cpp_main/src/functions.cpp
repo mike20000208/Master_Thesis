@@ -519,8 +519,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
     cv::resizeWindow(win1, 1280 / 2, 720 / 2);
-    cv::resizeWindow(win2, 500, 500);
-    cv::resizeWindow(win3, 500, 500);
+    cv::resizeWindow(win2, 600, 600);
+    cv::resizeWindow(win3, 600, 600);
     cv::Mat image;
 
     // Initialize other objects.
@@ -597,13 +597,18 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         S.setStartZ(0.0);
         S.setSearchRange(4.0);
 
-        // // Lower resolution. 
-        // S.setSearchStep(.40);
-        // S.setSize(.40);
-
-        // Higher resolution. 
-        S.setSearchStep(pow(res, -1));
-        S.setSize(pow(res, -1));
+        if (!isHighDef)
+        {
+            // Lower resolution. 
+            S.setSearchStep(2 * pow(res, -1));
+            S.setSize(2 * pow(res, -1));            
+        }
+        else
+        {
+            // Higher resolution. 
+            S.setSearchStep(pow(res, -1));
+            S.setSize(pow(res, -1));            
+        }
 
         S.setStride(1.0 * S.size);
         S.setHeightThreshold(.10);
@@ -682,8 +687,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::moveWindow(win1, 0, 0);
         // cv::moveWindow(win2, 1000, 0);
         // cv::moveWindow(win3, 1000, 500);
-        cv::moveWindow(win2, (1280 / 2 + 75), 0);
-        cv::moveWindow(win3, (1280 / 2 + 580), 0);
+        cv::moveWindow(win2, 1280 / 2 + 75, 0);
+        cv::moveWindow(win3, 1280 / 2 + 680, 0);
         cv::putText(
             image, 
             to_string(ImgLog.timestamp),
