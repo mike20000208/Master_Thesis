@@ -151,8 +151,10 @@ struct Pose
     int y_pixel_img = 0;
     int x_pixel_map = 0;
     int y_pixel_map = 0;
-    double x_meter = 0.0;
-    double y_meter = 0.0;
+    int x_mm = 0;
+    int y_mm = 0;
+    // double x_meter = 0.0;
+    // double y_meter = 0.0;
     double roll = 0.0;  // about x-axis.
     double yaw = 0.0;  // about z-axis. 
     double pitch = 0.0;  // about y-axis. 
@@ -319,8 +321,8 @@ public:
     // Maximum and minimum score of the whole region.
     double maxScore = 0.0, minScore = 0.0;
 
-    // X border in the specified depth range. 
-	double maxX = 0, minX = 0;  
+    // X border in the specified depth range. (in meter)
+	double maxX = -1e6, minX = 1e6;  
 
     // Lateral length in the specified depth range. 
 	double x_len = 0;  
@@ -353,6 +355,7 @@ public:
     vector<double> height;
     double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
     double maxHeight = 0.0, minHeight = 0.0;
+    double minZ = -1e6, maxZ = 1e6;  // (in meter)
 
     // Slices within specific z range
 	vector<Slice> slices;  
