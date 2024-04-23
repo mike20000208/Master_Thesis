@@ -12,7 +12,7 @@ int main(int argc, char * argv[])
         {"stream_map", 3},
         {"single_frame_map", 4}, 
         // {"None", 5},
-        // {"debug", 6},
+        {"debug", 6},
         {"replay_from_odometry", 7},
         // {"communication", 8}, 
         // {"map_demo", 9},
@@ -26,7 +26,7 @@ int main(int argc, char * argv[])
         "stream_map", 
         "single_frame_map", 
         // "None", 
-        // "debug",
+        "debug",
         "replay_from_odometry", 
         // "communication", 
         // "map_demo", 
@@ -390,31 +390,6 @@ int main(int argc, char * argv[])
             fstream f;
             f.open(node_path, ios::out | ios::app);
             f << "Command [" << temp_commands[7] << "] is used. \n";
-            f.close(); 
-            break;
-        }
-
-        case 9:
-        {
-            rclcpp::init(argc, argv);
-            std::shared_ptr<Mike> node = std::make_shared<Mike>();
-            printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-            int map_width_meter, map_height_meter, map_res;
-            cin >> map_width_meter >> map_height_meter >> map_res; 
-            printf("\n\nPlease enter which projection mode you want to use: \n\nOptions: \n\n  -> color\n\n  -> info\n\n");
-            string mode;
-            cin >> mode;
-            thread thread1 (Communication, node);
-            thread thread2 (map_projection_debug, node, map_width_meter, map_height_meter, map_res, mode);
-            // thread thread2 (map_projection_debug, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
-            thread1.join();
-            thread2.join();
-
-            // Write a note to specify which command is executed in this folder. 
-            string node_path = node->log_path + "/Mode.txt";
-            ofstream f;
-            f.open(node_path, ios::out | ios::app);
-            f << "Command [" << temp_commands[8] << "] is used. \n";
             f.close(); 
             break;
         }

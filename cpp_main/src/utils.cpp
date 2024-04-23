@@ -7,8 +7,6 @@ bool isEnableFromFile = false;
 
 bool isRecording = false;
 
-bool isHighDef = true;
-
 
 /**
  * @brief Shows that the whole program is done. 
@@ -450,56 +448,23 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
 
-	// Create the mini map if it's in map mode. 
+	// Create the info map if it's in map mode. 
 	if (isMap)
 	{
-		if (!isHighDef)
-		{
-			/*
-			Create a mini map that can store the necessary info for projection. (lower resolution)
+		/*
+		Create an info map that can store the necessary info for projection. (higher resolution)
 
-			There are 4 channels of this mini map. 
+		There are 2 channels of this info map. 
 
-			1st means the x coordinates. 
+		1st means if this region is explored. 
 
-			2nd means the y coordinates. 
-
-			3rd means if this region is explored. 
-
-			4th means the data of this region. (mostly is the height. sometimes the score)
-			*/
-			My_Map::miniMap = cv::Mat(
-				height_pixel / 2, 
-				width_pixel / 2, 
-				CV_64FC4, 
-				cv::Scalar(0.0, 0.0, 0.0, 0.0));
-			
-			for (int i = 0; i < My_Map::miniMap.rows; i++)
-			{
-				for (int j = 0; j < My_Map::miniMap.cols; j++)
-				{
-					My_Map::miniMap.at<cv::Vec4d>(i, j)[0] = (4 * j + 1) / 2.0;
-					My_Map::miniMap.at<cv::Vec4d>(i, j)[1] = (4 * i + 1) / 2.0;
-				}
-			}			
-		}
-		else
-		{
-			/*
-			Create a mini map that can store the necessary info for projection. (higher resolution)
-
-			There are 2 channels of this mini map. 
-
-			1st means if this region is explored. 
-
-			2nd means the data of this region. (mostly is the height. sometimes the score) 
-			*/
-			My_Map::miniMap = cv::Mat(
-				height_pixel, 
-				width_pixel, 
-				CV_64FC2, 
-				cv::Scalar(0.0, 0.0));			
-		}
+		2nd means the data of this region. (mostly is the height. sometimes the score) 
+		*/
+		My_Map::infoMap = cv::Mat(
+			height_pixel, 
+			width_pixel, 
+			CV_64FC2, 
+			cv::Scalar(0.0));			
 	}
 
 	My_Map::isMap = isMap;
@@ -583,37 +548,11 @@ Point2D My_Map::map2img(Point2D p)
 void My_Map::cam2map()
 {
 	// Convert the corners from camera frame to robot frame. (in meter)
-	// My_Map::top_left_robot[0] = My_Map::top_left_cam[2];
-	// My_Map::top_left_robot[1] = My_Map::top_left_cam[0];
-	// My_Map::top_left_robot[2] = My_Map::top_left_cam[1];
-	// My_Map::bottom_right_robot[0] = My_Map::bottom_right_cam[2];
-	// My_Map::bottom_right_robot[1] = My_Map::bottom_right_cam[0];
-	// My_Map::bottom_right_robot[2] = My_Map::bottom_right_cam[1];
 	My_Map::center_robot[0] = My_Map::center_cam[2];
 	My_Map::center_robot[1] = My_Map::center_cam[0];
 	My_Map::center_robot[2] = My_Map::center_cam[1];
 
 	// Convert the corners from robot frame to map frame. (in meter)
-	// My_Map::top_left_map[0] = cos(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
-	// sin(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
-	// (My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
-
-	// My_Map::top_left_map[1] = -sin(-My_Map::currentPoint.yaw) * top_left_robot[0] + \
-	// cos(-My_Map::currentPoint.yaw) * top_left_robot[1] + \
-	// (My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
-
-	// My_Map::top_left_map[2] = My_Map::top_left_robot[2];
-
-	// My_Map::bottom_right_map[0] = cos(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
-	// sin(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
-	// (My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
-
-	// My_Map::bottom_right_map[1] = -sin(-My_Map::currentPoint.yaw) * bottom_right_robot[0] + \
-	// cos(-My_Map::currentPoint.yaw) * bottom_right_robot[1] + \
-	// (My_Map::currentPoint.y_meter - My_Map::startPoint.y_meter);
-
-	// My_Map::bottom_right_map[2] = My_Map::bottom_right_robot[2];
-
 	My_Map::center_map[0] = cos(-My_Map::currentPoint.yaw) * center_robot[0] + \
 	sin(-My_Map::currentPoint.yaw) * center_robot[1] + \
 	(My_Map::currentPoint.x_meter - My_Map::startPoint.x_meter);
@@ -625,8 +564,6 @@ void My_Map::cam2map()
 	My_Map::center_map[2] = My_Map::center_robot[2];
 
 	// Make the unit consistant. from meter to pixel. 
-	// My_Map::top_left_map *= My_Map::res;
-	// My_Map::bottom_right_map *= My_Map::res;
 	My_Map::center_map *= My_Map::res;
 
 	// confirm the transformation is done. 
@@ -649,7 +586,7 @@ void My_Map::cam2map()
 
 
 /**
- * @brief Project the slice area on the map and show it. 
+ * @brief Project the slice area on the maps. 
  * @param S the instance of class Score which is running the slicing and assessment currently. 
  * @param index the index of current slice which is going to be projected on the map. 
 */
@@ -684,65 +621,69 @@ void My_Map::sliceProject(Score S, int index)
 		// 	-1
 		// );
 
-		// Project the slice on the mini map, avoiding the overlap problem. 
-		if (!isHighDef)
+		// Project the slice on the info map, avoiding the overlap problem. 
+		if (My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
 		{
-			// Lower resolution case. 
-			for (int i = 0; i < My_Map::miniMap.rows; i++)
-			{
-				for (int j = 0; j < My_Map::miniMap.cols; j++)
-				{
-					coors.push_back(center_img.x);
-					coors.push_back(center_img.y);
-					coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]);
-					coors.push_back(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]);
-					dis = getDistance(coors);
-					coors.clear();
-
-					// f << to_string(i) << ", " << to_string(j) << ", " \
-					// << to_string(S.slices[index].centroid[0]) << ", " \
-					// << to_string(S.slices[index].centroid[1]) << ", " \
-					// << to_string(S.slices[index].centroid[2]) << ", " \
-					// << to_string(center_img.x) << ", " \
-					// << to_string(center_img.y) << ", " \
-					// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
-					// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
-					// << to_string(dis) << "\n";
-					
-					if (dis <= (sqrt(2) * 0.5 + 1e-5))  // in pixel
-					{
-						
-						if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
-						{
-							My_Map::miniMap.at<cv::Vec4d>(i, j)[2] = 1.0;
-						}
-						// else
-						// {
-						// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] += S.slices[index].score;
-						// 	My_Map::miniMap.at<cv::Vec4d>(i, j)[3] /= 2;
-						// }
-						My_Map::miniMap.at<cv::Vec4d>(i, j)[3] = S.slices[index].score;
-						isFound = true;
-						break;
-					}
-				}
-
-				if (isFound)
-				{
-					break;
-				}
-			}
+			My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
 		}
-		else
+
+		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.slices[index].score;			
+
+		// reset the flag. 
+		My_Map::isTransformed = false;
+
+		// f.close();
+	}
+	else
+	{
+		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+		exit(-1);
+	}
+}
+
+
+/**
+ * @brief Project the cell on the map. 
+ * @param S
+ * @param i
+ * @param j
+*/
+void My_Map::sliceProject(Score S, int i, int j)
+{
+	Point2D center_map, center_img;
+	if (My_Map::isTransformed)
+	{
+		// Make sure the numebers will be integers. but still in the map frame  
+		center_map.x = round(My_Map::center_map[0]);
+		center_map.y = round(My_Map::center_map[1]);
+
+		// Convert the corners from map frame to image frame. 
+		center_img = My_Map::map2img(center_map);
+
+		// Draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
+		bool isFound = false;
+
+		// // Debug. 
+		// fstream f;
+		// f.open(DEBUG_FILE, ios::app | ios::out);
+		// f.open("/home/mike/Debug/center.csv", ios::app | ios::out);
+
+		// // Mark the center of the slice on the map. (for debug)
+		// cv::circle(
+		// 	My_Map::map_,
+		// 	cv::Point(center_img.x, center_img.y),
+		// 	1,
+		// 	cv::Scalar(255, 255, 255),
+		// 	-1
+		// );
+
+		// Project the cell on the info map. 
+		if (My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
 		{
-			// Higher resolution case. 
-			if (My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
-			{
-				My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
-			}
-
-			My_Map::miniMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.slices[index].score;			
+			My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
 		}
+
+		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.infoMap[i][j].Y;			
 
 		// reset the flag. 
 		My_Map::isTransformed = false;
@@ -957,18 +898,23 @@ void My_Map::mapUpdate(Score S)
 	// Assign the height threshold. 
 	My_Map::height_threshold = S.height_threshold;
 
-    for (int i = 0; i < S.slices.size(); i++)
+	// The faster method. 
+	for (int i = 0; i < S.infoMap.size(); i++)
 	{
-		// Get the coordinates of the slice (region, grid), but still in camera frame. 
-		My_Map::center_cam = S.slices[i].centroid;
-		// My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
-		// My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
+		for (int j = 0; j < S.infoMap[0].size(); j++)
+		{
+			// Get the coordinates of a cell, but still in camera frame. 
+			My_Map::center_cam = cv::Vec3d(
+				S.infoMap[i][j].X, 
+				S.infoMap[i][j].Y, 
+				S.infoMap[i][j].Z);
 
-		// Transformation from camera frame to map frame. 
-		My_Map::cam2map();
+			// Transformation from camera frame to map frame.
+			My_Map::cam2map();
 
-		// Transformation from map frame to image frame. (the image used to display the map)
-		My_Map::sliceProject(S, i);
+			// Transformation from map frame to image frame. (the image used to display the map)
+			My_Map::sliceProject(S, i, j);
+		}
 	}
 }
 
@@ -1066,9 +1012,9 @@ void My_Map::originShow()
 
 
 /**
- * @brief Render the map with the mini map. 
+ * @brief Render the map with the info map. 
 */
-void My_Map::renderingFromMiniMap()
+void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
@@ -1080,77 +1026,37 @@ void My_Map::renderingFromMiniMap()
 		My_Map::tempMap = My_Map::map_.clone();
 	}
 
-	for (int i = 0; i < My_Map::miniMap.rows; i++)
+	for (int i = 0; i < My_Map::infoMap.rows; i++)
 	{
-		for (int j = 0; j < My_Map::miniMap.rows; j++)
+		for (int j = 0; j < My_Map::infoMap.rows; j++)
 		{
 			// // Debug
 			// f << to_string(i) << ", " << to_string(j) << ", " \
-			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[0]) << ", " \
-			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[1]) << ", " \
-			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[2]) << ", " \
-			// << to_string(My_Map::miniMap.at<cv::Vec4d>(i, j)[3]) << "\n";
+			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[0]) << ", " \
+			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[1]) << ", " \
+			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[2]) << ", " \
+			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[3]) << "\n";
 			
-			if (!isHighDef)
+			if (My_Map::infoMap.at<cv::Vec2d>(i, j)[0] == 0.0)
 			{
-				// Lower resolution case. 
-				if (My_Map::miniMap.at<cv::Vec4d>(i, j)[2] == 0.0)
-				{
-					continue;
-				}
-				else
-				{
-					if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= -My_Map::height_threshold && 
-					My_Map::miniMap.at<cv::Vec4d>(i, j)[3] <= My_Map::height_threshold)
-					// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
-					{
-						color = cv::Scalar(0, 127, 0);
-					}
-					else
-					{
-						color = cv::Scalar(0, 0, 127);
-					}
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[0] = color[0];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[1] = color[1];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j)[2] = color[2];
-
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[0] = color[0];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[1] = color[1];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i, 2 * j + 1)[2] = color[2];
-
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[0] = color[0];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[1] = color[1];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j)[2] = color[2];
-
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[0] = color[0];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[1] = color[1];
-					My_Map::tempMap.at<cv::Vec3b>(2 * i + 1, 2 * j + 1)[2] = color[2];
-				}
+				continue;
 			}
 			else
 			{
-				// Higher resolution case.
-				if (My_Map::miniMap.at<cv::Vec2d>(i, j)[0] == 0.0)
+				if (My_Map::infoMap.at<cv::Vec2d>(i, j)[1] >= -My_Map::height_threshold && 
+				My_Map::infoMap.at<cv::Vec2d>(i, j)[1] <= My_Map::height_threshold)
 				{
-					continue;
+					color = cv::Scalar(0, 127, 0);
 				}
 				else
 				{
-					if (My_Map::miniMap.at<cv::Vec2d>(i, j)[1] >= -My_Map::height_threshold && 
-					My_Map::miniMap.at<cv::Vec2d>(i, j)[1] <= My_Map::height_threshold)
-					// if (My_Map::miniMap.at<cv::Vec4d>(i, j)[3] >= 0.6)
-					{
-						color = cv::Scalar(0, 127, 0);
-					}
-					else
-					{
-						color = cv::Scalar(0, 0, 127);
-					}
-					My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
-					My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
-					My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
-				}				
-			}
+					color = cv::Scalar(0, 0, 127);
+				}
+
+				My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
+				My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
+				My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+			}				
 		}
 	}
 	// f.close();
@@ -1207,82 +1113,6 @@ void My_Map::flagReset()
 
 
 /**
- * @brief Constructor of class Roughness.
-*/
-Roughness::Roughness()
-{
-	a = 0;
-	b = 0;
-	c = 0;
-	d = 0;
-}
-
-
-/**
- * @brief Constructor of class Roughness.
- * @param coefficients plane model coefficients. 
-*/
-Roughness::Roughness(Eigen::VectorXf& coefficients)
-{
-	a = coefficients[0];
-	b = coefficients[1];
-	c = coefficients[2];
-	d = coefficients[3];
-}
-
-
-/**
- * @brief Constructor of class Roughness.
- * @param coefficients plane model coefficients.
-*/
-Roughness::Roughness(pcl::ModelCoefficients& coefficients)
-{
-	a = coefficients.values[0];
-	b = coefficients.values[1];
-	c = coefficients.values[2];
-	d = coefficients.values[3];
-}
-
-
-/**
- * @brief Calculate the distance between a point and plane.
- * @param point one point from outliers. 
- * @return distance distance between point and plane.
-*/
-double Roughness::get_distance(pcl::PointXYZRGB point)
-{
-	double distance = 0;
-	distance = (abs(a * point.x + b * point.y + c * point.z + d)) / (sqrt(pow(a, 2.0) + pow(b, 2.0) + pow(c, 2.0)));
-	return distance;
-}
-
-
-/**
- * @brief Calculate the roughness of outliers of single frame. 
- * @param cloud pointcloud with inliers in green. 
-*/
-void Roughness::get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud)
-{
-	vector<double> temp;
-	outliers.clear();
-	rough.clear();
-	double d = 0;
-
-	for (int i = 0; i < cloud.points.size(); i++)
-	{
-		if (cloud.points[i].r == 255 && cloud.points[i].b == 255)  // outliers
-		{
-			d = get_distance(cloud.points[i]);
-			temp.push_back(d);
-			outliers.push_back(i);
-		}
-	}
-	normalize(temp, rough, 50, 255, cv::NORM_MINMAX, CV_64F);
-	// normalize(temp, rough, 0, 255, cv::NORM_MINMAX, CV_64F);
-}
-
-
-/**
  * @brief Constructor of class Score. 
  * @param incloud a filtered pointcloud which covers the ROI. 
 */
@@ -1290,20 +1120,43 @@ Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
 {
 	cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::copyPointCloud(*incloud, *cloud);
+	vector<double> height;
+	vector<double> Z, X;
 
 	// Calculate the height statistics. 
 	for (auto& p : (*cloud).points)
 	{
-		Score::height.push_back(p.y);
+		height.push_back(p.y);
+		Z.push_back(p.z);
+		X.push_back(p.x);
 	}
 
-	Score::height_mean = Score::get_mean(Score::height);
-	Score::height_median = Score::get_median(Score::height);
-	Score::height_mode = Score::get_mode(Score::height);
+	// Get the basic statistics of the pointcloud. 
+	sort(height.begin(), height.end());
+	sort(Z.begin(), Z.end());
+	sort(X.begin(), X.end());
+	Score::maxHeight = height.back();
+	Score::minHeight = height.front();
+	Score::maxX = X.back();
+	Score::minX = X.front();
+	Score::maxZ = Z.back();
+	Score::minZ = Z.front();
+	Score::height_mean = Score::get_mean(height);
+	Score::height_median = Score::get_median(height);
+	Score::height_mode = Score::get_mode(height);
 
 	// Initialize the maximum and minimum score of the whole scanned region. 
 	Score::minScore = 999999;
 	Score::maxScore = -999999;
+
+	// // Debug
+	// fstream f;
+	// f.open(DEBUG_FILE, ios::app | ios::out);
+	// f << to_string(Score::minX) << ", " \
+	// << to_string(Score::maxX) << ", " \
+	// << to_string(Score::minZ) << ", " \
+	// << to_string(Score::maxZ) << "\n";
+	// f.close();
 }
 
 
@@ -1364,6 +1217,16 @@ void Score::setSize(double insize)
 void Score::setHeightThreshold(double ht)
 {
 	Score::height_threshold = ht;
+}
+
+
+/**
+ * @brief Set the size of the grid. 
+ * @param size size of the grid that divide the pointcloud. 
+*/
+void Score::setGridSize(double size)
+{
+	Score::gridSize = size;
 }
 
 
@@ -1876,13 +1739,100 @@ double Score::get_mode(vector<double> data)
 
 
 /**
- * @brief Find the max and min height of the pointcloud. 
+ * @brief Divide the pointcloud into a grid and create an info map to store all the necessary data. 
+ * 
+ * Especially, the info map is a 2D matrix of a user-defined data type: Grid. s
+ * 
+ * 
 */
-void Score::get_maxMin()
+void Score::divide()
 {
-	sort(Score::height.begin(), Score::height.end());
-	Score::maxHeight = height[height.size() - 1];
-	Score::minHeight = height[0];
+	// Determine the size of the info map. 
+	int width = 0, height = 0;
+	width = ceil((Score::maxX - Score::minX) / Score::gridSize);
+	height = ceil((Score::maxZ - Score::minZ) / Score::gridSize);
+	
+	// Resize the info map. 
+	for (auto& row : Score::infoMap)
+	{
+		row.resize(width);
+	}
+
+	Score::infoMap.resize(height, vector<Grid>(width));
+
+	// Iterate through the whole pointcloud to complete the info map. 
+	int row = 0, col = 0;
+
+	for (auto& p : Score::cloud->points)
+	{
+		// Determine which row it is in. 
+		if (!(p.z < 0.5))  // filter out the points within the invalid range. 
+		{
+			if ((int)round((p.z - Score::minZ) * 1e3) % (int)round(Score::gridSize * 1e3) == 0)  // in mm. 
+			{
+				row = (p.z - Score::minZ) / Score::gridSize;
+			}
+			else
+			{
+				row = floor((p.z - Score::minZ) / Score::gridSize);
+			}
+		}
+		else
+		{
+			continue;
+		}
+
+		// Determine which col it is in.
+		if ((int)round((p.x - Score::minX) * 1e3) % (int)round(Score::gridSize * 1e3) == 0)  // in mm. 
+		{
+			col = (p.x - Score::minX) / Score::gridSize;
+		}
+		else
+		{
+			col = floor((p.x - Score::minX) / Score::gridSize);
+		}
+
+		// Fill that cell. 
+		Score::infoMap[row][col].height.push_back(p.y);
+		Score::infoMap[row][col].X += p.x;
+		Score::infoMap[row][col].Z += p.z;
+		Score::infoMap[row][col].counter++;
+	}
+
+	// Calculate the statistics of each cell in the grid. 
+    printf("\n\nStart processing the statistics. \n\n");
+	for (int i = 0; i < Score::infoMap.size(); i++)
+	{
+		for (int j = 0; j < Score::infoMap[0].size(); j++)
+		{
+			if (Score::infoMap[i][j].counter != 0)
+			{
+				Score::infoMap[i][j].Y = get_median(Score::infoMap[i][j].height);
+				Score::infoMap[i][j].X /= Score::infoMap[i][j].counter;
+				Score::infoMap[i][j].Z /= Score::infoMap[i][j].counter;
+			}
+			else
+			{
+				continue;
+			}
+
+		}
+	}
+
+	// // Debug
+	// fstream f;
+	// f.open(DEBUG_FILE, ios::out | ios::app);
+	// for (int i = 0; i < Score::infoMap.size(); i++)
+	// {
+	// 	for (int j = 0; j < Score::infoMap[0].size(); j++)
+	// 	{
+	// 		f << to_string(i) << ", " << to_string(j) << ", " \
+	// 		<< to_string(Score::infoMap[i][j].X) << ", " \
+	// 		<< to_string(Score::infoMap[i][j].Y) << ", " \
+	// 		<< to_string(Score::infoMap[i][j].Z) << "\n";
+	// 	}
+	// }
+	// f.close();
 }
 
 
@@ -2023,8 +1973,8 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 		p.y = cos(theta) * temp_y - sin(theta) * temp_z;
 		p.z = sin(theta) * temp_y + cos(theta) * temp_z;
 
-		p.y += 65 * CENTI;
-		p.z += 15 * CENTI;
+		p.y += 65 * CENTI;  // in meter. 
+		p.z += 15 * CENTI;  // in meter. 
 
 		// f << to_string(p.x) << ", " \
 		// << to_string(p.y) << ", " \
@@ -2149,4 +2099,33 @@ double getDistance(vector<double> data)
 }
 
 
+/**
+ * @brief Calculate the spent time of a specific function.
+ * @param start the start time of the function. 
+ * @param end the end time of the function. 
+ * @param func_name the name of the estimated function. 
+*/
+MyTime get_duration(clock_t start, clock_t end, char func_name[])
+{
+	MyTime time;
+	double duration = double(end - start) / double(CLOCKS_PER_SEC);  // in second. 
+
+	// if (duration < 1.0)
+	// {
+	// 	duration *= 1000;  // in millisecond. 
+	// 	printf("\n\n%s takes %f ms. \n\n", func_name, duration);
+	// 	time.is_ms = true;
+	// }
+	// else
+	// {
+	// 	printf("\n\n%s takes %f s. \n\n", func_name, duration);
+	// 	time.is_ms = false;
+	// }
+
+	duration *= 1000;  // in millisecond. 
+	// printf("\n\n%s takes %f ms. \n\n", func_name, duration);
+	time.is_ms = true;
+	time.time = duration;
+	return time;
+}
 

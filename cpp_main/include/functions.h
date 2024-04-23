@@ -23,9 +23,6 @@ int replay_from_odometry(string folder_name, int width=30, int height=30, int re
 int pointcloud_debug(int width, int height, int res);
 
 
-int map_projection_debug(std::shared_ptr<Mike> node, int width, int height, int res, string mode="color");
-
-
 int delay_test(std::shared_ptr<Mike> node);
 
 

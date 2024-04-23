@@ -73,7 +73,6 @@ using namespace std::filesystem;
 extern bool TERMINATE;
 extern bool isEnableFromFile;
 extern bool isRecording;
-extern bool isHighDef;
 
 
 struct GPS
@@ -151,10 +150,10 @@ struct Pose
     int y_pixel_img = 0;
     int x_pixel_map = 0;
     int y_pixel_map = 0;
-    int x_mm = 0;
-    int y_mm = 0;
-    // double x_meter = 0.0;
-    // double y_meter = 0.0;
+    // int x_mm = 0;
+    // int y_mm = 0;
+    double x_meter = 0.0;
+    double y_meter = 0.0;
     double roll = 0.0;  // about x-axis.
     double yaw = 0.0;  // about z-axis. 
     double pitch = 0.0;  // about y-axis. 
@@ -180,6 +179,23 @@ struct Slice
 	double score = 0.0;
 	cv::Vec3d centroid = cv::Vec3d(0.0, 0.0, 0.0);
 	vector<int> indices;
+};
+
+
+struct MyTime
+{
+	double time;
+	bool is_ms;
+};
+
+
+struct Grid
+{
+    vector<double> height;
+    double X = 0.0;
+    double Y = 0.0;
+    double Z = 0.0;
+    int counter = 0;
 };
 
 
@@ -318,6 +334,9 @@ public:
     // Pointcloud to process. 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
+    // Grid size. (in meter)
+    double gridSize = 1e-3;
+
     // Maximum and minimum score of the whole region.
     double maxScore = 0.0, minScore = 0.0;
 
@@ -352,10 +371,12 @@ public:
     double height_threshold = .10;  // in meter. 
 
     // Pointcloud basic statistics. 
-    vector<double> height;
     double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
     double maxHeight = 0.0, minHeight = 0.0;
     double minZ = -1e6, maxZ = 1e6;  // (in meter)
+
+    // 
+    vector<vector<Grid>> infoMap;
 
     // Slices within specific z range
 	vector<Slice> slices;  
@@ -376,6 +397,7 @@ public:
 	void setStride(double instride);
 	void setSize(double insize);
     void setHeightThreshold(double ht);
+    void setGridSize(double size);
 	void setInlierWeight(double iw);
 	void setOutlierWeight(double ow);
 	void setDisWeight(double dw);
@@ -403,10 +425,10 @@ public:
     // 
     bool get_height(double z);
 
-    //
-    void get_maxMin();
+    // 
+    void divide();
 
-    //
+    // Render the pointcloud based on the height. 
     void rendering();
 
     //
@@ -448,8 +470,8 @@ public:
     // Temporary map for drawing an arrow indicating the heading. 
     cv::Mat tempMap;
 
-    // Mini map that stores the projection info. 
-    cv::Mat miniMap;
+    // Info map that stores the projection info. 
+    cv::Mat infoMap;
 
     // Threshold of height to determine the traversability. 
     double height_threshold = .10;  // in meter. 
@@ -509,7 +531,8 @@ public:
     // cv::Vec3d cam2map(cv::Vec3d p);
 
     //Project the slice area on the map. 
-    void sliceProject(Score S, int index);
+    void sliceProject(Score S, int index);  // slower way
+    void sliceProject(Score S, int i, int j); // faster way
     void sliceProject(vector<cv::Vec3i> colors, int c);  // only for debug
     void sliceProject(vector<cv::Vec3i> colors, int c, int i);  // only for debug
 
@@ -529,8 +552,8 @@ public:
     // Show the origin. 
     void originShow();
 
-    // Render the map with the mini map. 
-    void renderingFromMiniMap();
+    // Render the map with the info map. 
+    void renderingFromInfoMap();
 
     // Show the current location. 
     void locShow();
@@ -541,35 +564,6 @@ public:
     // Reset all the flags. 
     void flagReset();
 
-};
-
-
-class Roughness
-{
-public:
-    // Plane model coefficients. 
-	double a = 0, b = 0, c = 0, d = 0;
-
-    // the serial numebr of the outliers in the pointcloud. 
-	vector<int> outliers;
-
-    // the normalized roughness corresponding to the saved outliers serial number. 
-	vector<double> rough;
-
-    // Constructor. 
-	Roughness();
-
-    // Constructor with plane model coefficients. 
-	Roughness(Eigen::VectorXf& coefficients);
-
-    // Constructor with plane model coefficients. 
-	Roughness(pcl::ModelCoefficients& coefficients);
-
-    // Calculate the distance between a given point and the found plane. 
-	double get_distance(pcl::PointXYZRGB point);
-
-    // Calculate the roughness regarding to the outliers. 
-	void get_Roughness(pcl::PointCloud<pcl::PointXYZRGB>& cloud);
 };
 
 
@@ -608,3 +602,5 @@ int getFilesNum(string folder);
 
 double getDistance(vector<double> data);
 
+
+MyTime get_duration(clock_t start, clock_t end, char func_name[]);
