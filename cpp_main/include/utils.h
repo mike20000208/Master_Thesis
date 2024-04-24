@@ -56,6 +56,7 @@ using namespace std::filesystem;
 #define REPLAY_FOLDER "/home/mike/DatatoAnalyze/"
 #define REPLAY_DATE "2024-03-17-18:26:07"
 #define DEBUG_FILE "/home/mike/Debug/debug.csv"
+#define DEBUG_FOLDER "/home/mike/Debug/"
 // #define RECORDING_PATH "/home/mike/Recording/Room005.bag"
 #define RECORDING_FOLDER "/home/mike/Recording/"
 #define _USE_MATH_DEFINES
@@ -73,6 +74,7 @@ using namespace std::filesystem;
 extern bool TERMINATE;
 extern bool isEnableFromFile;
 extern bool isRecording;
+extern bool isUseNewDivision;
 
 
 struct GPS
@@ -189,7 +191,7 @@ struct MyTime
 };
 
 
-struct Grid
+struct Cell
 {
     vector<double> height;
     double X = 0.0;
@@ -334,9 +336,6 @@ public:
     // Pointcloud to process. 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
-    // Grid size. (in meter)
-    double gridSize = 1e-3;
-
     // Maximum and minimum score of the whole region.
     double maxScore = 0.0, minScore = 0.0;
 
@@ -373,10 +372,6 @@ public:
     // Pointcloud basic statistics. 
     double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
     double maxHeight = 0.0, minHeight = 0.0;
-    double minZ = -1e6, maxZ = 1e6;  // (in meter)
-
-    // 
-    vector<vector<Grid>> infoMap;
 
     // Slices within specific z range
 	vector<Slice> slices;  
@@ -397,7 +392,6 @@ public:
 	void setStride(double instride);
 	void setSize(double insize);
     void setHeightThreshold(double ht);
-    void setGridSize(double size);
 	void setInlierWeight(double iw);
 	void setOutlierWeight(double ow);
 	void setDisWeight(double dw);
@@ -425,20 +419,9 @@ public:
     // 
     bool get_height(double z);
 
-    // 
-    void divide();
 
     // Render the pointcloud based on the height. 
     void rendering();
-
-    //
-    static double get_mean(vector<double> data);
-
-    //
-    static double get_median(vector<double> data);
-
-    //
-    static double get_mode(vector<double> data);
 
     //
 	bool find_best_path();
@@ -446,6 +429,40 @@ public:
     //
 	void visualization(pcl::visualization::PCLVisualizer::Ptr viewer, 
 		Slice slice);
+};
+
+
+class GridAnalysis
+{
+public:
+    // Pointcloud to process. 
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+
+    // Grid size. (in meter)
+    double cellSize = 1e-3;
+
+    // X and Z border of the pointcloud. (in meter)
+	double maxX = -1e6, minX = 1e6;  
+    double minZ = -1e6, maxZ = 1e6;
+
+    // Threshold of height to determine the traversability. (in meter)
+    double heightThreshold = .10;
+
+    // Info map to store the information of each cell in the grid. 
+    vector<vector<Cell>> infoMap;
+
+    // Constructor. 
+    GridAnalysis(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
+
+    // Methods to setup the attributes. 
+    void setCellSize(double size);
+    void setHeightThreshold(double threshold);
+
+    // Render the pointcloud based on the height. 
+    void rendering();
+
+    // Divide the pointcloud into a grid. 
+    void divide();
 };
 
 
@@ -481,17 +498,12 @@ public:
     Pose previousPoint;
     Pose currentPoint;
 
-    // Corners of projection area. Will be in camera frame first, then converted to map frame. follewed by being converted to image frame. 
-    cv::Vec3d bottom_right_cam;
-    cv::Vec3d top_left_cam;
+    /**
+     * Centroid of the cell being projected. Will be in camera frame first, 
+     * then converted to robot frame. follewed by being converted to map frame. 
+    */
     cv::Vec3d center_cam;
-
-    cv::Vec3d bottom_right_map;
-    cv::Vec3d top_left_map;
     cv::Vec3d center_map;
-
-    cv::Vec3d bottom_right_robot;
-    cv::Vec3d top_left_robot;
     cv::Vec3d center_robot;
 
     // Flag to check whether the area is already transformed to map frame.
@@ -532,9 +544,7 @@ public:
 
     //Project the slice area on the map. 
     void sliceProject(Score S, int index);  // slower way
-    void sliceProject(Score S, int i, int j); // faster way
-    void sliceProject(vector<cv::Vec3i> colors, int c);  // only for debug
-    void sliceProject(vector<cv::Vec3i> colors, int c, int i);  // only for debug
+    void sliceProject(GridAnalysis G, int i, int j); // faster way
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -543,8 +553,8 @@ public:
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
     // Map info update method. 
-    void mapUpdate(Score S);
-    void mapUpdate(Score S, vector<cv::Vec3i> colors, int c);  // only for debug. 
+    void mapUpdate(Score S);  // the slower method. 
+    void mapUpdate(GridAnalysis G);  // the faster method. 
 
     // Show the heading. 
     void headingShow();
@@ -600,7 +610,16 @@ Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
 int getFilesNum(string folder);
 
 
+double get_mean(vector<double> data);
+
+
+double get_median(vector<double> data);
+
+
+double get_mode(vector<double> data);
+
+
 double getDistance(vector<double> data);
 
 
-MyTime get_duration(clock_t start, clock_t end, char func_name[]);
+MyTime getDuration(clock_t start, clock_t end, bool isLast=false);

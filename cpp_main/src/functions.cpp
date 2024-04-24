@@ -533,7 +533,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     Img ImgLog;
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
     clock_t start, end;
-    MyTime time;
+    clock_t start_whole, end_whole;
 
     // Start the pipeline. 
     p.start(cfg);
@@ -542,6 +542,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     while (1)
     {
         // Get frame. 
+        start_whole = clock();
         frames = p.wait_for_frames();
         color = frames.get_color_frame();
         depth = frames.get_depth_frame();
@@ -564,7 +565,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         f.close();
 
         // Draw the map. 
-        // start = clock();
+        start = clock();
         mut.lock();
 
         Quaternion_ q;
@@ -584,66 +585,87 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             q);
 
         mut.unlock();
-        // end = clock();
-
-        // // Get the spent time. (1)
-        // time = get_duration(start, end, "Pose Update");
-        // f.open(DEBUG_FILE, ios::out | ios::app);
-        // f << to_string(time.time) << ", ";  
-        // f.close();
+        end = clock();
+        getDuration(start, end);  // Get the spent time. (1)
 
         // Calculate realsense pointcloud and convert it into PCL format.
-        // start = clock();
+        start = clock();
         points = pointcloud.calculate(depth);
         cloud = Points2PCL(points);
-        // end = clock();
-
-        // // Get the spent time. (2)
-        // time = get_duration(start, end, "Pointcloud Building");
-        // f.open(DEBUG_FILE, ios::out | ios::app);
-        // f << to_string(time.time) << ", ";  
-        // f.close();
+        end = clock();
+        getDuration(start, end);  // Get the spent time. (2)
 
         // Filter the depth map with z-value. 
-        // start = clock();
+        start = clock();
 		filter.setInputCloud(cloud);
 		filter.setFilterFieldName("z");
 		filter.setFilterLimits(0, 4);
 		filter.filter(*cloud_filtered);
-        // end = clock();
+        end = clock();
+        getDuration(start, end);  // Get the spent time. (3)
 
-        // // Get the spent time. (3)
-        // time = get_duration(start, end, "Pointcloud Filtering");
-        // f.open(DEBUG_FILE, ios::out | ios::app);
-        // f << to_string(time.time) << ", ";
-        // f.close();
-
-        // Project the pointcloud to the map. 
-        // start = clock();
-        Score S(cloud_filtered); 
-        S.setGridSize(pow(res, -1));
-        S.setStartZ(0.0);
-        S.setSearchRange(4.0);
-        S.setSearchStep(pow(res, -1));
-        S.setSize(pow(res, -1));            
-        S.setStride(1.0 * S.size);
-        S.setHeightThreshold(.10);
-        S.rendering();
-
-        // The Faster method. 
-        S.divide();
-        if (m.isMap)
+        // Project the pointcloud to the map. (test two divison method to see the spent time)
+        start = clock();
+        GridAnalysis G(cloud_filtered);
+        if (!isUseNewDivision)
         {
-            m.mapUpdate(S);
+            // The slower method. 
+            Score S(cloud_filtered); 
+            S.setStartZ(0.0);
+            S.setSearchRange(4.0);
+            S.setSearchStep(pow(res, -1));
+            S.setSize(pow(res, -1));            
+            S.setStride(1.0 * S.size);
+            S.setHeightThreshold(.10);
+            // S.rendering();
+
+            for (double z = S.start_z; z < S.search_range; z += S.search_step)
+            {
+                S.get_boundary(z);
+                S.get_slices(z);
+
+                // // Debug. To see the coordinates of each slice in each step. 
+                // string file = "division.csv";
+                // file = DEBUG_FOLDER + file;
+                // f.open(file, ios::app | ios::out);
+                // for (int i = 0; i < S.slices.size(); i++)
+                // {
+                //     f << to_string(z) << ", " \
+                //     << to_string(S.minX) << ", " \
+                //     << to_string(S.maxX) << ", " \
+                //     << to_string(S.slices[i].centroid[0]) << ", " \
+                //     << to_string(S.slices[i].centroid[1]) << ", " \
+                //     << to_string(S.slices[i].centroid[2]) << "\n";
+                // }
+                // f.close();
+
+                S.get_height(z);
+
+                if (m.isMap)
+                {
+                    m.mapUpdate(S);
+                }
+            }
         }
-        // end = clock();
+        else
+        {
+            // The Faster method.
+            // GridAnalysis G(cloud_filtered);
+            G.setCellSize(pow(res, -1));
+            G.setHeightThreshold(.10);
+            G.rendering();
+            G.divide();
 
-        // // Get the spent time. (4)
-        // time = get_duration(start, end, "Map Projecting");
-        // f.open(DEBUG_FILE, ios::out | ios::app);
-        // f << to_string(time.time) << "\n";
-        // f.close();
+            if (m.isMap)
+            {
+                m.mapUpdate(G);
+            }
+        }
 
+        end = clock();
+        getDuration(start, end);  // Get the spent time. (4)
+
+        // Display the map and trajectory. 
         m.renderingFromInfoMap();
         m.originShow();
         m.locShow();
@@ -669,8 +691,16 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imwrite(l.map_path, m.tempMap);
 
         // Visualization. 
-        pc_layers.push_back(S.cloud);
-        // pc_layers.push_back(cloud_filtered);
+        // if (isUseNewDivision)
+        // {
+        //     pc_layers.push_back(G.cloud);
+        // }
+        // else
+        // {
+        //     pc_layers.push_back(S.cloud);
+        // }
+        
+        pc_layers.push_back(G.cloud);
         for (int i = 0; i < pc_layers.size(); i++)
         {
 			viewer->addPointCloud(
@@ -708,9 +738,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             break;
         }
 
-        // reset. 
+        // Reset. 
         pc_layers.clear();
 		viewer->removeAllPointClouds();
+
+        end_whole = clock();
+        getDuration(start_whole, end_whole, true);  // Get the spent time. (5)
     }
 
     // document the general info.
@@ -1206,160 +1239,6 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         isPressed = false;
     }
 
-    return 0;
-}
-
-
-/**
- * @brief Debug the pointcloud details and the map projection in the early stage.  
-*/
-int pointcloud_debug(int width, int height, int res)
-{
-    // Initialize rs2 objects. 
-    rs2::pipeline p;
-    rs2::frameset frames;
-    rs2::frame color, depth;
-    rs2::config cfg;
-    rs2::pointcloud pointcloud;
-    rs2::points points;
-    int stream_width = 1280;
-    int stream_height = 720;
-    int frame_rate = 30;
-    cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
-    // cfg.enable_stream(RS2_STREAM_COLOR, stream_width, stream_height, RS2_FORMAT_RGB8, frame_rate);
-    // cfg.enable_stream(RS2_STREAM_DEPTH, stream_width, stream_height, RS2_FORMAT_Z16, frame_rate);
-
-    // Initialize pcl objects.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PassThrough<pcl::PointXYZRGB> filter;
-
-    // Initialize other variables and objects.
-    fstream f;
-    f.open(DEBUG_FILE, ios::out);
-    vector<int> inliers;
-    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
-    My_Map m(width, height, res, true);
-    cv::namedWindow("Map", WINDOW_NORMAL);
-
-    // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
-    p.start(cfg);
-
-    // Get color and depth frame. 
-    frames = p.wait_for_frames();
-    color = frames.get_color_frame();
-    depth = frames.get_depth_frame();
-
-    // Calculate realsense pointcloud and convert it into PCL format.
-    points = pointcloud.calculate(depth);
-    cloud = Points2PCL(points);
-
-    // Filter the depth map with z-value. 
-    filter.setInputCloud(cloud);
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 5);
-    filter.filter(*cloud_filtered);
-    f << to_string(cloud_filtered->points.size()) << "\n";
-
-    // Update the pose of the robot.  
-    Quaternion_ q;
-    q.w = -0.000000;
-    q.x = 0.015092;
-    q.y = -0.000000;
-    q.z = -0.999886;
-    m.poseUpdate(
-        0, 
-        0.000000, 
-        0.000000,
-        q);
-
-    // Show the ranges in different colors.
-    vector<cv::Vec3i> colors;
-    colors.push_back(cv::Vec3i(143, 9, 9));  // red
-    colors.push_back(cv::Vec3i(214, 91, 19));  // orange
-    colors.push_back(cv::Vec3i(211, 214, 19));  // yellow
-    colors.push_back(cv::Vec3i(19, 214, 55));  // green
-    colors.push_back(cv::Vec3i(19, 104, 214));  // blue
-    colors.push_back(cv::Vec3i(152, 19, 214));  // purple
-    colors.push_back(cv::Vec3i(235, 59, 123));  // pink
-    double step = 0.7;
-    double range = 3.8;
-    int c = 0;
-    int count = 0;
-
-    // Calculate the best path. 
-	Score S(cloud_filtered); 
-	S.setSearchRange(3.0);
-	S.setSearchStep(0.50);
-	S.setSize(0.60);
-	S.setStride(0.5 * S.size);
-	S.setInlierWeight(0.70);
-	S.setOutlierWeight(1.80);
-	S.setDisWeight(1.80);
-	S.setAngleWeight(0.1);
-
-    for (double z = 0.0; z < range; z += step)
-    {
-        for (int i = 0; i < cloud_filtered->points.size(); i++)
-        {
-            if ((cloud_filtered->points[i].z >= z) && 
-            (cloud_filtered->points[i].z < (z + step)))
-            {
-                cloud_filtered->points[i].r = colors[c][0];
-                cloud_filtered->points[i].g = colors[c][1];
-                cloud_filtered->points[i].b = colors[c][2];
-                count++;
-            }
-        }
-
-        // debug
-        f << to_string(z) << ", " << to_string(c) << ", " << to_string(count) << "\n";
-
-		S.get_boundary(z);
-		S.get_slices(z);
-		S.get_score(z);
-
-        if (m.isMap)
-        {
-            m.mapUpdate(S, colors, c);
-        }
-
-        c++;
-        count = 0;
-    }
-
-    m.tempMap = m.map_.clone();
-
-    f.close();
-
-    PCL2PLY(cloud_filtered, "/home/mike/Debug/pointcloud.ply");
-
-    // Visualization. 
-    pc_layers.push_back(cloud_filtered);
-    cv::Scalar bg_color(0, 0, 0);
-    pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
-        pc_layers, 
-        bg_color);
-
-    while (!viewer->wasStopped())
-	{
-        cv::resizeWindow("Map", cv::Size(m.map_.cols, m.map_.rows));
-        cv::moveWindow("Map", 1200, 0);
-        // cv::cvtColor(m.tempMap, m.tempMap, cv::COLOR_RGB2BGR);
-        cv::imshow("Map", m.tempMap);
-        int c = cv::waitKey(1000);
-        viewer->spinOnce(1000);
-		std::this_thread::sleep_for(100ms);
-
-        // check whether to terminate the programme. 
-        if (c == 32 || c == 13 || TERMINATE == true)
-        {
-            printf("\n\nThe programme is terminated by keyboard. \n\n");
-            TERMINATE = true;
-            break;
-        }
-	}
-    
     return 0;
 }
 

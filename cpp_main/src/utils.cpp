@@ -7,6 +7,8 @@ bool isEnableFromFile = false;
 
 bool isRecording = false;
 
+bool isUseNewDivision = true;
+
 
 /**
  * @brief Shows that the whole program is done. 
@@ -644,11 +646,11 @@ void My_Map::sliceProject(Score S, int index)
 
 /**
  * @brief Project the cell on the map. 
- * @param S
+ * @param G
  * @param i
  * @param j
 */
-void My_Map::sliceProject(Score S, int i, int j)
+void My_Map::sliceProject(GridAnalysis G, int i, int j)
 {
 	Point2D center_map, center_img;
 	if (My_Map::isTransformed)
@@ -662,11 +664,6 @@ void My_Map::sliceProject(Score S, int i, int j)
 
 		// Draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
 		bool isFound = false;
-
-		// // Debug. 
-		// fstream f;
-		// f.open(DEBUG_FILE, ios::app | ios::out);
-		// f.open("/home/mike/Debug/center.csv", ios::app | ios::out);
 
 		// // Mark the center of the slice on the map. (for debug)
 		// cv::circle(
@@ -683,123 +680,7 @@ void My_Map::sliceProject(Score S, int i, int j)
 			My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
 		}
 
-		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.infoMap[i][j].Y;			
-
-		// reset the flag. 
-		My_Map::isTransformed = false;
-
-		// f.close();
-	}
-	else
-	{
-		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
-		exit(-1);
-	}
-}
-
-
-/**
- * @brief Project the slice area on the map and show it. (only for debug)
- * 
- * The pointcloud is rendered in colors based on the distance interval, and 
- * 
- * this will project the location and color of that slice on the map. 
- * 
- * @param colors
- * @param c
-*/
-void My_Map::sliceProject(vector<cv::Vec3i> colors, int c)
-{
-	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
-	if (My_Map::isTransformed)
-	{
-		// Make sure the numebers will be integers. but still in the map frame  
-		top_left_map.x = round(My_Map::top_left_map[0]);
-		top_left_map.y = round(My_Map::top_left_map[1]);
-		bottom_right_map.x = round(My_Map::bottom_right_map[0]);
-		bottom_right_map.y = round(My_Map::bottom_right_map[1]);
-
-		// Transform the coordinates of the corners to image frame. 
-		top_left_img = My_Map::map2img(top_left_map);
-		bottom_right_img = My_Map::map2img(bottom_right_map);
-
-		// Draw the area as a rectangle on the map. 
-		cv::rectangle(
-			My_Map::map_,
-			cv::Point(top_left_img.x, top_left_img.y),
-			cv::Point(bottom_right_img.x, bottom_right_img.y),
-			cv::Scalar(colors[c][2], colors[c][1], colors[c][0]),
-			-1
-		);
-
-		// Reset the flag. 
-		My_Map::isTransformed = false;
-	}
-	else
-	{
-		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
-		exit(-1);
-	}
-}
-
-
-/**
- * @brief Project the slice area on the map and show it. (only for debug)
- * 
- * The pointcloud is rendered in colors based on the distance interval, and 
- * 
- * this will project the location, color, and number of that slice on the map. 
- * 
- * @param colors
- * @param c
- * @param i
-*/
-void My_Map::sliceProject(vector<cv::Vec3i> colors, int c, int i)
-{
-	Point2D top_left_map, bottom_right_map, top_left_img, bottom_right_img;
-	if (My_Map::isTransformed)
-	{
-		// Make sure the numebers will be integers. but still in the map frame  
-		top_left_map.x = round(My_Map::top_left_map[0]);
-		top_left_map.y = round(My_Map::top_left_map[1]);
-		bottom_right_map.x = round(My_Map::bottom_right_map[0]);
-		bottom_right_map.y = round(My_Map::bottom_right_map[1]);
-
-		// Transform the coordinates of the corners to image frame. 
-		top_left_img = My_Map::map2img(top_left_map);
-		bottom_right_img = My_Map::map2img(bottom_right_map);
-
-		// Draw the area as a rectangle on the map. 
-		cv::rectangle(
-			My_Map::map_,
-			cv::Point(top_left_img.x, top_left_img.y),
-			cv::Point(bottom_right_img.x, bottom_right_img.y),
-			cv::Scalar(colors[c][2], colors[c][1], colors[c][0]),
-			-1
-		);
-
-		// Print the number of slice on the map. 
-		cv::putText(
-			My_Map::map_,
-			to_string(i),
-			cv::Point(
-				((top_left_img.x + bottom_right_img.x) / 2), 
-				((top_left_img.y + bottom_right_img.y) / 2)),
-			FONT_HERSHEY_COMPLEX_SMALL,
-			0.01,
-			cv::Scalar(0, 0, 0)
-		);
-
-		// Put a circle on the center of the slice. 
-		cv::circle(
-			My_Map::map_,
-			cv::Point(
-				((top_left_img.x + bottom_right_img.x) / 2), 
-				((top_left_img.y + bottom_right_img.y) / 2)),
-			1,
-			cv::Scalar(0, 0, 0),
-			-1
-		);
+		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = G.infoMap[i][j].Y;			
 
 		// Reset the flag. 
 		My_Map::isTransformed = false;
@@ -891,50 +772,62 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 
 /**
  * @brief Update the map with the info from camera. 
- * @param S an object contains the information to update the map. 
+ * @param S an instance of class Score that contains the information to update the map. 
 */
 void My_Map::mapUpdate(Score S)
 {
 	// Assign the height threshold. 
 	My_Map::height_threshold = S.height_threshold;
 
-	// The faster method. 
-	for (int i = 0; i < S.infoMap.size(); i++)
+    for (int i = 0; i < S.slices.size(); i++)
 	{
-		for (int j = 0; j < S.infoMap[0].size(); j++)
-		{
-			// Get the coordinates of a cell, but still in camera frame. 
-			My_Map::center_cam = cv::Vec3d(
-				S.infoMap[i][j].X, 
-				S.infoMap[i][j].Y, 
-				S.infoMap[i][j].Z);
+		// Get the coordinates of the slice (region, grid), but still in camera frame. 
+		My_Map::center_cam = S.slices[i].centroid;
 
-			// Transformation from camera frame to map frame.
-			My_Map::cam2map();
+		// Transformation from camera frame to map frame. 
+		My_Map::cam2map();
 
-			// Transformation from map frame to image frame. (the image used to display the map)
-			My_Map::sliceProject(S, i, j);
-		}
+		// Transformation from map frame to image frame. (the image used to display the map)
+		My_Map::sliceProject(S, i);
 	}
 }
 
 
 /**
- * @brief Update the map with the info from camera. (only for debug)
- * @param S an object contains the information to update the map. 
- * @param colors the colors that can divide the pointcloud based on distance. 
- * @param c the index to decide the color. 
+ * @brief Update the map with the info from camera. 
+ * @param G an instance of the class GridAnalysis that contains the information to update the map. 
 */
-void My_Map::mapUpdate(Score S, vector<cv::Vec3i> colors, int c)
+void My_Map::mapUpdate(GridAnalysis G)
 {
-	double scale = 1.5;
-    for (int i = 0; i < S.slices.size(); i++)
+	// Assign the height threshold. 
+	My_Map::height_threshold = G.heightThreshold;
+
+	// The faster method. 
+	for (int i = 0; i < G.infoMap.size(); i++)
 	{
-		My_Map::top_left_cam = S.slices[i].centroid + cv::Vec3d((S.size / scale), 0.0, (S.search_step / scale));
-		My_Map::bottom_right_cam = S.slices[i].centroid + cv::Vec3d(-(S.size / scale), 0.0, -(S.search_step / scale));
-		My_Map::cam2map();
-		// My_Map::sliceProject(colors, c, i);
-		My_Map::sliceProject(colors, c);
+		for (int j = 0; j < G.infoMap[0].size(); j++)
+		{
+			// Chech if the current cell is empty. 
+			if (G.infoMap[i][j].counter == 0 || 
+			cv::Vec3d(G.infoMap[i][j].X, G.infoMap[i][j].Y, G.infoMap[i][j].Z) == cv::Vec3d(0.0, 0.0, 0.0))
+			{
+				continue;
+			}
+			else
+			{
+				// Get the coordinates of a cell, but still in camera frame. 
+				My_Map::center_cam = cv::Vec3d(
+					G.infoMap[i][j].X, 
+					G.infoMap[i][j].Y, 
+					G.infoMap[i][j].Z);
+
+				// Transformation from camera frame to map frame.
+				My_Map::cam2map();
+
+				// Transformation from map frame to image frame. (the image used to display the map)
+				My_Map::sliceProject(G, i, j);
+			}
+		}
 	}
 }
 
@@ -1012,7 +905,7 @@ void My_Map::originShow()
 
 
 /**
- * @brief Render the map with the info map. 
+ * @brief Render the image with the info map to display the map. 
 */
 void My_Map::renderingFromInfoMap()
 {
@@ -1064,7 +957,7 @@ void My_Map::renderingFromInfoMap()
 
 
 /**
- * @brief Show the current location. 
+ * @brief Show the current location of the robot. 
 */
 void My_Map::locShow()
 {
@@ -1121,29 +1014,20 @@ Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
 	cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
 	pcl::copyPointCloud(*incloud, *cloud);
 	vector<double> height;
-	vector<double> Z, X;
 
 	// Calculate the height statistics. 
 	for (auto& p : (*cloud).points)
 	{
 		height.push_back(p.y);
-		Z.push_back(p.z);
-		X.push_back(p.x);
 	}
 
 	// Get the basic statistics of the pointcloud. 
 	sort(height.begin(), height.end());
-	sort(Z.begin(), Z.end());
-	sort(X.begin(), X.end());
 	Score::maxHeight = height.back();
 	Score::minHeight = height.front();
-	Score::maxX = X.back();
-	Score::minX = X.front();
-	Score::maxZ = Z.back();
-	Score::minZ = Z.front();
-	Score::height_mean = Score::get_mean(height);
-	Score::height_median = Score::get_median(height);
-	Score::height_mode = Score::get_mode(height);
+	Score::height_mean = get_mean(height);
+	Score::height_median = get_median(height);
+	Score::height_mode = get_mode(height);
 
 	// Initialize the maximum and minimum score of the whole scanned region. 
 	Score::minScore = 999999;
@@ -1217,16 +1101,6 @@ void Score::setSize(double insize)
 void Score::setHeightThreshold(double ht)
 {
 	Score::height_threshold = ht;
-}
-
-
-/**
- * @brief Set the size of the grid. 
- * @param size size of the grid that divide the pointcloud. 
-*/
-void Score::setGridSize(double size)
-{
-	Score::gridSize = size;
 }
 
 
@@ -1632,8 +1506,8 @@ bool Score::get_height(double z)
 				heights.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
 			}
 
-			// height = Score::get_mean(heights);
-			height = Score::get_median(heights);
+			// height = get_mean(heights);
+			height = get_median(heights);
 			Score::slices[i].score = height;
 			heights.clear();
 
@@ -1671,173 +1545,7 @@ bool Score::get_height(double z)
 
 
 /**
- * @brief Find the mean of a set of data saved in a vector. 
- * @param data a vector save the statistics. 
- * @return the mean of the given set of data. 
-*/
-double Score::get_mean(vector<double> data)
-{
-	double mean = 0.0;
-	double len = static_cast<double>(data.size());
-	double sum = reduce(data.begin(), data.end(), 0.0);
-	mean = sum / len;
-	return mean;
-}
-
-
-/**
- * @brief Find the median of a set of data saved in a vector. 
- * @param data a vector save the statistics. 
- * @return the median of the given set of data. 
-*/
-double Score::get_median(vector<double> data)
-{
-	double median = 0.0;
-	int len = static_cast<int>(data.size());
-	sort(data.begin(), data.end());
-
-	if (len % 2 == 0)
-	{
-		median = (data[len / 2] + data[len / 2 + 1]) / 2.0;
-	}
-	else
-	{
-		median = data[len / 2 + 1];
-	}
-
-	return median;
-}
-
-
-/**
- * @brief Find the mode of a set of data saved in a vector. 
- * @param data a vector save the statistics. 
- * @return the mode of the given set of data. 
-*/
-double Score::get_mode(vector<double> data)
-{
-	double mode = 0.0;
-	unordered_map<double, int> frequency;
-	int maxFrequency = 0;
-
-	for (int i = 0; i < data.size(); i++)
-	{
-		frequency[data[i]]++;
-	}
-
-	for (auto& pair : frequency)
-	{
-		if (pair.second > maxFrequency)
-		{
-			maxFrequency = pair.second;
-			mode = pair.first;
-		}
-	}
-
-	return mode;
-}
-
-
-/**
- * @brief Divide the pointcloud into a grid and create an info map to store all the necessary data. 
- * 
- * Especially, the info map is a 2D matrix of a user-defined data type: Grid. s
- * 
- * 
-*/
-void Score::divide()
-{
-	// Determine the size of the info map. 
-	int width = 0, height = 0;
-	width = ceil((Score::maxX - Score::minX) / Score::gridSize);
-	height = ceil((Score::maxZ - Score::minZ) / Score::gridSize);
-	
-	// Resize the info map. 
-	for (auto& row : Score::infoMap)
-	{
-		row.resize(width);
-	}
-
-	Score::infoMap.resize(height, vector<Grid>(width));
-
-	// Iterate through the whole pointcloud to complete the info map. 
-	int row = 0, col = 0;
-
-	for (auto& p : Score::cloud->points)
-	{
-		// Determine which row it is in. 
-		if (!(p.z < 0.5))  // filter out the points within the invalid range. 
-		{
-			if ((int)round((p.z - Score::minZ) * 1e3) % (int)round(Score::gridSize * 1e3) == 0)  // in mm. 
-			{
-				row = (p.z - Score::minZ) / Score::gridSize;
-			}
-			else
-			{
-				row = floor((p.z - Score::minZ) / Score::gridSize);
-			}
-		}
-		else
-		{
-			continue;
-		}
-
-		// Determine which col it is in.
-		if ((int)round((p.x - Score::minX) * 1e3) % (int)round(Score::gridSize * 1e3) == 0)  // in mm. 
-		{
-			col = (p.x - Score::minX) / Score::gridSize;
-		}
-		else
-		{
-			col = floor((p.x - Score::minX) / Score::gridSize);
-		}
-
-		// Fill that cell. 
-		Score::infoMap[row][col].height.push_back(p.y);
-		Score::infoMap[row][col].X += p.x;
-		Score::infoMap[row][col].Z += p.z;
-		Score::infoMap[row][col].counter++;
-	}
-
-	// Calculate the statistics of each cell in the grid. 
-    printf("\n\nStart processing the statistics. \n\n");
-	for (int i = 0; i < Score::infoMap.size(); i++)
-	{
-		for (int j = 0; j < Score::infoMap[0].size(); j++)
-		{
-			if (Score::infoMap[i][j].counter != 0)
-			{
-				Score::infoMap[i][j].Y = get_median(Score::infoMap[i][j].height);
-				Score::infoMap[i][j].X /= Score::infoMap[i][j].counter;
-				Score::infoMap[i][j].Z /= Score::infoMap[i][j].counter;
-			}
-			else
-			{
-				continue;
-			}
-
-		}
-	}
-
-	// // Debug
-	// fstream f;
-	// f.open(DEBUG_FILE, ios::out | ios::app);
-	// for (int i = 0; i < Score::infoMap.size(); i++)
-	// {
-	// 	for (int j = 0; j < Score::infoMap[0].size(); j++)
-	// 	{
-	// 		f << to_string(i) << ", " << to_string(j) << ", " \
-	// 		<< to_string(Score::infoMap[i][j].X) << ", " \
-	// 		<< to_string(Score::infoMap[i][j].Y) << ", " \
-	// 		<< to_string(Score::infoMap[i][j].Z) << "\n";
-	// 	}
-	// }
-	// f.close();
-}
-
-
-/**
- * @brief Find the max and min height of the pointcloud. 
+ * @brief Render the pointcloud based on the height. 
 */
 void Score::rendering()
 {
@@ -1932,6 +1640,185 @@ void Score::visualization(pcl::visualization::PCLVisualizer::Ptr viewer,
 		// 	break;
 		// }
 	}
+}
+
+
+/**
+ * @brief Constructor of class GridAnalysis. 
+ * @param incloud the target pointcloud. 
+*/
+GridAnalysis::GridAnalysis(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
+{
+	// Initialize and assign the pointcloud. 
+	GridAnalysis::cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
+	pcl::copyPointCloud(*incloud, *(GridAnalysis::cloud));
+
+	// Do the statistics. 
+	vector<double> Z, X;
+
+	for (auto& p : GridAnalysis::cloud->points)
+	{
+		Z.push_back(p.z);
+		X.push_back(p.x);
+	}
+
+	sort(Z.begin(), Z.end());
+	sort(X.begin(), X.end());
+	GridAnalysis::maxX = X.back();
+	GridAnalysis::minX = X.front();
+	GridAnalysis::maxZ = Z.back();
+	GridAnalysis::minZ = Z.front();
+}
+
+
+/**
+ * @brief Set the size of a cell. 
+ * @param size size of a cellthat divide the pointcloud. 
+*/
+void GridAnalysis::setCellSize(double size)
+{
+	GridAnalysis::cellSize = size;
+}
+
+
+/**
+ * @brief Set the height threshold to determine the traversability. 
+ * @param threshold the height threshold. 
+*/
+void GridAnalysis::setHeightThreshold(double threshold)
+{
+	GridAnalysis::heightThreshold = threshold;
+}
+
+
+/**
+ * @brief Render the pointcloud based on the height. 
+*/
+void GridAnalysis::rendering()
+{
+	for (auto& p : GridAnalysis::cloud->points)
+	{
+		if (p.y >= -GridAnalysis::heightThreshold && p.y <= GridAnalysis::heightThreshold)
+		{
+			p.r = 0;
+			p.g = 127;
+			p.b = 0;
+		}
+		else
+		{
+			p.r = 127;
+			p.g = 0;
+			p.b = 0;
+		}
+	}
+}
+
+
+/**
+ * @brief Divide the pointcloud into a grid and create an info map to store all the necessary data. 
+ * 
+ * Especially, the info map is a 2D matrix of a user-defined data type: Grid. 
+ * 
+ * Each element (a struct Grid) contains following information: 
+ * 
+ * height: a vector to store the height info of all the points within this cell. 
+ * 
+ * X: x component of the centroid of that cell. 
+ * 
+ * Y: y component of the centroid of that cell. 
+ * 
+ * Z: z component of the centroid of that cell. 
+*/
+void GridAnalysis::divide()
+{
+	// Determine the size of the info map. 
+	int width = 0, height = 0;
+	width = ceil((GridAnalysis::maxX - GridAnalysis::minX) / GridAnalysis::cellSize);
+	height = ceil((GridAnalysis::maxZ - GridAnalysis::minZ) / GridAnalysis::cellSize);
+
+	// Resize the info map. 
+	for (auto& row : GridAnalysis::infoMap)
+	{
+		row.resize(width);
+	}
+	
+	GridAnalysis::infoMap.resize(height, vector<Cell>(width));
+
+	// Iterate through the whole pointcloud to complete the info map. 
+	int row = 0, col = 0;
+
+	for (auto& p : GridAnalysis::cloud->points)
+	{
+		// Determine which row it is in. 
+		if (!(p.z < 0.5))  // filter out the points in the invalid range. 
+		{
+			if ((int)round((p.z - GridAnalysis::minZ) * 1e3) % (int)round(GridAnalysis::cellSize * 1e3) == 0)  // in mm. 
+			{
+				row = (p.z - GridAnalysis::minZ) / GridAnalysis::cellSize;
+			}
+			else
+			{
+				row = floor((p.z - GridAnalysis::minZ) / GridAnalysis::cellSize);
+			}
+		}
+		else
+		{
+			continue;
+		}
+
+		// Determine which col it is in.
+		if ((int)round((p.x - GridAnalysis::minX) * 1e3) % (int)round(GridAnalysis::cellSize * 1e3) == 0)  // in mm. 
+		{
+			col = (p.x - GridAnalysis::minX) / GridAnalysis::cellSize;
+		}
+		else
+		{
+			col = floor((p.x - GridAnalysis::minX) / GridAnalysis::cellSize);
+		}
+
+		// Fill in that cell. 
+		GridAnalysis::infoMap[row][col].height.push_back(p.y);
+		GridAnalysis::infoMap[row][col].X += p.x;
+		GridAnalysis::infoMap[row][col].Z += p.z;
+		GridAnalysis::infoMap[row][col].counter++;
+	}
+
+	// Calculate the statistics of each cell in the grid. 
+    printf("\n\nStart processing the statistics. \n\n");
+	for (int i = 0; i < GridAnalysis::infoMap.size(); i++)
+	{
+		for (int j = 0; j < GridAnalysis::infoMap[0].size(); j++)
+		{
+			if (GridAnalysis::infoMap[i][j].counter != 0)
+			{
+				GridAnalysis::infoMap[i][j].Y = get_median(GridAnalysis::infoMap[i][j].height);
+				GridAnalysis::infoMap[i][j].X /= GridAnalysis::infoMap[i][j].counter;
+				GridAnalysis::infoMap[i][j].Z /= GridAnalysis::infoMap[i][j].counter;
+			}
+			else
+			{
+				continue;
+			}
+		}
+	}
+
+	// // Debug
+	// fstream f;
+	// string file = "division.csv";
+	// file = DEBUG_FOLDER + file;
+	// f.open(file, ios::out | ios::app);
+	// for (int i = 0; i < GridAnalysis::infoMap.size(); i++)
+	// {
+	// 	for (int j = 0; j < GridAnalysis::infoMap[0].size(); j++)
+	// 	{
+	// 		f << to_string(i) << ", " << to_string(j) << ", " \
+	// 		<< to_string(GridAnalysis::infoMap[i][j].counter) << ", " \
+	// 		<< to_string(GridAnalysis::infoMap[i][j].X) << ", " \
+	// 		<< to_string(GridAnalysis::infoMap[i][j].Y) << ", " \
+	// 		<< to_string(GridAnalysis::infoMap[i][j].Z) << "\n";
+	// 	}
+	// }
+	// f.close();
 }
 
 
@@ -2082,6 +1969,74 @@ int getFilesNum(string folder)
 
 
 /**
+ * @brief Find the mean of a set of data saved in a vector. 
+ * @param data a vector save the statistics. 
+ * @return the mean of the given set of data. 
+*/
+double get_mean(vector<double> data)
+{
+	double mean = 0.0;
+	double len = static_cast<double>(data.size());
+	double sum = reduce(data.begin(), data.end(), 0.0);
+	mean = sum / len;
+	return mean;
+}
+
+
+/**
+ * @brief Find the median of a set of data saved in a vector. 
+ * @param data a vector save the statistics. 
+ * @return the median of the given set of data. 
+*/
+double get_median(vector<double> data)
+{
+	double median = 0.0;
+	int len = static_cast<int>(data.size());
+	sort(data.begin(), data.end());
+
+	if (len % 2 == 0)
+	{
+		median = (data[len / 2] + data[len / 2 + 1]) / 2.0;
+	}
+	else
+	{
+		median = data[len / 2 + 1];
+	}
+
+	return median;
+}
+
+
+/**
+ * @brief Find the mode of a set of data saved in a vector. 
+ * @param data a vector save the statistics. 
+ * @return the mode of the given set of data. 
+*/
+double get_mode(vector<double> data)
+{
+	double mode = 0.0;
+	unordered_map<double, int> frequency;
+	int maxFrequency = 0;
+
+	for (int i = 0; i < data.size(); i++)
+	{
+		frequency[data[i]]++;
+	}
+
+	for (auto& pair : frequency)
+	{
+		if (pair.second > maxFrequency)
+		{
+			maxFrequency = pair.second;
+			mode = pair.first;
+		}
+	}
+
+	return mode;
+}
+
+
+/**
  * @brief Get distance between two points. 
  * @param data a vector saving the coordinates of two points. 
  * 
@@ -2100,32 +2055,34 @@ double getDistance(vector<double> data)
 
 
 /**
- * @brief Calculate the spent time of a specific function.
+ * @brief Calculate the spent time of a specific function. Also log the spent time to debug. 
  * @param start the start time of the function. 
  * @param end the end time of the function. 
- * @param func_name the name of the estimated function. 
+ * @param isLast the flag to see if this is the last data in this row. 
 */
-MyTime get_duration(clock_t start, clock_t end, char func_name[])
+MyTime getDuration(clock_t start, clock_t end, bool isLast)
 {
+	fstream f;
+	string file = "spent_time_for_each_component.csv";
+	file = DEBUG_FOLDER + file;
+	f.open(file, ios::app | ios::out);
 	MyTime time;
+
 	double duration = double(end - start) / double(CLOCKS_PER_SEC);  // in second. 
-
-	// if (duration < 1.0)
-	// {
-	// 	duration *= 1000;  // in millisecond. 
-	// 	printf("\n\n%s takes %f ms. \n\n", func_name, duration);
-	// 	time.is_ms = true;
-	// }
-	// else
-	// {
-	// 	printf("\n\n%s takes %f s. \n\n", func_name, duration);
-	// 	time.is_ms = false;
-	// }
-
 	duration *= 1000;  // in millisecond. 
-	// printf("\n\n%s takes %f ms. \n\n", func_name, duration);
 	time.is_ms = true;
 	time.time = duration;
+
+	if (isLast)
+	{
+		f << to_string(time.time) << "\n";
+	}
+	else
+	{
+		f << to_string(time.time) << ", ";
+	}
+
+	f.close();
 	return time;
 }
 
