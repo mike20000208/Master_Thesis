@@ -200,6 +200,18 @@ struct Cell
     int counter = 0;
 };
 
+struct CellKF
+{
+    int iteration = -1;
+    double measurement = 0.0;
+    double est_state = 0.0;
+    double est_cov = 0.0;
+    double gain = 0.0;
+    double pre_state = 0.0;
+    double pre_cov = 0.0;
+};
+
+
 
 class Mike : public rclcpp::Node
 {
@@ -509,7 +521,8 @@ public:
     cv::Mat tempMap;
 
     // Info map that stores the projection info. 
-    cv::Mat infoMap;
+    // cv::Mat infoMap;
+    vector<vector<CellKF>> infoMap;
 
     // Threshold of height to determine the traversability. 
     double height_threshold = .10;  // in meter. 
@@ -576,7 +589,7 @@ public:
 
     // Map info update method. 
     void mapUpdate(Score S);  // the slower method. 
-    void mapUpdate(GridAnalysis G, double timestamp);  // the faster method. 
+    void mapUpdate(GridAnalysis G);  // the faster method. 
 
     // Show the heading. 
     void headingShow();

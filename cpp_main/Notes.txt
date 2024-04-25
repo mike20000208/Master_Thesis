@@ -22,3 +22,15 @@
     1. One of the bugs is the type of coordinates. Should be double instead of integer. 
 
     2. Another bug is the round of the numbers, happening in the conversion from 3D space to pixel space. 
+
+
+2024/04/25
+
+    1. Trying to implement the KF. Stoppd at cellProject function. 
+
+    2. Use 2D matrix to represent the info map in class My_Map instead of cv::Mat. 
+
+    3. Therefore, also need to change renderingFromInfoMap function. 
+
+    4. Create a new struct CellKF and class KF, but not really sure if the latter is 
+        necessary or not. 

@@ -494,25 +494,54 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		CV_8UC3, 
 		cv::Scalar(150, 150, 150));
 
-	// Create the info map if it's in map mode. 
+	// Create the info map if it's in map mode. Also resize it so that it can share the same size as the map. 
 	if (isMap)
 	{
+		// /**
+		//  * Create an info map that can store the necessary info for projection. 
+		//  * 
+		//  * There are 4 channels of this info map:
+		//  * 
+		//  * 1st holds the number of exploration of this cell, also indicates which iteration it has gone through. 
+		//  * 
+		//  * 2nd holds the estimated state, which will be used to represent the height data of this cell. 
+		//  * 
+		//  * 3rd holds the predicted state, which will be used in the next iteration. 
+		//  * 
+		//  * 4th holds the predicted covariance. (uncertainty of the measurement (measurement error, in meter, which is sigma).)
+		// */
+		// My_Map::infoMap = cv::Mat(
+		// 	height_pixel, 
+		// 	width_pixel, 
+		// 	CV_64FC4, 
+		// 	cv::Scalar(0.0));	
+	
+
 		/**
-		 * Create an info map that can store the necessary info for projection. 
+		 * Create an info map that can store the necessary info for projection. (Kalman filter applied)
 		 * 
-		 * There are 4 channels of this info map. 
+		 * Each cell in the info map contains the following information: 
 		 * 
-		 * 1st holds the number of exploration of this cell. 
+		 * iteration: holds the number indicating that which iteration it has gone through. 
 		 * 
-		 * 2nd holds the data of this region. (mostly is the height. sometimes the score) 
+		 * measurement: holds the latest measurement from the camera. (height in my case)
 		 * 
-		 * 3rd holds the uncertainty of the measurement (measurement error, in meter, which is sigma). 
+		 * est_state: holds the estimated state. (height in my case)
+		 * 
+		 * est_cov: holds the estimated covariance. 
+		 * 
+		 * gain: updated Kalman gain. 
+		 * 
+		 * pre_state: holds the predicted state, which will be used in the next iteration. 
+		 * 
+		 * pre_cov: holds the predicted covariance. 
 		*/
-		My_Map::infoMap = cv::Mat(
-			height_pixel, 
-			width_pixel, 
-			CV_64FC3, 
-			cv::Scalar(0.0));			
+		for (auto& row : My_Map::infoMap)
+		{
+			row.resize(My_Map::width_pixel);
+		}
+
+		My_Map::infoMap.resize(My_Map::height_pixel, vector<CellKF>(My_Map::width_pixel))
 	}
 
 	My_Map::isMap = isMap;
@@ -736,8 +765,8 @@ void My_Map::cellProject(double height)
 
 /**
  * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
- * @param height the height data of this cell. 
- * @param depth the depth data of this cell. (relative to the robot in the camera frame)
+ * @param height the height data of this cell. (as the measurement in the KF)
+ * @param depth the depth data of this cell. (relative to the robot in the camera frame) (used to determine the variance)
 */
 void My_Map::cellProject(double height, double depth)
 {
@@ -761,16 +790,16 @@ void My_Map::cellProject(double height, double depth)
 		// );
 
 		// Project the cell on the info map. 
-		if (My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
+		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
 		{
-			My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] = 1.0;
+			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
 		}
 		else  // already explored. 
 		{
-			My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] += 1;
+			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] += 1;
 		}
 
-		My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[1] = height;
+		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;
 
 		// Reset the flag. 
 		My_Map::isTransformed = false;
@@ -887,7 +916,7 @@ void My_Map::mapUpdate(Score S)
  * @brief Update the map with the info from camera. 
  * @param G an instance of the class GridAnalysis that contains the information to update the map. 
 */
-void My_Map::mapUpdate(GridAnalysis G, double timestamp)
+void My_Map::mapUpdate(GridAnalysis G)
 {
 	// Assign the height threshold. 
 	My_Map::height_threshold = G.heightThreshold;

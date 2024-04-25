@@ -656,7 +656,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
             if (m.isMap)
             {
-                m.mapUpdate(G, ImgLog.timestamp);
+                m.mapUpdate(G);
             }
         }
 
