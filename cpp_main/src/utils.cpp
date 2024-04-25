@@ -403,6 +403,50 @@ void Logging::createDir(string mode)
 }
 
 
+/**
+ * @brief Constructor of class KF (Kalman filter). 
+*/
+KF::KF()
+{
+	;
+}
+
+
+/**
+ * @brief Select standard deviation for following variance update. 
+ * @param z the z component of the centroid of this cell. (depth, in meter)
+ * @return measurement error in this depth range. 
+*/
+double KF::selectSigma(double z)
+{
+	double sigma = 0.0;
+
+	if (z >= 3.0 && z < 4)
+	{
+		sigma = KF::sigma_34;
+	}
+	else if (z >= 2.0 && z < 3)
+	{
+		sigma = KF::sigma_23;
+	}
+	else if (z >= 1.0 && z < 2)
+	{
+		sigma = KF::sigma_12;
+	}
+	else if (z < 1)
+	{
+		sigma = KF::sigma_01;
+	}
+	else
+	{
+		cerr << "\n\nInvalid coordinate of this cell\n\n";
+		exit(-1);
+	}
+
+	return sigma;
+}
+
+
 
 /**
  * @brief Constrctor of class Map. 
@@ -453,19 +497,21 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 	// Create the info map if it's in map mode. 
 	if (isMap)
 	{
-		/*
-		Create an info map that can store the necessary info for projection. (higher resolution)
-
-		There are 2 channels of this info map. 
-
-		1st means if this region is explored. 
-
-		2nd means the data of this region. (mostly is the height. sometimes the score) 
+		/**
+		 * Create an info map that can store the necessary info for projection. 
+		 * 
+		 * There are 4 channels of this info map. 
+		 * 
+		 * 1st holds the number of exploration of this cell. 
+		 * 
+		 * 2nd holds the data of this region. (mostly is the height. sometimes the score) 
+		 * 
+		 * 3rd holds the uncertainty of the measurement (measurement error, in meter, which is sigma). 
 		*/
 		My_Map::infoMap = cv::Mat(
 			height_pixel, 
 			width_pixel, 
-			CV_64FC2, 
+			CV_64FC3, 
 			cv::Scalar(0.0));			
 	}
 
@@ -645,12 +691,10 @@ void My_Map::sliceProject(Score S, int index)
 
 
 /**
- * @brief Project the cell on the map. 
- * @param G
- * @param i
- * @param j
+ * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
+ * @param height the height data of this cell.
 */
-void My_Map::sliceProject(GridAnalysis G, int i, int j)
+void My_Map::cellProject(double height)
 {
 	Point2D center_map, center_img;
 	if (My_Map::isTransformed)
@@ -662,8 +706,50 @@ void My_Map::sliceProject(GridAnalysis G, int i, int j)
 		// Convert the corners from map frame to image frame. 
 		center_img = My_Map::map2img(center_map);
 
-		// Draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
-		bool isFound = false;
+		// // Mark the center of the slice on the map. (for debug)
+		// cv::circle(
+		// 	My_Map::map_,
+		// 	cv::Point(center_img.x, center_img.y),
+		// 	1,
+		// 	cv::Scalar(255, 255, 255),
+		// 	-1
+		// );
+
+		// Project the cell on the info map. 
+		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)
+		{
+			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
+		}
+
+		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;			
+
+		// Reset the flag. 
+		My_Map::isTransformed = false;
+	}
+	else
+	{
+		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+		exit(-1);
+	}
+}
+
+
+/**
+ * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
+ * @param height the height data of this cell. 
+ * @param depth the depth data of this cell. (relative to the robot in the camera frame)
+*/
+void My_Map::cellProject(double height, double depth)
+{
+	Point2D center_map, center_img;
+	if (My_Map::isTransformed)
+	{
+		// Make sure the numebers will be integers. but still in the map frame  
+		center_map.x = round(My_Map::center_map[0]);
+		center_map.y = round(My_Map::center_map[1]);
+
+		// Convert the corners from map frame to image frame. 
+		center_img = My_Map::map2img(center_map);
 
 		// // Mark the center of the slice on the map. (for debug)
 		// cv::circle(
@@ -675,12 +761,16 @@ void My_Map::sliceProject(GridAnalysis G, int i, int j)
 		// );
 
 		// Project the cell on the info map. 
-		if (My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
+		if (My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
 		{
-			My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
+			My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] = 1.0;
+		}
+		else  // already explored. 
+		{
+			My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[0] += 1;
 		}
 
-		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = G.infoMap[i][j].Y;			
+		My_Map::infoMap.at<cv::Vec3d>(center_img.y, center_img.x)[1] = height;
 
 		// Reset the flag. 
 		My_Map::isTransformed = false;
@@ -797,19 +887,19 @@ void My_Map::mapUpdate(Score S)
  * @brief Update the map with the info from camera. 
  * @param G an instance of the class GridAnalysis that contains the information to update the map. 
 */
-void My_Map::mapUpdate(GridAnalysis G)
+void My_Map::mapUpdate(GridAnalysis G, double timestamp)
 {
 	// Assign the height threshold. 
 	My_Map::height_threshold = G.heightThreshold;
 
-	// The faster method. 
-	for (int i = 0; i < G.infoMap.size(); i++)
+	// Project the info map in class GridAnalysis to the image used to display the map. 
+	for (int i = 0; i < G.grid.size(); i++)
 	{
-		for (int j = 0; j < G.infoMap[0].size(); j++)
+		for (int j = 0; j < G.grid[0].size(); j++)
 		{
 			// Chech if the current cell is empty. 
-			if (G.infoMap[i][j].counter == 0 || 
-			cv::Vec3d(G.infoMap[i][j].X, G.infoMap[i][j].Y, G.infoMap[i][j].Z) == cv::Vec3d(0.0, 0.0, 0.0))
+			if (G.grid[i][j].counter == 0 || 
+			cv::Vec3d(G.grid[i][j].X, G.grid[i][j].Y, G.grid[i][j].Z) == cv::Vec3d(0.0, 0.0, 0.0))
 			{
 				continue;
 			}
@@ -817,15 +907,16 @@ void My_Map::mapUpdate(GridAnalysis G)
 			{
 				// Get the coordinates of a cell, but still in camera frame. 
 				My_Map::center_cam = cv::Vec3d(
-					G.infoMap[i][j].X, 
-					G.infoMap[i][j].Y, 
-					G.infoMap[i][j].Z);
+					G.grid[i][j].X, 
+					G.grid[i][j].Y, 
+					G.grid[i][j].Z);
 
 				// Transformation from camera frame to map frame.
 				My_Map::cam2map();
 
 				// Transformation from map frame to image frame. (the image used to display the map)
-				My_Map::sliceProject(G, i, j);
+				// My_Map::cellProject(G.grid[i][j].Y);  // the older method, and it's verified working. 
+				My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z);  // the newer method, but still in test. 
 			}
 		}
 	}
@@ -1737,12 +1828,12 @@ void GridAnalysis::divide()
 	height = ceil((GridAnalysis::maxZ - GridAnalysis::minZ) / GridAnalysis::cellSize);
 
 	// Resize the info map. 
-	for (auto& row : GridAnalysis::infoMap)
+	for (auto& row : GridAnalysis::grid)
 	{
 		row.resize(width);
 	}
 	
-	GridAnalysis::infoMap.resize(height, vector<Cell>(width));
+	GridAnalysis::grid.resize(height, vector<Cell>(width));
 
 	// Iterate through the whole pointcloud to complete the info map. 
 	int row = 0, col = 0;
@@ -1766,7 +1857,7 @@ void GridAnalysis::divide()
 			continue;
 		}
 
-		// Determine which col it is in.
+		// Determine which column it is in.
 		if ((int)round((p.x - GridAnalysis::minX) * 1e3) % (int)round(GridAnalysis::cellSize * 1e3) == 0)  // in mm. 
 		{
 			col = (p.x - GridAnalysis::minX) / GridAnalysis::cellSize;
@@ -1777,23 +1868,23 @@ void GridAnalysis::divide()
 		}
 
 		// Fill in that cell. 
-		GridAnalysis::infoMap[row][col].height.push_back(p.y);
-		GridAnalysis::infoMap[row][col].X += p.x;
-		GridAnalysis::infoMap[row][col].Z += p.z;
-		GridAnalysis::infoMap[row][col].counter++;
+		GridAnalysis::grid[row][col].height.push_back(p.y);
+		GridAnalysis::grid[row][col].X += p.x;
+		GridAnalysis::grid[row][col].Z += p.z;
+		GridAnalysis::grid[row][col].counter++;
 	}
 
 	// Calculate the statistics of each cell in the grid. 
     printf("\n\nStart processing the statistics. \n\n");
-	for (int i = 0; i < GridAnalysis::infoMap.size(); i++)
+	for (int i = 0; i < GridAnalysis::grid.size(); i++)
 	{
-		for (int j = 0; j < GridAnalysis::infoMap[0].size(); j++)
+		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
 		{
-			if (GridAnalysis::infoMap[i][j].counter != 0)
+			if (GridAnalysis::grid[i][j].counter != 0)
 			{
-				GridAnalysis::infoMap[i][j].Y = get_median(GridAnalysis::infoMap[i][j].height);
-				GridAnalysis::infoMap[i][j].X /= GridAnalysis::infoMap[i][j].counter;
-				GridAnalysis::infoMap[i][j].Z /= GridAnalysis::infoMap[i][j].counter;
+				GridAnalysis::grid[i][j].Y = get_median(GridAnalysis::grid[i][j].height);
+				GridAnalysis::grid[i][j].X /= GridAnalysis::grid[i][j].counter;
+				GridAnalysis::grid[i][j].Z /= GridAnalysis::grid[i][j].counter;
 			}
 			else
 			{
@@ -1807,15 +1898,15 @@ void GridAnalysis::divide()
 	// string file = "division.csv";
 	// file = DEBUG_FOLDER + file;
 	// f.open(file, ios::out | ios::app);
-	// for (int i = 0; i < GridAnalysis::infoMap.size(); i++)
+	// for (int i = 0; i < GridAnalysis::grid.size(); i++)
 	// {
-	// 	for (int j = 0; j < GridAnalysis::infoMap[0].size(); j++)
+	// 	for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
 	// 	{
 	// 		f << to_string(i) << ", " << to_string(j) << ", " \
-	// 		<< to_string(GridAnalysis::infoMap[i][j].counter) << ", " \
-	// 		<< to_string(GridAnalysis::infoMap[i][j].X) << ", " \
-	// 		<< to_string(GridAnalysis::infoMap[i][j].Y) << ", " \
-	// 		<< to_string(GridAnalysis::infoMap[i][j].Z) << "\n";
+	// 		<< to_string(GridAnalysis::grid[i][j].counter) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].X) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].Y) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].Z) << "\n";
 	// 	}
 	// }
 	// f.close();

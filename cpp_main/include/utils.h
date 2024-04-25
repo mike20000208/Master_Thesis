@@ -448,8 +448,8 @@ public:
     // Threshold of height to determine the traversability. (in meter)
     double heightThreshold = .10;
 
-    // Info map to store the information of each cell in the grid. 
-    vector<vector<Cell>> infoMap;
+    // Grid to store the information of each cell. 
+    vector<vector<Cell>> grid;
 
     // Constructor. 
     GridAnalysis(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
@@ -463,6 +463,27 @@ public:
 
     // Divide the pointcloud into a grid. 
     void divide();
+};
+
+
+class KF
+{
+private:
+
+    // Measurement error. (in meter)
+    double sigma_34 = 0.08; 
+    double sigma_23 = 0.03; 
+    double sigma_12 = 0.01; 
+    double sigma_01 = 0.0025; 
+
+public:
+
+    // Constructor. 
+    KF();
+
+    // Select standard deviation for following variance update. 
+    double selectSigma(double z);
+
 };
 
 
@@ -543,8 +564,9 @@ public:
     // cv::Vec3d cam2map(cv::Vec3d p);
 
     //Project the slice area on the map. 
-    void sliceProject(Score S, int index);  // slower way
-    void sliceProject(GridAnalysis G, int i, int j); // faster way
+    void sliceProject(Score S, int index);  // slower way. 
+    void cellProject(double height); // faster way. 
+    void cellProject(double height, double depth); // faster way, and with more info. 
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -554,7 +576,7 @@ public:
 
     // Map info update method. 
     void mapUpdate(Score S);  // the slower method. 
-    void mapUpdate(GridAnalysis G);  // the faster method. 
+    void mapUpdate(GridAnalysis G, double timestamp);  // the faster method. 
 
     // Show the heading. 
     void headingShow();

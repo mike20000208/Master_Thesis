@@ -625,9 +625,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
                 S.get_slices(z);
 
                 // // Debug. To see the coordinates of each slice in each step. 
-                // string file = "division.csv";
-                // file = DEBUG_FOLDER + file;
-                // f.open(file, ios::app | ios::out);
+                // f.open(string(DEBUG_FILE) + string("division.csv"), ios::app | ios::out);
                 // for (int i = 0; i < S.slices.size(); i++)
                 // {
                 //     f << to_string(z) << ", " \
@@ -658,7 +656,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
             if (m.isMap)
             {
-                m.mapUpdate(G);
+                m.mapUpdate(G, ImgLog.timestamp);
             }
         }
 
@@ -691,16 +689,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::imwrite(l.map_path, m.tempMap);
 
         // Visualization. 
-        // if (isUseNewDivision)
-        // {
-        //     pc_layers.push_back(G.cloud);
-        // }
-        // else
-        // {
-        //     pc_layers.push_back(S.cloud);
-        // }
-        
         pc_layers.push_back(G.cloud);
+
         for (int i = 0; i < pc_layers.size(); i++)
         {
 			viewer->addPointCloud(
@@ -746,7 +736,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         getDuration(start_whole, end_whole, true);  // Get the spent time. (5)
     }
 
-    // document the general info.
+    // Document the general info.
     f.open(l.info_path, ios::app | ios::out);
     // f << "Map Information" << "\n\n";
     f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
