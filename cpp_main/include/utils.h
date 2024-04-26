@@ -74,7 +74,7 @@ using namespace std::filesystem;
 extern bool TERMINATE;
 extern bool isEnableFromFile;
 extern bool isRecording;
-extern bool isUseNewDivision;
+extern bool isUseKF;
 
 
 struct GPS
@@ -202,6 +202,7 @@ struct Cell
 
 struct CellKF
 {
+    double timestamp = 0.0;
     int iteration = -1;
     double measurement = 0.0;
     double est_state = 0.0;
@@ -494,7 +495,7 @@ public:
     KF();
 
     // Select standard deviation for following variance update. 
-    static double selectSigma(double z);
+    static double selectSigma(double z, double timeSpan);
 
     // Update the Kalman gain. 
     static double updateKalmanGain(double predictedCov, double measuredCov);
@@ -568,6 +569,9 @@ public:
     My_Map();
     My_Map(int w, int h, int r, bool isMap = false);
 
+    // Initialize the info map. 
+    void initialize(double timestamp);
+
     // Flag of is map or trajectory.
     bool isMap = false;
 
@@ -586,7 +590,7 @@ public:
 
     //Project the slice area on the map. 
     // void cellProject(double height); // faster way. (without KF)
-    void cellProject(double height, double depth); // faster way, and with more info. 
+    void cellProject(double height, double depth, double timestamp); // faster way, and with more info. 
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
@@ -595,7 +599,7 @@ public:
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
     // Map info update method. 
-    void mapUpdate(GridAnalysis G);  // the faster method. 
+    void mapUpdate(GridAnalysis G, double timestamp);  // the faster method. 
 
     // Show the heading. 
     void headingShow();

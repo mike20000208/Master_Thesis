@@ -7,7 +7,7 @@ bool isEnableFromFile = false;
 
 bool isRecording = false;
 
-bool isUseNewDivision = true;
+bool isUseKF = true;
 
 
 /**
@@ -415,38 +415,71 @@ KF::KF()
 /**
  * @brief Select standard deviation for following variance update. 
  * @param z the z component of the centroid of this cell. (depth, in meter)
+ * @param timeSpan the time between now and the last time this cell was updated. (in millisecond)
  * @return measurement error in this depth range. 
 */
-double KF::selectSigma(double z)
+double KF::selectSigma(double z, double timeSpan)
 {
 	double sigma = 0.0;
 
 	// Measurement error. (in meter)
-    double sigma_34 = 0.08; 
-    double sigma_23 = 0.03; 
-    double sigma_12 = 0.01; 
-    double sigma_01 = 0.0025; 
+    double sigma_34_normal = .08; 
+    double sigma_23_normal = .03; 
+    double sigma_12_normal = .01; 
+    double sigma_01_normal = .005; 
 
-	if (z >= 3.0 && z < 4)
+	double sigma_34_latest = .008; 
+    double sigma_23_latest = .003; 
+    double sigma_12_latest = .001; 
+    double sigma_01_latest = .0005; 
+
+	if (timeSpan > 3000)
 	{
-		sigma = sigma_34;
-	}
-	else if (z >= 2.0 && z < 3)
-	{
-		sigma = sigma_23;
-	}
-	else if (z >= 1.0 && z < 2)
-	{
-		sigma = sigma_12;
-	}
-	else if (z < 1)
-	{
-		sigma = sigma_01;
+		if (z >= 3.0 && z < 4.0)
+		{
+			sigma = sigma_34_latest;
+		}
+		else if (z >= 2.0 && z < 3.0)
+		{
+			sigma = sigma_23_latest;
+		}
+		else if (z >= 1.0 && z < 2.0)
+		{
+			sigma = sigma_12_latest;
+		}
+		else if (z < 1.0)
+		{
+			sigma = sigma_01_latest;
+		}
+		else
+		{
+			cerr << "\n\nInvalid coordinate of this cell\n\n";
+			exit(-1);
+		}
 	}
 	else
 	{
-		cerr << "\n\nInvalid coordinate of this cell\n\n";
-		exit(-1);
+		if (z >= 3.0 && z < 4.0)
+		{
+			sigma = sigma_34_normal;
+		}
+		else if (z >= 2.0 && z < 3.0)
+		{
+			sigma = sigma_23_normal;
+		}
+		else if (z >= 1.0 && z < 2.0)
+		{
+			sigma = sigma_12_normal;
+		}
+		else if (z < 1.0)
+		{
+			sigma = sigma_01_normal;
+		}
+		else
+		{
+			cerr << "\n\nInvalid coordinate of this cell\n\n";
+			exit(-1);
+		}
 	}
 
 	return sigma;
@@ -476,7 +509,7 @@ double KF::updateKalmanGain(double predictedCov, double measuredCov)
 double KF::updateState(double gain, double measurement, double priorState)
 {
 	double state = 0.0;
-	state = gain * (measurement - priorState);
+	state = priorState + gain * (measurement - priorState);
 	return state;
 }
 
@@ -589,6 +622,22 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 	}
 
 	My_Map::isMap = isMap;
+}
+
+
+/**
+ * @brief Initialize the info map. 
+ * @param timestamp the time for the initialization of the info map. 
+*/
+void My_Map::initialize(double timestamp)
+{
+	for (int i = 0; i < My_Map::infoMap.size(); i++)
+	{
+		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
+		{
+			My_Map::infoMap[i][j].timestamp = timestamp;
+		}
+	}
 }
 
 
@@ -742,14 +791,15 @@ void My_Map::cam2map()
  * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
  * @param height the height data of this cell. (as the measurement in the KF)
  * @param depth the depth data of this cell. (relative to the robot in the camera frame) (used to determine the variance)
+ * @param timestamp the time when this cell is updated. (in second)
 */
-void My_Map::cellProject(double height, double depth)
+void My_Map::cellProject(double height, double depth, double timestamp)
 {
 	// Initialize center point in map frame and image frame. 
 	Point2D center_map, center_img;
 
 	// Initialize general variables. 
-	double sigma = 0.0, variance = 0.0, gain = 0.0, state = 0.0, cov = 0.0;
+	double sigma = 0.0, variance = 0.0, gain = 0.0, state = 0.0, cov = 0.0, timeSpan = 0.0;
 
 	if (My_Map::isTransformed)
 	{
@@ -770,54 +820,57 @@ void My_Map::cellProject(double height, double depth)
 		// );
 
 		// Project the cell on the info map. 
-		// // Method without KF. 
-		// if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
-		// {
-		// 	My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
-		// }
-		// else  // already explored. 
-		// {
-		// 	My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] += 1;
-		// }
-
-		// My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;
-
-		// Method with KF. 
-		My_Map::infoMap[center_img.y][center_img.x].iteration++;
-
-		// Measurement. 
-		My_Map::infoMap[center_img.y][center_img.x].measurement = height;
-		sigma = KF::selectSigma(depth);
-		variance = pow(sigma, 2);
-
-		if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // Initialization of KF
+		if (!isUseKF)
 		{
-			// Initialize the estmated state and its variance with the measurement directly. 
+			// Method without KF. 
+			My_Map::infoMap[center_img.y][center_img.x].iteration += 1;
 			My_Map::infoMap[center_img.y][center_img.x].est_state = height;
-			My_Map::infoMap[center_img.y][center_img.x].est_cov = variance;
-
-			// Predict. 
-			My_Map::infoMap[center_img.y][center_img.x].pre_state = height;
-			My_Map::infoMap[center_img.y][center_img.x].pre_cov = variance;
 		}
-		else  // normal iteration. 
+		else
 		{
-			// Update. 
-			gain = KF::updateKalmanGain(My_Map::infoMap[center_img.y][center_img.x].pre_cov, variance);
-			state = KF::updateState(
-				gain, 
-				height, 
-				My_Map::infoMap[center_img.y][center_img.x].pre_state);
-			cov = KF::updateCov(
-				gain, 
-				My_Map::infoMap[center_img.y][center_img.x].pre_cov);
-			My_Map::infoMap[center_img.y][center_img.x].gain = gain;
-			My_Map::infoMap[center_img.y][center_img.x].est_state = state;
-			My_Map::infoMap[center_img.y][center_img.x].est_cov = cov;
-			
-			// Predict. 	
-			My_Map::infoMap[center_img.y][center_img.x].pre_state = state;
-			My_Map::infoMap[center_img.y][center_img.x].pre_cov = cov;
+			// Method with KF. 
+			My_Map::infoMap[center_img.y][center_img.x].iteration += 1;
+
+			// Check the time span. 
+			timeSpan = timestamp - infoMap[center_img.y][center_img.x].timestamp * 1000;  // in millisecond. 
+			infoMap[center_img.y][center_img.x].timestamp = timestamp;
+
+			// Measurement. 
+			My_Map::infoMap[center_img.y][center_img.x].measurement = height;
+			sigma = KF::selectSigma(depth, timeSpan);
+			variance = pow(sigma, 2);
+
+			if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // Initialization of KF
+			{
+				// Initialize the estmated state and its variance with the measurement directly. 
+				My_Map::infoMap[center_img.y][center_img.x].est_state = height;
+				My_Map::infoMap[center_img.y][center_img.x].est_cov = variance;
+
+				// Predict. 
+				My_Map::infoMap[center_img.y][center_img.x].pre_state = height;
+				My_Map::infoMap[center_img.y][center_img.x].pre_cov = variance;
+			}
+			else  // normal iteration. 
+			{
+				// Update. 
+				gain = KF::updateKalmanGain(
+					My_Map::infoMap[center_img.y][center_img.x].pre_cov, 
+					variance);
+				state = KF::updateState(
+					gain, 
+					height, 
+					My_Map::infoMap[center_img.y][center_img.x].pre_state);
+				cov = KF::updateCov(
+					gain, 
+					My_Map::infoMap[center_img.y][center_img.x].pre_cov);
+				My_Map::infoMap[center_img.y][center_img.x].gain = gain;
+				My_Map::infoMap[center_img.y][center_img.x].est_state = state;
+				My_Map::infoMap[center_img.y][center_img.x].est_cov = cov;
+				
+				// Predict. 	
+				My_Map::infoMap[center_img.y][center_img.x].pre_state = state;
+				My_Map::infoMap[center_img.y][center_img.x].pre_cov = cov;
+			}
 		}
 
 		// Reset the flag. 
@@ -911,8 +964,9 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 /**
  * @brief Update the map with the info from camera. 
  * @param G an instance of the class GridAnalysis that contains the information to update the map. 
+ * @param timestamp the time when this map is updated. (in second)
 */
-void My_Map::mapUpdate(GridAnalysis G)
+void My_Map::mapUpdate(GridAnalysis G, double timestamp)
 {
 	// Assign the height threshold. 
 	My_Map::height_threshold = G.heightThreshold;
@@ -941,7 +995,7 @@ void My_Map::mapUpdate(GridAnalysis G)
 
 				// Transformation from map frame to image frame. (the image used to display the map)
 				// My_Map::cellProject(G.grid[i][j].Y);  // the older method, and it's verified working. 
-				My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z);  // the newer method, but still in test. 
+				My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z, timestamp);  // the newer method, but still in test. 
 			}
 		}
 	}
@@ -1028,7 +1082,7 @@ void My_Map::renderingFromInfoMap()
 	My_Map::isRendered = true;
 	cv::Scalar color;
 	// fstream f;
-	// f.open(DEBUG_FILE, ios::out);
+	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1075,7 +1129,13 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			if (My_Map::infoMap[i][j].iteration == -1)
+			// // Debug. 
+			// f << to_string(i) << ", " << to_string(j) << ", " \
+			// << to_string(infoMap[i][j].est_state) << ", " \
+			// << to_string(infoMap[i][j].measurement) << ", " \
+			// << to_string(infoMap[i][j].gain) << "\n";
+			
+			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
 				continue;
 			}
@@ -1930,7 +1990,6 @@ void GridAnalysis::divide()
 	}
 
 	// Calculate the statistics of each cell in the grid. 
-    printf("\n\nStart processing the statistics. \n\n");
 	for (int i = 0; i < GridAnalysis::grid.size(); i++)
 	{
 		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)

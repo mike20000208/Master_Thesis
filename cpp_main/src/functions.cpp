@@ -1,26 +1,25 @@
-# include "functions.h"
-
+#include "functions.h"
 
 /**
- * @brief Show the robot view and trajectory at the same time. 
- * 
- * When getting the arguments from the terminal, 
- * 
+ * @brief Show the robot view and trajectory at the same time.
+ *
+ * When getting the arguments from the terminal,
+ *
  *  the first one is width,
- * 
+ *
  *  the second one is height,
- * 
- *  the third one is res. 
- * 
- * @param node a node that communicates with the capra robot. 
- * @param width width of the map in meter. 
+ *
+ *  the third one is res.
+ *
+ * @param node a node that communicates with the capra robot.
+ * @param width width of the map in meter.
  * @param height height of the map in meter.
- * @param res resolution of the map. 
-*/
+ * @param res resolution of the map.
+ */
 int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
-    // prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    // prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
     l.createDir("trajectory");
     // string img_folder = node->log_path + "/Images";
@@ -42,8 +41,8 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // string traj_path;
     // string depth_path;
     // string map_path;
-    
-    // initialize rs2 objects. 
+
+    // initialize rs2 objects.
     rs2::pipeline p;
     rs2::frame color_frame, depth_frame;
     rs2::frameset frames;
@@ -57,13 +56,13 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     // cfg.enable_stream(RS2_STREAM_ACCEL, RS2_FORMAT_MOTION_XYZ32F);
     // cfg.enable_stream(RS2_STREAM_GYRO, RS2_FORMAT_XYZ32F);
 
-    // initialize cv objects. 
+    // initialize cv objects.
     const string win1 = "Color Image";
     const string win2 = "Trajectory";
-	cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
-	cv::moveWindow(win1, 0, 0);
-	cv::moveWindow(win2, 300, 150);
+    cv::moveWindow(win1, 0, 0);
+    cv::moveWindow(win2, 300, 150);
     cv::Mat image;
     cv::Mat trajectory;
 
@@ -72,10 +71,10 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     std::mutex mut;
     std::fstream f;
 
-    // initialize some variables. 
+    // initialize some variables.
     Img ImgLog;
 
-    // start the pipeline. 
+    // start the pipeline.
     auto profile = p.start(cfg);
     // rs2::device device = profile.get_device();
     // string device_name = device.get_info(RS2_CAMERA_INFO_NAME);
@@ -100,23 +99,23 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     //     printf("\n\nDirectory creation is failed. \n\n");
     // }
 
-    // start streaming. 
-    while(1)
+    // start streaming.
+    while (1)
     {
-        // get a frame. 
+        // get a frame.
         frames = p.wait_for_frames();
         // depth_frame = frames.get_depth_frame();
         color_frame = frames.get_color_frame();
 
-        // get the information of the frame. 
+        // get the information of the frame.
         const int w = color_frame.as<rs2::video_frame>().get_width();
         const int h = color_frame.as<rs2::video_frame>().get_height();
 
-        // create color images. 
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+        // create color images.
+        image = cv::Mat(Size(w, h), CV_8UC3, (void *)color_frame.get_data(), Mat::AUTO_STEP);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // save the image. 
+        // save the image.
         l.img_suffix = "/img_" + to_string(count) + ".png";
         l.img_path = l.img_folder + l.img_suffix;
         cv::imwrite(l.img_path, image);
@@ -124,7 +123,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // image number and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color_frame.get_timestamp() / 1000;
-        count ++;
+        count++;
         f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
@@ -138,8 +137,8 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         q.y = node->odo_data.oy;
         q.z = node->odo_data.oz;
         m.poseUpdate(
-            ImgLog.number, 
-            node->odo_data.px, 
+            ImgLog.number,
+            node->odo_data.px,
             node->odo_data.py,
             q);
 
@@ -158,7 +157,7 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
         l.traj_path = l.traj_folder + l.traj_suffix;
         cv::imwrite(l.traj_path, m.map_);
 
-        // show the current scene. 
+        // show the current scene.
         // mut.lock();
         // string time = to_string(node->gps_data.timestamp);
         // mut.unlock();
@@ -187,14 +186,13 @@ int stream_test(std::shared_ptr<Mike> node, int width, int height, int res)
     f << "Size of color image (width x height): " << to_string(image.cols) << " x " << to_string(image.rows) << "\n\n";
     f << "Size of depth image (width x height): " << to_string(stream_width) << " x " << to_string(stream_height) << "\n\n";
     f.close();
-    
+
     return 0;
 }
 
-
 /**
- * @brief Test the directory creation. 
-*/
+ * @brief Test the directory creation.
+ */
 int time_files_test()
 {
     string time = getTime();
@@ -213,27 +211,26 @@ int time_files_test()
     return 0;
 }
 
-
 /**
- * @brief Replay the recorded images and trajectory. 
- * 
- * Can take the first argument from the terminal as folder_name. 
- * 
- * @param folder_name the name of the recording folder. 
+ * @brief Replay the recorded images and trajectory.
+ *
+ * Can take the first argument from the terminal as folder_name.
+ *
+ * @param folder_name the name of the recording folder.
  */
 int replay_from_images(string folder_name, string mode)
 {
-    // Initialize variables to control replay. 
+    // Initialize variables to control replay.
     bool isPressed = false;
-    float speed = 100.0;  // milliseconds
+    float speed = 100.0; // milliseconds
     int pauseCnt = 0;
     float currentSpeed = 100.0, previousSpeed = 100.0;
 
-    // Initialize counter. 
+    // Initialize counter.
     int num_files = 0;
     int count = 0;
 
-    // Initialize log containers. 
+    // Initialize log containers.
     vector<double> timeLog;
 
     // Initialize general variables and objects.
@@ -269,7 +266,7 @@ int replay_from_images(string folder_name, string mode)
         int map_width, map_height;
     }
 
-    // read TimeLog.csv. 
+    // read TimeLog.csv.
     f.open(time_path, ios::in);
 
     while (getline(f, line))
@@ -277,7 +274,7 @@ int replay_from_images(string folder_name, string mode)
         row.clear();
         stringstream linestream(line);
 
-        while(getline(linestream, word, ','))
+        while (getline(linestream, word, ','))
         {
             row.push_back(word);
         }
@@ -287,10 +284,10 @@ int replay_from_images(string folder_name, string mode)
 
     f.close();
 
-    // count the number of files. 
-    std::filesystem::path P {img_folder};
+    // count the number of files.
+    std::filesystem::path P{img_folder};
 
-    for (auto& p : std::filesystem::directory_iterator(P))
+    for (auto &p : std::filesystem::directory_iterator(P))
     {
         num_files++;
     }
@@ -298,7 +295,7 @@ int replay_from_images(string folder_name, string mode)
     // Main loop. Start replaying
     count = 0;
     // for (count = 0; count < num_files; count++)
-    while(count < num_files)
+    while (count < num_files)
     {
         img_suffix = "img_" + to_string(count) + ".png";
         traj_suffix = "trajectory_" + to_string(count) + ".png";
@@ -319,42 +316,42 @@ int replay_from_images(string folder_name, string mode)
         // if (scene.empty() || trajectory.empty() || map.empty())
         // {
         //     printf("\n\nReading Error!  \n\n");
-        //     // printf("\n\nCannot read images from directories [%s] or [%s]. \n\n", 
-        //     // img_full_path.c_str(), 
+        //     // printf("\n\nCannot read images from directories [%s] or [%s]. \n\n",
+        //     // img_full_path.c_str(),
         //     // traj_full_path.c_str());
         //     break;
         // }
 
-        // Visualization. 
+        // Visualization.
         img_width = scene.cols;
         img_height = scene.rows;
         traj_width = trajectory.cols;
         traj_height = trajectory.rows;
         cv::putText(
-            scene, 
+            scene,
             "Replaying.....",
-		    cv::Point(50, 50),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 50),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         cv::putText(
-            scene, 
+            scene,
             to_string(timeLog[count]),
-		    cv::Point(50, 100),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 100),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         // cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
         // cv::resizeWindow(win2, traj_width, traj_height);
         // cv::moveWindow(win1, 0, 0);
-	    // cv::moveWindow(win2, img_width + 70, 0);
+        // cv::moveWindow(win2, img_width + 70, 0);
         // cv::imshow(win1, scene);
         // cv::imshow(win2, trajectory);
 
         if (mode == "map")
-        {       
+        {
             // cv::resizeWindow(win1, (int)img_width / 2, (int)img_height / 2);
             // cv::resizeWindow(win3, map_width, map_height);
             // cv::resizeWindow(win2, traj_width, traj_height);
@@ -362,7 +359,7 @@ int replay_from_images(string folder_name, string mode)
             cv::moveWindow(win3, 0, 720 / 2 + 75);
             cv::moveWindow(win2, 680, 720 / 2 + 75);
             cv::imshow(win1, scene);
-            cv::imshow(win2, trajectory); 
+            cv::imshow(win2, trajectory);
             cv::imshow(win3, map);
         }
         else
@@ -374,7 +371,7 @@ int replay_from_images(string folder_name, string mode)
             cv::moveWindow(win2, 1280 + 70, 0);
             // cv::moveWindow(win3, (img_width + 70), (traj_height + 250));
             cv::imshow(win1, scene);
-            cv::imshow(win2, trajectory); 
+            cv::imshow(win2, trajectory);
             // cv::imshow(win3, map);
         }
 
@@ -442,31 +439,30 @@ int replay_from_images(string folder_name, string mode)
     return 0;
 }
 
-
 /**
- * @brief Create the map with environment information while streaming and robot moving. 
- * 
- * When getting the arguments from the terminal. 
- * 
+ * @brief Create the map with environment information while streaming and robot moving.
+ *
+ * When getting the arguments from the terminal.
+ *
  *  the first one is width,
- * 
+ *
  *  the second one is height,
- * 
- *  the thrid one is res. 
- * 
- * @param node a node that communicates with the capra robot. 
- * @param width width of the map in meter. 
+ *
+ *  the thrid one is res.
+ *
+ * @param node a node that communicates with the capra robot.
+ * @param width width of the map in meter.
  * @param height height of the map in meter.
- * @param res resolution of the map. 
-*/
+ * @param res resolution of the map.
+ */
 int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 {
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    // Prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
     l.createDir("stream_map");
-    
-    // Initialize rs2 objects. 
+
+    // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frameset frames;
     rs2::frame color, depth;
@@ -506,12 +502,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     pcl::PassThrough<pcl::PointXYZRGB> filter;
     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
     viewer->setBackgroundColor(0, 0, 0);
-	viewer->setPosition(0, 450);
-	// viewer->setPosition(50, 70);
-	viewer->addCoordinateSystem(5, "global");
-	viewer->initCameraParameters();
+    viewer->setPosition(0, 450);
+    // viewer->setPosition(50, 70);
+    viewer->addCoordinateSystem(5, "global");
+    viewer->initCameraParameters();
 
-    // Initialize cv objects. 
+    // Initialize cv objects.
     const string win1 = "Color Image";
     const string win2 = "Map";
     const string win3 = "Trajectory";
@@ -535,28 +531,35 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     clock_t start, end;
     clock_t start_whole, end_whole;
 
-    // Start the pipeline. 
+    // Clear the debug folder.
+    std::filesystem::path P {DEBUG_FOLDER};
+    for (auto& p : std::filesystem::directory_iterator(P))
+    {
+        std::filesystem::remove(p);
+    }
+
+    // Start the pipeline.
     p.start(cfg);
 
-    // Start streaming. 
+    // Start streaming.
     while (1)
     {
-        // Get frame. 
+        // Get frame.
         start_whole = clock();
         frames = p.wait_for_frames();
         color = frames.get_color_frame();
         depth = frames.get_depth_frame();
 
-        // Create color image and save it. 
+        // Create color image and save it.
         const int w = color.as<rs2::video_frame>().get_width();
         const int h = color.as<rs2::video_frame>().get_height();
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+        image = cv::Mat(Size(w, h), CV_8UC3, (void *)color.get_data(), Mat::AUTO_STEP);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // Image and timestamp logging. 
+        // Image and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
-        count ++;
+        count++;
         l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
         l.img_path = l.img_folder + l.img_suffix;
         cv::imwrite(l.img_path, image);
@@ -564,8 +567,15 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
-        // Draw the map. 
+        // Draw the map.
         start = clock();
+
+        // Initialize the info map first. 
+        if (ImgLog.number == 0)
+        {
+            m.initialize(ImgLog.timestamp);
+        }
+
         mut.lock();
 
         Quaternion_ q;
@@ -574,37 +584,37 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         q.y = node->odo_data.oy;
         q.z = node->odo_data.oz;
         m.poseUpdate(
-            ImgLog.number, 
-            node->odo_data.px, 
+            ImgLog.number,
+            node->odo_data.px,
             node->odo_data.py,
             q);
         t.poseUpdate(
-            ImgLog.number, 
-            node->odo_data.px, 
+            ImgLog.number,
+            node->odo_data.px,
             node->odo_data.py,
             q);
 
         mut.unlock();
         end = clock();
-        getDuration(start, end);  // Get the spent time. (1)
+        getDuration(start, end); // Get the spent time. (1)
 
         // Calculate realsense pointcloud and convert it into PCL format.
         start = clock();
         points = pointcloud.calculate(depth);
         cloud = Points2PCL(points);
         end = clock();
-        getDuration(start, end);  // Get the spent time. (2)
+        getDuration(start, end); // Get the spent time. (2)
 
-        // Filter the depth map with z-value. 
+        // Filter the depth map with z-value.
         start = clock();
-		filter.setInputCloud(cloud);
-		filter.setFilterFieldName("z");
-		filter.setFilterLimits(0, 4);
-		filter.filter(*cloud_filtered);
+        filter.setInputCloud(cloud);
+        filter.setFilterFieldName("z");
+        filter.setFilterLimits(0, 4);
+        filter.filter(*cloud_filtered);
         end = clock();
-        getDuration(start, end);  // Get the spent time. (3)
+        getDuration(start, end); // Get the spent time. (3)
 
-        // Divide the pointcloud into grid. 
+        // Divide the pointcloud into grid.
         start = clock();
         GridAnalysis G(cloud_filtered);
         G.setCellSize(pow(res, -1));
@@ -615,13 +625,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // Project the grid divided from the pointcloud on the map.
         if (m.isMap)
         {
-            m.mapUpdate(G);
+            m.mapUpdate(G, ImgLog.timestamp);
         }
 
         end = clock();
-        getDuration(start, end);  // Get the spent time. (4)
+        getDuration(start, end); // Get the spent time. (4)
 
-        // Display the map and trajectory. 
+        // Display the map and trajectory.
         m.renderingFromInfoMap();
         m.originShow();
         m.locShow();
@@ -631,32 +641,32 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         t.mapShow();
         t.flagReset();
 
-        // // Depth info logging. 
+        // // Depth info logging.
         // depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
         // depth_path = depth_folder + depth_suffix;
         // PCL2PLY(cloud_filtered, depth_path);
 
-        // Trajectory logging. 
+        // Trajectory logging.
         l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         l.traj_path = l.traj_folder + l.traj_suffix;
         cv::imwrite(l.traj_path, t.tempMap);
 
-        // Map logging. 
+        // Map logging.
         l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
 
-        // Visualization. 
+        // Visualization.
         pc_layers.push_back(G.cloud);
 
         for (int i = 0; i < pc_layers.size(); i++)
         {
-			viewer->addPointCloud(
-                pc_layers[i], 
+            viewer->addPointCloud(
+                pc_layers[i],
                 to_string(i));
-			viewer->setPointCloudRenderingProperties(
-                pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 
-                4, 
+            viewer->setPointCloudRenderingProperties(
+                pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
+                4,
                 to_string(i));
         }
 
@@ -664,13 +674,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         cv::moveWindow(win2, 1280 / 2 + 75, 0);
         cv::moveWindow(win3, 1280 / 2 + 680, 0);
         cv::putText(
-            image, 
+            image,
             to_string(ImgLog.timestamp),
-		    cv::Point(50, 50),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 50),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         cv::imshow(win1, image);
         cv::imshow(win2, m.tempMap);
         cv::imshow(win3, t.tempMap);
@@ -678,7 +688,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         viewer->spinOnce(1);
 
-        // Check whether to terminate the programme. 
+        // Check whether to terminate the programme.
         if (c == 32 || c == 13 || TERMINATE == true)
         {
             printf("\n\nThe programme is terminated by keyboard. \n\n");
@@ -686,12 +696,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
             break;
         }
 
-        // Reset. 
+        // Reset.
         pc_layers.clear();
-		viewer->removeAllPointClouds();
+        viewer->removeAllPointClouds();
 
         end_whole = clock();
-        getDuration(start_whole, end_whole, true);  // Get the spent time. (5)
+        getDuration(start_whole, end_whole, true); // Get the spent time. (5)
     }
 
     // Document the general info.
@@ -707,31 +717,30 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     return 0;
 }
 
-
 // /**
-//  * @brief Create the map with environment information while only take a single frame from camera. 
-//  * 
-//  * When getting the arguments from the terminal. 
-//  * 
+//  * @brief Create the map with environment information while only take a single frame from camera.
+//  *
+//  * When getting the arguments from the terminal.
+//  *
 //  *  the first one is width,
-//  * 
+//  *
 //  *  the second one is height,
-//  * 
-//  *  the thrid one is res. 
-//  * 
-//  * @param node a node that communicates with the capra robot. 
-//  * @param width width of the map in meter. 
+//  *
+//  *  the thrid one is res.
+//  *
+//  * @param node a node that communicates with the capra robot.
+//  * @param width width of the map in meter.
 //  * @param height height of the map in meter.
-//  * @param res resolution of the map. 
+//  * @param res resolution of the map.
 // */
 // int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 // {
-//     // Prepare folders and other paths.  
-//     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+//     // Prepare folders and other paths.
+//     int count = 0;  // serial number of color images, trajectories, maps, depth info.
 //     Logging l(node);
 //     l.createDir("single_frame_map");
 
-//     // Initialize rs2 objects. 
+//     // Initialize rs2 objects.
 //     rs2::pipeline p;
 //     rs2::frameset frames;
 //     rs2::frame color, depth;
@@ -762,7 +771,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
 //     pcl::PassThrough<pcl::PointXYZRGB> filter;
 
-//     // initialize cv objects. 
+//     // initialize cv objects.
 //     const string win1 = "Color Image";
 //     const string win2 = "Map";
 //     cv::namedWindow(win1, WINDOW_NORMAL);
@@ -778,21 +787,21 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     Img ImgLog;
 //     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-//     // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
+//     // Start the pipeline, and there will be no infinite loop since we only want a single frame.
 //     p.start(cfg);
 
-//     // Get color and depth frame. 
+//     // Get color and depth frame.
 //     frames = p.wait_for_frames();
 //     color = frames.get_color_frame();
 //     depth = frames.get_depth_frame();
 
-//     // Create color image and save it. 
+//     // Create color image and save it.
 //     const int w = color.as<rs2::video_frame>().get_width();
 //     const int h = color.as<rs2::video_frame>().get_height();
 //     image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
 //     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-//     // Image and timestamp logging. 
+//     // Image and timestamp logging.
 //     ImgLog.number = count;
 //     ImgLog.timestamp = color.get_timestamp() / 1000;
 //     count ++;
@@ -803,7 +812,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
 //     f.close();
 
-//     // Update the pose of the robot.  
+//     // Update the pose of the robot.
 //     mut.lock();
 //     Quaternion_ q;
 //     q.w = node->odo_data.ow;
@@ -811,8 +820,8 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     q.y = node->odo_data.oy;
 //     q.z = node->odo_data.oz;
 //     m.poseUpdate(
-//         ImgLog.number, 
-//         node->odo_data.px, 
+//         ImgLog.number,
+//         node->odo_data.px,
 //         node->odo_data.py,
 //         q);
 //     mut.unlock();
@@ -826,15 +835,15 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     // f << to_string(cloud->points.size()) << "\n";
 //     // f.close();
 
-//     // Filter the depth map with z-value. 
+//     // Filter the depth map with z-value.
 //     filter.setInputCloud(cloud);
 //     filter.setFilterFieldName("z");
 //     filter.setFilterLimits(0, 4);
 //     filter.filter(*cloud_filtered);
 
-//     // calculate the best path. 
+//     // calculate the best path.
 //     cv::Scalar rendering;
-//     Score S(cloud_filtered); 
+//     Score S(cloud_filtered);
 //     S.setStartZ(0.0);
 //     S.setSearchRange(3.5);
 //     S.setSearchStep(0.40);
@@ -844,7 +853,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     // S.setOutlierWeight(1.80);
 //     // S.setDisWeight(1.80);
 //     // S.setAngleWeight(0.1);
-       
+
 //     S.rendering();
 
 //     // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
@@ -876,7 +885,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
 //     }
 
-//     // Show the heading of the robot, also as an indicator of the robot. 
+//     // Show the heading of the robot, also as an indicator of the robot.
 //     // m.headingShow();
 //     m.originShow();
 //     m.renderingFromInfoMap();
@@ -884,7 +893,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     m.mapShow();
 //     m.flagReset();
 
-//     // Depth info logging. 
+//     // Depth info logging.
 //     l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
 //     l.depth_path = l.depth_folder + l.depth_suffix;
 //     PCL2PLY(cloud_filtered, l.depth_path);
@@ -894,12 +903,12 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //     l.map_path = l.map_folder + l.map_suffix;
 //     cv::imwrite(l.map_path, m.tempMap);
 
-//     // Visualization. 
+//     // Visualization.
 //     pc_layers.push_back(cloud_filtered);
 //     pc_layers.push_back(S.cloud);
 //     cv::Scalar bg_color(0, 0, 0);
 //     pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
-//         pc_layers, 
+//         pc_layers,
 //         bg_color);
 
 //     while (!viewer->wasStopped())
@@ -914,7 +923,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 // 		viewer->spinOnce(1000);
 // 		std::this_thread::sleep_for(100ms);
 
-//         // check whether to terminate the programme. 
+//         // check whether to terminate the programme.
 //         if (c == 32 || c == 13 || TERMINATE == true)
 //         {
 //             printf("\n\nThe programme is terminated by keyboard. \n\n");
@@ -923,30 +932,29 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 //         }
 // 	}
 
-//     // reset. 
+//     // reset.
 //     cv::destroyAllWindows();
 //     pc_layers.clear();
 //     viewer->removeAllPointClouds();
 //     p.stop();
-    
+
 //     return 0;
 // }
 
-
 /**
  * @brief Replay the trajectory and scene based on the save images and log file in csv format. (more robust than "replay")
- * @param folder_name the name of the recording folder. 
+ * @param folder_name the name of the recording folder.
  * @param width
  * @param height
  * @param res
-*/
+ */
 int replay_from_odometry(string folder_name, int width, int height, int res)
 {
-    // Initialize flag. 
+    // Initialize flag.
     bool isPressed = false;
-    float speed = 100;  // milliseconds
-    
-    // Initialize loading path. 
+    float speed = 100; // milliseconds
+
+    // Initialize loading path.
     string folder = REPLAY_FOLDER + folder_name;
     string img_folder = folder + "/Images/";
     string time_path = folder + "/TimeLog.csv";
@@ -955,36 +963,36 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     string img_suffix;
     string img_path;
 
-    // Initialize counter. 
+    // Initialize counter.
     int imgNum = 0;
     int num_files = getFilesNum(img_folder);
     int i = 0;
     int mark = 0;
 
-    // Initialize cv objects. 
+    // Initialize cv objects.
     const string win1 = "Color Image";
     const string win2 = "Trajectory";
-	cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::Mat scene;
     cv::Mat trajectory;
 
-    // Initialize log containers. 
+    // Initialize log containers.
     vector<Odo> odoLog;
     map<string, int> infoLog;
     vector<double> timeLog;
 
-    // Initialize object and variables for file reading. 
+    // Initialize object and variables for file reading.
     fstream f;
     vector<string> row;
     string line, word, temp;
     Odo tempOdo;
 
-    // Initialize variables for data matching based on timestamp. 
+    // Initialize variables for data matching based on timestamp.
     double currentTime = 0.0; // sec
-    double timeRange = 0.3; // sec
+    double timeRange = 0.3;   // sec
 
-    // Read TimeLog.csv. 
+    // Read TimeLog.csv.
     f.open(time_path, ios::in);
 
     while (getline(f, line))
@@ -992,7 +1000,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         row.clear();
         stringstream linestream(line);
 
-        while(getline(linestream, word, ','))
+        while (getline(linestream, word, ','))
         {
             row.push_back(word);
         }
@@ -1002,7 +1010,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 
     f.close();
 
-    // read OdoLog.csv. 
+    // read OdoLog.csv.
     f.open(odo_path, ios::in);
 
     while (getline(f, line))
@@ -1010,7 +1018,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         row.clear();
         stringstream linestream(line);
 
-        while(getline(linestream, word, ','))
+        while (getline(linestream, word, ','))
         {
             row.push_back(word);
         }
@@ -1038,7 +1046,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
 
     f.close();
 
-    // // read info.csv. 
+    // // read info.csv.
     // f.open(info_path, ios::in);
 
     // while (getline(f, line))
@@ -1067,34 +1075,34 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     // initialize map drawing.
     My_Map t(width, height, res);
 
-    // Main loop. Start replaying. 
+    // Main loop. Start replaying.
     while (imgNum < num_files)
     {
-        // prepare the color image. 
+        // prepare the color image.
         img_suffix = "img_" + to_string(imgNum) + ".png";
         img_path = img_folder + img_suffix;
         scene = cv::imread(img_path, cv::IMREAD_COLOR);
 
-        // check whether the reading is successful or not. 
+        // check whether the reading is successful or not.
         if (scene.empty())
         {
             printf("\n\nReading Error!  \n\n");
-            printf("\n\nCannot read images from directories [%s]. \n\n", 
-            img_path.c_str());
+            printf("\n\nCannot read images from directories [%s]. \n\n",
+                   img_path.c_str());
             break;
         }
 
         // check the timestamp of the current scene.
         currentTime = timeLog[imgNum];
 
-        // find the corresponding odometry data. 
+        // find the corresponding odometry data.
         i = mark;
         Odo currentOdo;
 
         for (; i < odoLog.size(); i++)
         {
-            if (odoLog[i].timestamp >= (currentTime - timeRange) && 
-            odoLog[i].timestamp <= (currentTime + timeRange))
+            if (odoLog[i].timestamp >= (currentTime - timeRange) &&
+                odoLog[i].timestamp <= (currentTime + timeRange))
             {
                 currentOdo = odoLog[i];
                 mark = i;
@@ -1102,7 +1110,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
             }
         }
 
-        // Gather the odometry data to update the pose of the robot. 
+        // Gather the odometry data to update the pose of the robot.
         Quaternion_ q;
         q.w = currentOdo.ow;
         q.x = currentOdo.ox;
@@ -1112,7 +1120,7 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         t.headingShow();
         t.mapShow();
 
-        // // Logging to debug. 
+        // // Logging to debug.
         // fstream f;
         // f.open(DEBUG_FILE, ios::app | ios::out);
         // f << to_string(imgNum) << ", " \
@@ -1124,27 +1132,27 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
         // << to_string(currentOdo.pz) << "\n";
         // f.close();
 
-        // Show the map and scene. 
+        // Show the map and scene.
         cv::putText(
-            scene, 
+            scene,
             "Replaying.....",
-		    cv::Point(50, 50),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 50),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         cv::putText(
-            scene, 
+            scene,
             to_string(timeLog[imgNum]),
-		    cv::Point(50, 100),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 100),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         cv::resizeWindow(win1, (int)scene.cols / 2, (int)scene.rows / 2);
         cv::resizeWindow(win2, t.map_.cols, t.map_.rows);
         cv::moveWindow(win1, 0, 0);
-	    cv::moveWindow(win2, scene.cols + 70, 0);
+        cv::moveWindow(win2, scene.cols + 70, 0);
         cv::imshow(win1, scene);
         cv::imshow(win2, t.tempMap);
         char c = (char)cv::waitKey(speed);
@@ -1190,12 +1198,11 @@ int replay_from_odometry(string folder_name, int width, int height, int res)
     return 0;
 }
 
-
 /**
- * @brief Test the delay between the receiving node and the main program. 
- * 
- * @param node a ROS node that communicates with the Capra robot. 
-*/
+ * @brief Test the delay between the receiving node and the main program.
+ *
+ * @param node a ROS node that communicates with the Capra robot.
+ */
 int delay_test(std::shared_ptr<Mike> node)
 {
     // Initialize general objects and variables.
@@ -1206,9 +1213,9 @@ int delay_test(std::shared_ptr<Mike> node)
     Img ImgLog;
     double pc_time = 0.0, node_time = 0.0, camera_time = 0.0;
     int serial_number = 0;
-    
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+
+    // Prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
     l.createDir("delay_test");
     // mut.lock();
@@ -1237,7 +1244,7 @@ int delay_test(std::shared_ptr<Mike> node)
     // string depth_path;
     // string map_path;
 
-    // Initialize rs2 objects. 
+    // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frame color_frame, depth_frame;
     rs2::frameset frames;
@@ -1251,21 +1258,21 @@ int delay_test(std::shared_ptr<Mike> node)
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
     // cfg.enable_record_to_file(bag_path);
 
-    // Initialize cv objects. 
+    // Initialize cv objects.
     const string win1 = "Color Image";
     const string win2 = "Trajectory";
-	cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
-	cv::moveWindow(win1, 0, 0);
-	cv::moveWindow(win2, 300, 150);
+    cv::moveWindow(win1, 0, 0);
+    cv::moveWindow(win2, 300, 150);
     cv::Mat image;
 
-    // Start the pipeline. 
+    // Start the pipeline.
     auto profile = p.start(cfg);
 
-    // // Create the folders for logging. 
+    // // Create the folders for logging.
     // if (
-    //     create_directories(img_folder) && 
+    //     create_directories(img_folder) &&
     //     create_directories(traj_folder))
     // {
     //     printf("\n\nDirectories are created. \n\n");
@@ -1275,23 +1282,23 @@ int delay_test(std::shared_ptr<Mike> node)
     //     printf("\n\nDirectory creation is failed. \n\n");
     // }
 
-    // Start streaming. 
+    // Start streaming.
     while (1)
     {
-        // Get a frame. 
+        // Get a frame.
         frames = p.wait_for_frames();
         // depth_frame = frames.get_depth_frame();
         color_frame = frames.get_color_frame();
 
-        // Get the information of the frame. 
+        // Get the information of the frame.
         const int w = color_frame.as<rs2::video_frame>().get_width();
         const int h = color_frame.as<rs2::video_frame>().get_height();
 
-        // Create color images. 
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color_frame.get_data(), Mat::AUTO_STEP);
+        // Create color images.
+        image = cv::Mat(Size(w, h), CV_8UC3, (void *)color_frame.get_data(), Mat::AUTO_STEP);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // Save the image. 
+        // Save the image.
         l.img_suffix = "/img_" + to_string(count) + ".png";
         l.img_path = l.img_folder + l.img_suffix;
         cv::imwrite(l.img_path, image);
@@ -1299,12 +1306,12 @@ int delay_test(std::shared_ptr<Mike> node)
         // Image number and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color_frame.get_timestamp() / 1000;
-        count ++;
+        count++;
         f.open(l.time_path, ios::app | ios::out);
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
-        // Test the delay between the main program and the ROS node. 
+        // Test the delay between the main program and the ROS node.
         const auto currenTime = std::chrono::system_clock::now();
         pc_time = (double)std::chrono::duration_cast<std::chrono::microseconds>(currenTime.time_since_epoch()).count() * MICRO;
         camera_time = ImgLog.timestamp;
@@ -1314,15 +1321,15 @@ int delay_test(std::shared_ptr<Mike> node)
         serial_number = node->odo_data.serial_number;
         mut.unlock();
 
-        // Logging the delay. 
+        // Logging the delay.
         f.open(l.debug_path, ios::app | ios::out);
-        f << to_string(camera_time) << ", " \
-        << to_string(pc_time) << ", " \
-        << to_string(node_time) << ", " \
-        << to_string(serial_number) << "\n";
+        f << to_string(camera_time) << ", "
+          << to_string(pc_time) << ", "
+          << to_string(node_time) << ", "
+          << to_string(serial_number) << "\n";
         f.close();
 
-        // Draw the trajectory. 
+        // Draw the trajectory.
         mut.lock();
         Quaternion_ q;
         q.w = node->odo_data.ow;
@@ -1330,15 +1337,15 @@ int delay_test(std::shared_ptr<Mike> node)
         q.y = node->odo_data.oy;
         q.z = node->odo_data.oz;
         t.poseUpdate(
-            ImgLog.number, 
-            node->odo_data.px, 
+            ImgLog.number,
+            node->odo_data.px,
             node->odo_data.py,
             q);
         mut.unlock();
         t.headingShow();
         t.mapShow();
 
-        // Show the current scene. 
+        // Show the current scene.
         cv::resizeWindow(win1, image.cols, image.rows);
         cv::resizeWindow(win2, t.width_pixel, t.height_pixel);
         cv::imshow(win1, image);
@@ -1357,22 +1364,21 @@ int delay_test(std::shared_ptr<Mike> node)
     return 0;
 }
 
-
 /**
- * @brief Logging function for the field trip. 
+ * @brief Logging function for the field trip.
  * @param node
  * @param width
  * @param height
  * @param res
-*/
+ */
 int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
 {
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    // Prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
     l.createDir("field_trip");
-    
-    // Initialize rs2 objects. 
+
+    // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frameset frames;
     rs2::frame color, depth;
@@ -1401,8 +1407,8 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     {
         cfg.enable_record_to_file(l.bag_path);
     }
-    
-    // Initialize cv objects. 
+
+    // Initialize cv objects.
     const string win1 = "Color Image";
     // const string win2 = "Map";
     const string win3 = "Trajectory";
@@ -1410,7 +1416,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     // cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
     cv::Mat image;
-    
+
     // Initialize general objects and variables.
     // My_Map m(width, height, res, true);
     My_Map t(width, height, res);
@@ -1418,27 +1424,27 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     std::fstream f;
     Img ImgLog;
 
-    // Start the pipeline. 
+    // Start the pipeline.
     p.start(cfg);
 
-    // Start streaming. 
+    // Start streaming.
     while (1)
     {
-        // Get frame. 
+        // Get frame.
         frames = p.wait_for_frames();
         color = frames.get_color_frame();
         // depth = frames.get_depth_frame();
 
-        // Create color image and save it. 
+        // Create color image and save it.
         const int w = color.as<rs2::video_frame>().get_width();
         const int h = color.as<rs2::video_frame>().get_height();
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+        image = cv::Mat(Size(w, h), CV_8UC3, (void *)color.get_data(), Mat::AUTO_STEP);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // Image and timestamp logging. 
+        // Image and timestamp logging.
         ImgLog.number = count;
         ImgLog.timestamp = color.get_timestamp() / 1000;
-        count ++;
+        count++;
         l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
         l.img_path = l.img_folder + l.img_suffix;
         cv::imwrite(l.img_path, image);
@@ -1446,7 +1452,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
         f.close();
 
-        // Draw the trajectory only. 
+        // Draw the trajectory only.
         mut.lock();
         Quaternion_ q;
         q.w = node->odo_data.ow;
@@ -1454,20 +1460,20 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
         q.y = node->odo_data.oy;
         q.z = node->odo_data.oz;
         t.poseUpdate(
-            ImgLog.number, 
-            node->odo_data.px, 
+            ImgLog.number,
+            node->odo_data.px,
             node->odo_data.py,
             q);
         mut.unlock();
         t.headingShow();
         t.mapShow();
 
-        // Trajectory logging. 
+        // Trajectory logging.
         l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
         l.traj_path = l.traj_folder + l.traj_suffix;
         cv::imwrite(l.traj_path, t.tempMap);
 
-        // Visualization. 
+        // Visualization.
         cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
         // cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
         cv::resizeWindow(win3, cv::Size(t.map_.cols, t.map_.rows));
@@ -1491,7 +1497,6 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     return 0;
 }
 
-
 int simple_test()
 {
     // cv::Vec3d n = cv::Vec3d(1, 2, 3);
@@ -1499,7 +1504,7 @@ int simple_test()
 
     // cout << "\n\n" << n << endl;
     // printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
-    
+
     // n *= 3;
 
     // cout << "\n\n" << n << endl;
@@ -1510,8 +1515,8 @@ int simple_test()
     // printf("(x, y, z) = (%f, %f, %f). \n\n", n[0], n[1], n[2]);
 
     // vector<vector<int>> n{
-    //     {0, 1, 2}, 
-    //     {3, 4 ,5}, 
+    //     {0, 1, 2},
+    //     {3, 4 ,5},
     //     {6, 7, 8}};
 
     // printf("\n\n");
@@ -1548,34 +1553,34 @@ int simple_test()
 
     double minZ = -3.87;
     double z = -2.87;
-    cout << "\n\n" << (z - minZ) /  0.2 << "\n\n";
-    cout << "\n\n" << fmod((z - minZ), 0.2) << "\n\n";
-    
+    cout << "\n\n"
+         << (z - minZ) / 0.2 << "\n\n";
+    cout << "\n\n"
+         << fmod((z - minZ), 0.2) << "\n\n";
 
     return 0;
 }
 
-
 /**
- * @brief Record everything necessary for working offline. 
+ * @brief Record everything necessary for working offline.
  *
- * Specifically, this function only creates: 
- * 
- * OdoLog.csv, 
- * 
- * GPSLog.csv, 
- * 
+ * Specifically, this function only creates:
+ *
+ * OdoLog.csv,
+ *
+ * GPSLog.csv,
+ *
  * VelLog.csv,
- * 
+ *
  * record.bag.
-*/
-int  recording(std::shared_ptr<Mike> node)
+ */
+int recording(std::shared_ptr<Mike> node)
 {
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+    // Prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
 
-    // Initialize rs2 objects. 
+    // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frameset frames;
     rs2::frame color, depth;
@@ -1588,45 +1593,45 @@ int  recording(std::shared_ptr<Mike> node)
     // int stream_depth_height = 720;
     int frame_rate = 30;
 
-    // Configure the Intel camera. 
+    // Configure the Intel camera.
     cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
     cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
     cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     cfg.enable_record_to_file(l.bag_path);
 
-    // Initialize cv objects. 
+    // Initialize cv objects.
     const string win1 = "Color Image";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::Mat image(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
 
-    // Start the pipeline. 
+    // Start the pipeline.
     p.start(cfg);
 
-    // Start streaming. 
+    // Start streaming.
     while (1)
     {
-        // Get frame. 
+        // Get frame.
         // frames = p.wait_for_frames();
         // color = frames.get_color_frame();
 
-        // // Create color image and save it. 
+        // // Create color image and save it.
         // const int w = color.as<rs2::video_frame>().get_width();
         // const int h = color.as<rs2::video_frame>().get_height();
         // image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
         // cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // Visualization. 
+        // Visualization.
         cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
         cv::moveWindow(win1, 0, 0);
         cv::putText(
-            image, 
+            image,
             "Recording",
-		    cv::Point(50, 50),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
+            cv::Point(50, 50),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
         cv::imshow(win1, image);
         char c = cv::waitKey(10);
 
@@ -1640,25 +1645,24 @@ int  recording(std::shared_ptr<Mike> node)
     return 0;
 }
 
-
 // /**
 //  * @brief Create the map with environment infomation while streaming and robot moving. (from recording)
-//  * 
-//  * This is for working offline. 
-//  * 
-//  * @param file folder name that contains all necessary recording and logs. 
-//  * @param width width of the map in meter. 
+//  *
+//  * This is for working offline.
+//  *
+//  * @param file folder name that contains all necessary recording and logs.
+//  * @param width width of the map in meter.
 //  * @param height height of the map in meter.
-//  * @param res resolution of the map. 
+//  * @param res resolution of the map.
 // */
 // int stream_map_test_from_recording(string folder, int width, int height, int res)
 // {
-//     // Prepare folders and other paths.  
-//     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+//     // Prepare folders and other paths.
+//     int count = 0;  // serial number of color images, trajectories, maps, depth info.
 //     Logging l;
 //     l.createDir("stream_map");
 
-//     // Initialize rs2 objects. 
+//     // Initialize rs2 objects.
 //     rs2::pipeline p;
 //     rs2::frameset frames;
 //     rs2::frame color, depth;
@@ -1677,7 +1681,7 @@ int  recording(std::shared_ptr<Mike> node)
 //     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
 //     pcl::PassThrough<pcl::PointXYZRGB> filter;
 
-//     // Initialize cv objects. 
+//     // Initialize cv objects.
 //     const string win1 = "Color Image";
 //     const string win2 = "Map";
 //     const string win3 = "Trajectory";
@@ -1693,7 +1697,7 @@ int  recording(std::shared_ptr<Mike> node)
 //     My_Map m(width, height, res, true);
 //     My_Map t(width, height, res);
 
-//     // Initialize object and variables for file reading. 
+//     // Initialize object and variables for file reading.
 //     fstream f;
 //     vector<string> row;
 //     string line, word, temp;
@@ -1709,7 +1713,7 @@ int  recording(std::shared_ptr<Mike> node)
 //     double timeRange = 200 * MILLI; // sec
 //     // double timeRange = 0.3; // sec
 
-//     // Read OdoLog.csv. 
+//     // Read OdoLog.csv.
 //     f.open(odo_path, ios::in);
 
 //     while (getline(f, line))
@@ -1736,18 +1740,18 @@ int  recording(std::shared_ptr<Mike> node)
 
 //     f.close();
 
-//     // Start the pipeline. 
+//     // Start the pipeline.
 //     p.start(cfg);
 
-//     // Start streaming. 
+//     // Start streaming.
 //     while (1)
 //     {
-//         // Get frame. 
+//         // Get frame.
 //         frames = p.wait_for_frames();
 //         color = frames.get_color_frame();
 //         depth = frames.get_depth_frame();
 
-//         // Create color image and save it. 
+//         // Create color image and save it.
 //         const int w = color.as<rs2::video_frame>().get_width();
 //         const int h = color.as<rs2::video_frame>().get_height();
 //         stream_color_height = h;
@@ -1757,7 +1761,7 @@ int  recording(std::shared_ptr<Mike> node)
 //         image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
 //         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-//         // Image and timestamp logging. 
+//         // Image and timestamp logging.
 //         ImgLog.number = count;
 //         ImgLog.timestamp = color.get_timestamp() / 1000;
 //         count ++;
@@ -1768,14 +1772,14 @@ int  recording(std::shared_ptr<Mike> node)
 //         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
 //         f.close();
 
-//         // Match the current camera timestamp to the OdoLog.csv. 
+//         // Match the current camera timestamp to the OdoLog.csv.
 //         currentTime = ImgLog.timestamp;
 //         i = mark;
 //         Odo currentOdo;
 
 //         for (; i < odoLog.size(); i++)
 //         {
-//             if (odoLog[i].timestamp >= (currentTime - timeRange) && 
+//             if (odoLog[i].timestamp >= (currentTime - timeRange) &&
 //             odoLog[i].timestamp <= (currentTime + timeRange))
 //             {
 //                 currentOdo = odoLog[i];
@@ -1790,20 +1794,20 @@ int  recording(std::shared_ptr<Mike> node)
 //         << to_string(currentOdo.timestamp) << "\n";
 //         f.close();
 
-//         // Gather the odometry data to update the pose of the robot on the map. 
+//         // Gather the odometry data to update the pose of the robot on the map.
 //         Quaternion_ q;
 //         q.w = currentOdo.ow;
 //         q.x = currentOdo.ox;
 //         q.y = currentOdo.oy;
 //         q.z = currentOdo.oz;
 //         m.poseUpdate(
-//             ImgLog.number, 
-//             currentOdo.px, 
+//             ImgLog.number,
+//             currentOdo.px,
 //             currentOdo.py,
 //             q);
 //         t.poseUpdate(
-//             ImgLog.number, 
-//             currentOdo.px, 
+//             ImgLog.number,
+//             currentOdo.px,
 //             currentOdo.py,
 //             q);
 
@@ -1811,14 +1815,14 @@ int  recording(std::shared_ptr<Mike> node)
 //         points = pointcloud.calculate(depth);
 //         cloud = Points2PCL(points);
 
-//         // Filter the depth map with z-value. 
+//         // Filter the depth map with z-value.
 // 		filter.setInputCloud(cloud);
 // 		filter.setFilterFieldName("z");
 // 		filter.setFilterLimits(0, 4);
 // 		filter.filter(*cloud_filtered);
 
-//         // Project the pointcloud to the map. 
-//         Score S(cloud_filtered); 
+//         // Project the pointcloud to the map.
+//         Score S(cloud_filtered);
 //         S.setStartZ(0.0);
 //         S.setSearchRange(3.5);
 //         S.setSearchStep(0.40);
@@ -1848,22 +1852,22 @@ int  recording(std::shared_ptr<Mike> node)
 //         t.mapShow();
 //         t.flagReset();
 
-//         // Trajectory logging. 
+//         // Trajectory logging.
 //         l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
 //         l.traj_path = l.traj_folder + l.traj_suffix;
 //         cv::imwrite(l.traj_path, t.tempMap);
 
-//         // Map logging. 
+//         // Map logging.
 //         l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
 //         l.map_path = l.map_folder + l.map_suffix;
 //         cv::imwrite(l.map_path, m.tempMap);
 
-//         // Visualization. 
+//         // Visualization.
 //         cv::moveWindow(win1, 0, 0);
 //         cv::moveWindow(win2, (image.cols / 2 + 75), 0);
 //         cv::moveWindow(win3, (image.cols / 2 + 580), 0);
 //         cv::putText(
-//             image, 
+//             image,
 //             to_string(ImgLog.timestamp),
 // 		    cv::Point(50, 50),
 // 		    FONT_HERSHEY_DUPLEX,
@@ -1875,7 +1879,7 @@ int  recording(std::shared_ptr<Mike> node)
 //         cv::imshow(win3, t.tempMap);
 //         char c = cv::waitKey(10);
 
-//         // Check whether to terminate the programme. 
+//         // Check whether to terminate the programme.
 //         if (c == 32 || c == 13 || TERMINATE == true)
 //         {
 //             printf("\n\nThe programme is terminated by keyboard. \n\n");

@@ -45,3 +45,13 @@
     3. Also, maybe need to clean up the codes. 
 
     4. Also, try to discuss the details in the Kalman filter with Christian tomorrow. 
+
+    5. Already complete the KF, generally. 
+
+    6. However, some places still need to improvement or tune on. 
+
+    7. For example, the time span between two updates. 
+
+    8. For instance, the choice of sigma. 
+
+    9. For example, the choice of the threshold of time span. 
