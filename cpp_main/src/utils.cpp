@@ -421,21 +421,27 @@ double KF::selectSigma(double z)
 {
 	double sigma = 0.0;
 
+	// Measurement error. (in meter)
+    double sigma_34 = 0.08; 
+    double sigma_23 = 0.03; 
+    double sigma_12 = 0.01; 
+    double sigma_01 = 0.0025; 
+
 	if (z >= 3.0 && z < 4)
 	{
-		sigma = KF::sigma_34;
+		sigma = sigma_34;
 	}
 	else if (z >= 2.0 && z < 3)
 	{
-		sigma = KF::sigma_23;
+		sigma = sigma_23;
 	}
 	else if (z >= 1.0 && z < 2)
 	{
-		sigma = KF::sigma_12;
+		sigma = sigma_12;
 	}
 	else if (z < 1)
 	{
-		sigma = KF::sigma_01;
+		sigma = sigma_01;
 	}
 	else
 	{
@@ -447,9 +453,47 @@ double KF::selectSigma(double z)
 }
 
 
+/**
+ * @brief 
+ * @param predictedCov
+ * @param measuredCov
+ * @return updated Kalman gain. 
+*/
+double KF::updateKalmanGain(double predictedCov, double measuredCov)
+{
+	double gain = 0.0;
+	gain = (predictedCov) / (predictedCov + measuredCov);
+	return gain;
+}
+
 
 /**
- * @brief Constrctor of class Map. 
+ * @brief Update the estimated state. 
+ * @param gain
+ * @param measuremet
+ * @param priorState
+*/
+double KF::updateState(double gain, double measurement, double priorState)
+{
+	double state = 0.0;
+	state = gain * (measurement - priorState);
+	return state;
+}
+
+
+/**
+ * @brief Update the variance of the estimated state. 
+*/
+double KF::updateCov(double gain, double priorCov)
+{
+	double cov = 0.0;
+	cov = (1 - gain) * priorCov;
+	return cov;
+}
+
+
+/**
+ * @brief Constrctor of class My_Map. 
  * 
  * There are two modes of the instance: map and trajectory. (the default mode is trajectory)
  * 
@@ -475,7 +519,7 @@ My_Map::My_Map()
 
 
 /**
- * @brief Constrctor of class Map. 
+ * @brief Constrctor of class My_Map. 
  * @param w width of the map in meter.
  * @param h height of the map in meter.
  * @param r resolution of the map. [pixel/meter]
@@ -541,7 +585,7 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 			row.resize(My_Map::width_pixel);
 		}
 
-		My_Map::infoMap.resize(My_Map::height_pixel, vector<CellKF>(My_Map::width_pixel))
+		My_Map::infoMap.resize(My_Map::height_pixel, vector<CellKF>(My_Map::width_pixel));
 	}
 
 	My_Map::isMap = isMap;
@@ -649,118 +693,49 @@ void My_Map::cam2map()
 
 
 // /**
-//  * @brief Transform the point in camera frame into map frame. 
-//  * @param p a point in the camera frame. 
+//  * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
+//  * @param height the height data of this cell.
 // */
-// cv::Vec3d My_Map::cam2map(cv::Vec3d p)
+// void My_Map::cellProject(double height)
 // {
-// 	cv::Vec3d p_map;
-// 	p_map[0] = p[2];
-// 	p_map[1] = p[0];
-// 	p_map[2] = p[1];
-// 	return p_map;
+// 	// Initialize center point in map frame and image frame. 
+// 	Point2D center_map, center_img;
+
+// 	if (My_Map::isTransformed)
+// 	{
+// 		// Make sure the numebers will be integers. but still in the map frame  
+// 		center_map.x = round(My_Map::center_map[0]);
+// 		center_map.y = round(My_Map::center_map[1]);
+
+// 		// Convert the corners from map frame to image frame. 
+// 		center_img = My_Map::map2img(center_map);
+
+// 		// // Mark the center of the slice on the map. (for debug)
+// 		// cv::circle(
+// 		// 	My_Map::map_,
+// 		// 	cv::Point(center_img.x, center_img.y),
+// 		// 	1,
+// 		// 	cv::Scalar(255, 255, 255),
+// 		// 	-1
+// 		// );
+
+// 		// Project the cell on the info map. 
+// 		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)
+// 		{
+// 			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
+// 		}
+
+// 		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;			
+
+// 		// Reset the flag. 
+// 		My_Map::isTransformed = false;
+// 	}
+// 	else
+// 	{
+// 		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+// 		exit(-1);
+// 	}
 // }
-
-
-/**
- * @brief Project the slice area on the maps. 
- * @param S the instance of class Score which is running the slicing and assessment currently. 
- * @param index the index of current slice which is going to be projected on the map. 
-*/
-void My_Map::sliceProject(Score S, int index)
-{
-	Point2D top_left_map, bottom_right_map, center_map, top_left_img, bottom_right_img, center_img;
-	if (My_Map::isTransformed)
-	{
-		// Make sure the numebers will be integers. but still in the map frame  
-		center_map.x = round(My_Map::center_map[0]);
-		center_map.y = round(My_Map::center_map[1]);
-
-		// Convert the corners from map frame to image frame. 
-		center_img = My_Map::map2img(center_map);
-
-		// Draw the area as a rectangle on the map. (rendering with the percentage of inliers. above the threshold will be green, red the othe way)
-		double dis = 0.0;
-		vector<double> coors;
-		bool isFound = false;
-
-		// // Debug. 
-		// fstream f;
-		// f.open(DEBUG_FILE, ios::app | ios::out);
-		// f.open("/home/mike/Debug/center.csv", ios::app | ios::out);
-
-		// // Mark the center of the slice on the map. (for debug)
-		// cv::circle(
-		// 	My_Map::map_,
-		// 	cv::Point(center_img.x, center_img.y),
-		// 	1,
-		// 	cv::Scalar(255, 255, 255),
-		// 	-1
-		// );
-
-		// Project the slice on the info map, avoiding the overlap problem. 
-		if (My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] == 0.0)
-		{
-			My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[0] = 1.0;
-		}
-
-		My_Map::infoMap.at<cv::Vec2d>(center_img.y, center_img.x)[1] = S.slices[index].score;			
-
-		// reset the flag. 
-		My_Map::isTransformed = false;
-
-		// f.close();
-	}
-	else
-	{
-		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
-		exit(-1);
-	}
-}
-
-
-/**
- * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
- * @param height the height data of this cell.
-*/
-void My_Map::cellProject(double height)
-{
-	Point2D center_map, center_img;
-	if (My_Map::isTransformed)
-	{
-		// Make sure the numebers will be integers. but still in the map frame  
-		center_map.x = round(My_Map::center_map[0]);
-		center_map.y = round(My_Map::center_map[1]);
-
-		// Convert the corners from map frame to image frame. 
-		center_img = My_Map::map2img(center_map);
-
-		// // Mark the center of the slice on the map. (for debug)
-		// cv::circle(
-		// 	My_Map::map_,
-		// 	cv::Point(center_img.x, center_img.y),
-		// 	1,
-		// 	cv::Scalar(255, 255, 255),
-		// 	-1
-		// );
-
-		// Project the cell on the info map. 
-		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)
-		{
-			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
-		}
-
-		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;			
-
-		// Reset the flag. 
-		My_Map::isTransformed = false;
-	}
-	else
-	{
-		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
-		exit(-1);
-	}
-}
 
 
 /**
@@ -770,7 +745,12 @@ void My_Map::cellProject(double height)
 */
 void My_Map::cellProject(double height, double depth)
 {
+	// Initialize center point in map frame and image frame. 
 	Point2D center_map, center_img;
+
+	// Initialize general variables. 
+	double sigma = 0.0, variance = 0.0, gain = 0.0, state = 0.0, cov = 0.0;
+
 	if (My_Map::isTransformed)
 	{
 		// Make sure the numebers will be integers. but still in the map frame  
@@ -790,16 +770,55 @@ void My_Map::cellProject(double height, double depth)
 		// );
 
 		// Project the cell on the info map. 
-		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
-		{
-			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
-		}
-		else  // already explored. 
-		{
-			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] += 1;
-		}
+		// // Method without KF. 
+		// if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)  // haven't been explored. 
+		// {
+		// 	My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
+		// }
+		// else  // already explored. 
+		// {
+		// 	My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] += 1;
+		// }
 
-		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;
+		// My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;
+
+		// Method with KF. 
+		My_Map::infoMap[center_img.y][center_img.x].iteration++;
+
+		// Measurement. 
+		My_Map::infoMap[center_img.y][center_img.x].measurement = height;
+		sigma = KF::selectSigma(depth);
+		variance = pow(sigma, 2);
+
+		if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // Initialization of KF
+		{
+			// Initialize the estmated state and its variance with the measurement directly. 
+			My_Map::infoMap[center_img.y][center_img.x].est_state = height;
+			My_Map::infoMap[center_img.y][center_img.x].est_cov = variance;
+
+			// Predict. 
+			My_Map::infoMap[center_img.y][center_img.x].pre_state = height;
+			My_Map::infoMap[center_img.y][center_img.x].pre_cov = variance;
+		}
+		else  // normal iteration. 
+		{
+			// Update. 
+			gain = KF::updateKalmanGain(My_Map::infoMap[center_img.y][center_img.x].pre_cov, variance);
+			state = KF::updateState(
+				gain, 
+				height, 
+				My_Map::infoMap[center_img.y][center_img.x].pre_state);
+			cov = KF::updateCov(
+				gain, 
+				My_Map::infoMap[center_img.y][center_img.x].pre_cov);
+			My_Map::infoMap[center_img.y][center_img.x].gain = gain;
+			My_Map::infoMap[center_img.y][center_img.x].est_state = state;
+			My_Map::infoMap[center_img.y][center_img.x].est_cov = cov;
+			
+			// Predict. 	
+			My_Map::infoMap[center_img.y][center_img.x].pre_state = state;
+			My_Map::infoMap[center_img.y][center_img.x].pre_cov = cov;
+		}
 
 		// Reset the flag. 
 		My_Map::isTransformed = false;
@@ -886,29 +905,6 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
             	2);
 		}
     }
-}
-
-
-/**
- * @brief Update the map with the info from camera. 
- * @param S an instance of class Score that contains the information to update the map. 
-*/
-void My_Map::mapUpdate(Score S)
-{
-	// Assign the height threshold. 
-	My_Map::height_threshold = S.height_threshold;
-
-    for (int i = 0; i < S.slices.size(); i++)
-	{
-		// Get the coordinates of the slice (region, grid), but still in camera frame. 
-		My_Map::center_cam = S.slices[i].centroid;
-
-		// Transformation from camera frame to map frame. 
-		My_Map::cam2map();
-
-		// Transformation from map frame to image frame. (the image used to display the map)
-		My_Map::sliceProject(S, i);
-	}
 }
 
 
@@ -1039,25 +1035,54 @@ void My_Map::renderingFromInfoMap()
 		My_Map::tempMap = My_Map::map_.clone();
 	}
 
-	for (int i = 0; i < My_Map::infoMap.rows; i++)
-	{
-		for (int j = 0; j < My_Map::infoMap.rows; j++)
-		{
-			// // Debug
-			// f << to_string(i) << ", " << to_string(j) << ", " \
-			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[0]) << ", " \
-			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[1]) << ", " \
-			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[2]) << ", " \
-			// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[3]) << "\n";
+	// // Method without KF
+	// for (int i = 0; i < My_Map::infoMap.rows; i++)
+	// {
+	// 	for (int j = 0; j < My_Map::infoMap.rows; j++)
+	// 	{
+	// 		// // Debug
+	// 		// f << to_string(i) << ", " << to_string(j) << ", " \
+	// 		// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[0]) << ", " \
+	// 		// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[1]) << ", " \
+	// 		// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[2]) << ", " \
+	// 		// << to_string(My_Map::infoMap.at<cv::Vec4d>(i, j)[3]) << "\n";
 			
-			if (My_Map::infoMap.at<cv::Vec2d>(i, j)[0] == 0.0)
+	// 		if (My_Map::infoMap.at<cv::Vec2d>(i, j)[0] == 0.0)
+	// 		{
+	// 			continue;
+	// 		}
+	// 		else
+	// 		{
+	// 			if (My_Map::infoMap.at<cv::Vec2d>(i, j)[1] >= -My_Map::height_threshold && 
+	// 			My_Map::infoMap.at<cv::Vec2d>(i, j)[1] <= My_Map::height_threshold)
+	// 			{
+	// 				color = cv::Scalar(0, 127, 0);
+	// 			}
+	// 			else
+	// 			{
+	// 				color = cv::Scalar(0, 0, 127);
+	// 			}
+
+	// 			My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
+	// 			My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
+	// 			My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+	// 		}				
+	// 	}
+	// }
+
+	// Method with KF. 
+	for (int i = 0; i < My_Map::infoMap.size(); i++)
+	{
+		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
+		{
+			if (My_Map::infoMap[i][j].iteration == -1)
 			{
 				continue;
 			}
 			else
 			{
-				if (My_Map::infoMap.at<cv::Vec2d>(i, j)[1] >= -My_Map::height_threshold && 
-				My_Map::infoMap.at<cv::Vec2d>(i, j)[1] <= My_Map::height_threshold)
+				if (My_Map::infoMap[i][j].est_state >= -My_Map::height_threshold && 
+				My_Map::infoMap[i][j].est_state <= My_Map::height_threshold)
 				{
 					color = cv::Scalar(0, 127, 0);
 				}
@@ -1069,9 +1094,10 @@ void My_Map::renderingFromInfoMap()
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
-			}				
+			}
 		}
 	}
+
 	// f.close();
 }
 

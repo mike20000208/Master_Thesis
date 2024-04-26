@@ -10,7 +10,7 @@ int main(int argc, char * argv[])
         {"replay_from_images", 1}, 
         // {"trajectory", 2}, 
         {"stream_map", 3},
-        {"single_frame_map", 4}, 
+        // {"single_frame_map", 4}, 
         // {"None", 5},
         {"debug", 6},
         {"replay_from_odometry", 7},
@@ -18,13 +18,14 @@ int main(int argc, char * argv[])
         // {"map_demo", 9},
         // {"delay_test", 10}, 
         {"field_trip", 11},
-        {"recording", 12},
-        {"stream_map_from_recording", 13}};
+        {"recording", 12}
+        // {"stream_map_from_recording", 13}
+        };
     vector<string> temp_commands{
         "replay_from_images", 
         // "trajectory", 
         "stream_map", 
-        "single_frame_map", 
+        // "single_frame_map", 
         // "None", 
         "debug",
         "replay_from_odometry", 
@@ -32,8 +33,9 @@ int main(int argc, char * argv[])
         // "map_demo", 
         // "delay_test", 
         "field_trip",
-        "recording",
-        "stream_map_from_recording"};
+        "recording"
+        // "stream_map_from_recording"
+        };
     
     // Get into the command selection menu. 
     if (argc > 1)
@@ -214,34 +216,34 @@ int main(int argc, char * argv[])
 
         case 4:
         {
-            // test map building in single frame. 
-            rclcpp::init(argc, argv);
-            std::shared_ptr<Mike> node = std::make_shared<Mike>();
+            // // Test map building in single frame. 
+            // rclcpp::init(argc, argv);
+            // std::shared_ptr<Mike> node = std::make_shared<Mike>();
 
-            if (argc > 2)
-            {
-                thread thread1 (Communication, node);
-                thread thread2 (single_frame_map_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
-                thread1.join();
-                thread2.join();
-            }
-            else
-            {
-                printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-                int map_width_meter, map_height_meter, map_res;
-                cin >> map_width_meter >> map_height_meter >> map_res; 
-                thread thread1 (Communication, node);
-                thread thread2 (single_frame_map_test, node, map_width_meter, map_height_meter, map_res);
-                thread1.join();
-                thread2.join();
-            }
+            // if (argc > 2)
+            // {
+            //     thread thread1 (Communication, node);
+            //     thread thread2 (single_frame_map_test, node, stoi(argv[2]), stoi(argv[3]), stoi(argv[4]));
+            //     thread1.join();
+            //     thread2.join();
+            // }
+            // else
+            // {
+            //     printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+            //     int map_width_meter, map_height_meter, map_res;
+            //     cin >> map_width_meter >> map_height_meter >> map_res; 
+            //     thread thread1 (Communication, node);
+            //     thread thread2 (single_frame_map_test, node, map_width_meter, map_height_meter, map_res);
+            //     thread1.join();
+            //     thread2.join();
+            // }
 
-            // Write a note to specify which command is executed in this folder. 
-            string node_path = node->log_path + "/Mode.txt";
-            fstream f;
-            f.open(node_path, ios::out | ios::app);
-            f << "Command [" << temp_commands[3] << "] is used. \n";
-            f.close(); 
+            // // Write a note to specify which command is executed in this folder. 
+            // string node_path = node->log_path + "/Mode.txt";
+            // fstream f;
+            // f.open(node_path, ios::out | ios::app);
+            // f << "Command [" << temp_commands[3] << "] is used. \n";
+            // f.close(); 
             break;
         }
 
@@ -464,30 +466,30 @@ int main(int argc, char * argv[])
 
         case 13:
         {
-            // Test map building in streaming which is from a recording. 
-            vector<string> folders;
+            // // Test map building in streaming which is from a recording. 
+            // vector<string> folders;
             
-            // See how many folders are there in the main folder. 
-            std::filesystem::path P {RECORDING_FOLDER};
-            for (auto& p : std::filesystem::directory_iterator(P))
-            {
-                folders.push_back(p.path().filename());
-            }
-            sort(folders.begin(), folders.end());
+            // // See how many folders are there in the main folder. 
+            // std::filesystem::path P {RECORDING_FOLDER};
+            // for (auto& p : std::filesystem::directory_iterator(P))
+            // {
+            //     folders.push_back(p.path().filename());
+            // }
+            // sort(folders.begin(), folders.end());
 
-            // Choose folder to use. 
-            printf("Please select which folder you want to use. The availbale options are shown below: \n\n");
-            for (int i = 0; i < folders.size(); i++)
-            {
-                printf("%d  ->  %s \n\n", i, folders[i].c_str());
-            }
-            int folder;
-            cin >> folder;
-            string temp = RECORDING_FOLDER + folders[folder] + "/";
-            printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
-            int map_width_meter, map_height_meter, map_res;
-            cin >> map_width_meter >> map_height_meter >> map_res; 
-            stream_map_test_from_recording(temp, map_width_meter, map_height_meter, map_res);
+            // // Choose folder to use. 
+            // printf("Please select which folder you want to use. The availbale options are shown below: \n\n");
+            // for (int i = 0; i < folders.size(); i++)
+            // {
+            //     printf("%d  ->  %s \n\n", i, folders[i].c_str());
+            // }
+            // int folder;
+            // cin >> folder;
+            // string temp = RECORDING_FOLDER + folders[folder] + "/";
+            // printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+            // int map_width_meter, map_height_meter, map_res;
+            // cin >> map_width_meter >> map_height_meter >> map_res; 
+            // stream_map_test_from_recording(temp, map_width_meter, map_height_meter, map_res);
             break;
         }
 

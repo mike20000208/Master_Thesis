@@ -604,60 +604,18 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         end = clock();
         getDuration(start, end);  // Get the spent time. (3)
 
-        // Project the pointcloud to the map. (test two divison method to see the spent time)
+        // Divide the pointcloud into grid. 
         start = clock();
         GridAnalysis G(cloud_filtered);
-        if (!isUseNewDivision)
+        G.setCellSize(pow(res, -1));
+        G.setHeightThreshold(.10);
+        G.rendering();
+        G.divide();
+
+        // Project the grid divided from the pointcloud on the map.
+        if (m.isMap)
         {
-            // The slower method. 
-            Score S(cloud_filtered); 
-            S.setStartZ(0.0);
-            S.setSearchRange(4.0);
-            S.setSearchStep(pow(res, -1));
-            S.setSize(pow(res, -1));            
-            S.setStride(1.0 * S.size);
-            S.setHeightThreshold(.10);
-            // S.rendering();
-
-            for (double z = S.start_z; z < S.search_range; z += S.search_step)
-            {
-                S.get_boundary(z);
-                S.get_slices(z);
-
-                // // Debug. To see the coordinates of each slice in each step. 
-                // f.open(string(DEBUG_FILE) + string("division.csv"), ios::app | ios::out);
-                // for (int i = 0; i < S.slices.size(); i++)
-                // {
-                //     f << to_string(z) << ", " \
-                //     << to_string(S.minX) << ", " \
-                //     << to_string(S.maxX) << ", " \
-                //     << to_string(S.slices[i].centroid[0]) << ", " \
-                //     << to_string(S.slices[i].centroid[1]) << ", " \
-                //     << to_string(S.slices[i].centroid[2]) << "\n";
-                // }
-                // f.close();
-
-                S.get_height(z);
-
-                if (m.isMap)
-                {
-                    m.mapUpdate(S);
-                }
-            }
-        }
-        else
-        {
-            // The Faster method.
-            // GridAnalysis G(cloud_filtered);
-            G.setCellSize(pow(res, -1));
-            G.setHeightThreshold(.10);
-            G.rendering();
-            G.divide();
-
-            if (m.isMap)
-            {
-                m.mapUpdate(G);
-            }
+            m.mapUpdate(G);
         }
 
         end = clock();
@@ -750,229 +708,229 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 }
 
 
-/**
- * @brief Create the map with environment information while only take a single frame from camera. 
- * 
- * When getting the arguments from the terminal. 
- * 
- *  the first one is width,
- * 
- *  the second one is height,
- * 
- *  the thrid one is res. 
- * 
- * @param node a node that communicates with the capra robot. 
- * @param width width of the map in meter. 
- * @param height height of the map in meter.
- * @param res resolution of the map. 
-*/
-int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
-{
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    Logging l(node);
-    l.createDir("single_frame_map");
+// /**
+//  * @brief Create the map with environment information while only take a single frame from camera. 
+//  * 
+//  * When getting the arguments from the terminal. 
+//  * 
+//  *  the first one is width,
+//  * 
+//  *  the second one is height,
+//  * 
+//  *  the thrid one is res. 
+//  * 
+//  * @param node a node that communicates with the capra robot. 
+//  * @param width width of the map in meter. 
+//  * @param height height of the map in meter.
+//  * @param res resolution of the map. 
+// */
+// int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
+// {
+//     // Prepare folders and other paths.  
+//     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+//     Logging l(node);
+//     l.createDir("single_frame_map");
 
-    // Initialize rs2 objects. 
-    rs2::pipeline p;
-    rs2::frameset frames;
-    rs2::frame color, depth;
-    rs2::config cfg;
-    rs2::pointcloud pointcloud;
-    rs2::points points;
-    int stream_color_width = 1280;
-    int stream_color_height = 720;
-    // int stream_depth_width = 848;
-    // int stream_depth_height = 480;
-    int stream_depth_width = 1280;
-    int stream_depth_height = 720;
-    int frame_rate = 30;
+//     // Initialize rs2 objects. 
+//     rs2::pipeline p;
+//     rs2::frameset frames;
+//     rs2::frame color, depth;
+//     rs2::config cfg;
+//     rs2::pointcloud pointcloud;
+//     rs2::points points;
+//     int stream_color_width = 1280;
+//     int stream_color_height = 720;
+//     // int stream_depth_width = 848;
+//     // int stream_depth_height = 480;
+//     int stream_depth_width = 1280;
+//     int stream_depth_height = 720;
+//     int frame_rate = 30;
 
-    if (isEnableFromFile)
-    {
-        cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
-        // cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
-    }
-    else
-    {
-        cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
-        cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
-    }
+//     if (isEnableFromFile)
+//     {
+//         cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
+//         // cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
+//     }
+//     else
+//     {
+//         cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+//         cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+//     }
 
-    // Initialize pcl objects.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PassThrough<pcl::PointXYZRGB> filter;
+//     // Initialize pcl objects.
+//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+//     pcl::PassThrough<pcl::PointXYZRGB> filter;
 
-    // initialize cv objects. 
-    const string win1 = "Color Image";
-    const string win2 = "Map";
-    cv::namedWindow(win1, WINDOW_NORMAL);
-    cv::namedWindow(win2, WINDOW_NORMAL);
-    cv::Mat image;
+//     // initialize cv objects. 
+//     const string win1 = "Color Image";
+//     const string win2 = "Map";
+//     cv::namedWindow(win1, WINDOW_NORMAL);
+//     cv::namedWindow(win2, WINDOW_NORMAL);
+//     cv::Mat image;
 
-    // Initialize other objects.
-    My_Map m(width, height, res, true);
-    std::mutex mut;
-    std::fstream f;
+//     // Initialize other objects.
+//     My_Map m(width, height, res, true);
+//     std::mutex mut;
+//     std::fstream f;
 
-    // Initialize other variables.
-    Img ImgLog;
-    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
+//     // Initialize other variables.
+//     Img ImgLog;
+//     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
-    p.start(cfg);
+//     // Start the pipeline, and there will be no infinite loop since we only want a single frame. 
+//     p.start(cfg);
 
-    // Get color and depth frame. 
-    frames = p.wait_for_frames();
-    color = frames.get_color_frame();
-    depth = frames.get_depth_frame();
+//     // Get color and depth frame. 
+//     frames = p.wait_for_frames();
+//     color = frames.get_color_frame();
+//     depth = frames.get_depth_frame();
 
-    // Create color image and save it. 
-    const int w = color.as<rs2::video_frame>().get_width();
-    const int h = color.as<rs2::video_frame>().get_height();
-    image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
-    cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+//     // Create color image and save it. 
+//     const int w = color.as<rs2::video_frame>().get_width();
+//     const int h = color.as<rs2::video_frame>().get_height();
+//     image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+//     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-    // Image and timestamp logging. 
-    ImgLog.number = count;
-    ImgLog.timestamp = color.get_timestamp() / 1000;
-    count ++;
-    l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-    l.img_path = l.img_folder + l.img_suffix;
-    cv::imwrite(l.img_path, image);
-    f.open(l.time_path, ios::app | ios::out);
-    f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
-    f.close();
+//     // Image and timestamp logging. 
+//     ImgLog.number = count;
+//     ImgLog.timestamp = color.get_timestamp() / 1000;
+//     count ++;
+//     l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+//     l.img_path = l.img_folder + l.img_suffix;
+//     cv::imwrite(l.img_path, image);
+//     f.open(l.time_path, ios::app | ios::out);
+//     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+//     f.close();
 
-    // Update the pose of the robot.  
-    mut.lock();
-    Quaternion_ q;
-    q.w = node->odo_data.ow;
-    q.x = node->odo_data.ox;
-    q.y = node->odo_data.oy;
-    q.z = node->odo_data.oz;
-    m.poseUpdate(
-        ImgLog.number, 
-        node->odo_data.px, 
-        node->odo_data.py,
-        q);
-    mut.unlock();
+//     // Update the pose of the robot.  
+//     mut.lock();
+//     Quaternion_ q;
+//     q.w = node->odo_data.ow;
+//     q.x = node->odo_data.ox;
+//     q.y = node->odo_data.oy;
+//     q.z = node->odo_data.oz;
+//     m.poseUpdate(
+//         ImgLog.number, 
+//         node->odo_data.px, 
+//         node->odo_data.py,
+//         q);
+//     mut.unlock();
 
-    // Calculate realsense pointcloud and convert it into PCL format.
-    points = pointcloud.calculate(depth);
-    cloud = Points2PCL(points);
+//     // Calculate realsense pointcloud and convert it into PCL format.
+//     points = pointcloud.calculate(depth);
+//     cloud = Points2PCL(points);
 
-    // // debug
-    // f.open(DEBUG_FILE, ios::out | ios::app);
-    // f << to_string(cloud->points.size()) << "\n";
-    // f.close();
+//     // // debug
+//     // f.open(DEBUG_FILE, ios::out | ios::app);
+//     // f << to_string(cloud->points.size()) << "\n";
+//     // f.close();
 
-    // Filter the depth map with z-value. 
-    filter.setInputCloud(cloud);
-    filter.setFilterFieldName("z");
-    filter.setFilterLimits(0, 4);
-    filter.filter(*cloud_filtered);
+//     // Filter the depth map with z-value. 
+//     filter.setInputCloud(cloud);
+//     filter.setFilterFieldName("z");
+//     filter.setFilterLimits(0, 4);
+//     filter.filter(*cloud_filtered);
 
-    // calculate the best path. 
-    cv::Scalar rendering;
-    Score S(cloud_filtered); 
-    S.setStartZ(0.0);
-    S.setSearchRange(3.5);
-    S.setSearchStep(0.40);
-    S.setSize(0.40);
-    S.setStride(0.5 * S.size);
-    // S.setInlierWeight(0.70);
-    // S.setOutlierWeight(1.80);
-    // S.setDisWeight(1.80);
-    // S.setAngleWeight(0.1);
+//     // calculate the best path. 
+//     cv::Scalar rendering;
+//     Score S(cloud_filtered); 
+//     S.setStartZ(0.0);
+//     S.setSearchRange(3.5);
+//     S.setSearchStep(0.40);
+//     S.setSize(0.40);
+//     S.setStride(0.5 * S.size);
+//     // S.setInlierWeight(0.70);
+//     // S.setOutlierWeight(1.80);
+//     // S.setDisWeight(1.80);
+//     // S.setAngleWeight(0.1);
        
-    S.rendering();
+//     S.rendering();
 
-    // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-    // // for (double z = S.start_z; z < S.search_range; z += S.search_step)
-	// {
-	// 	S.get_boundary(z);
-	// 	S.get_slices(z);
-	// 	// S.get_score(z, false);
-    //     S.get_height(z);
+//     // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+//     // // for (double z = S.start_z; z < S.search_range; z += S.search_step)
+// 	// {
+// 	// 	S.get_boundary(z);
+// 	// 	S.get_slices(z);
+// 	// 	// S.get_score(z, false);
+//     //     S.get_height(z);
 
-    //     if (m.isMap)
-    //     {
-    //         m.mapUpdate(S);
-    //     }
+//     //     if (m.isMap)
+//     //     {
+//     //         m.mapUpdate(S);
+//     //     }
 
-	// 	// S.find_best_path();
-	// }
+// 	// 	// S.find_best_path();
+// 	// }
 
-    for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-    {
-        S.get_boundary(z);
-        S.get_slices(z);
-        // S.get_score(z);
-        S.get_height(z);
-        if (m.isMap)
-        {
-            m.mapUpdate(S);
-        }
+//     for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+//     {
+//         S.get_boundary(z);
+//         S.get_slices(z);
+//         // S.get_score(z);
+//         S.get_height(z);
+//         if (m.isMap)
+//         {
+//             m.mapUpdate(S);
+//         }
 
-    }
+//     }
 
-    // Show the heading of the robot, also as an indicator of the robot. 
-    // m.headingShow();
-    m.originShow();
-    m.renderingFromInfoMap();
-    m.locShow();
-    m.mapShow();
-    m.flagReset();
+//     // Show the heading of the robot, also as an indicator of the robot. 
+//     // m.headingShow();
+//     m.originShow();
+//     m.renderingFromInfoMap();
+//     m.locShow();
+//     m.mapShow();
+//     m.flagReset();
 
-    // Depth info logging. 
-    l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
-    l.depth_path = l.depth_folder + l.depth_suffix;
-    PCL2PLY(cloud_filtered, l.depth_path);
+//     // Depth info logging. 
+//     l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
+//     l.depth_path = l.depth_folder + l.depth_suffix;
+//     PCL2PLY(cloud_filtered, l.depth_path);
 
-    // Map logging.
-    l.map_suffix = "/map_" + to_string(ImgLog.number) +".png";
-    l.map_path = l.map_folder + l.map_suffix;
-    cv::imwrite(l.map_path, m.tempMap);
+//     // Map logging.
+//     l.map_suffix = "/map_" + to_string(ImgLog.number) +".png";
+//     l.map_path = l.map_folder + l.map_suffix;
+//     cv::imwrite(l.map_path, m.tempMap);
 
-    // Visualization. 
-    pc_layers.push_back(cloud_filtered);
-    pc_layers.push_back(S.cloud);
-    cv::Scalar bg_color(0, 0, 0);
-    pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
-        pc_layers, 
-        bg_color);
+//     // Visualization. 
+//     pc_layers.push_back(cloud_filtered);
+//     pc_layers.push_back(S.cloud);
+//     cv::Scalar bg_color(0, 0, 0);
+//     pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
+//         pc_layers, 
+//         bg_color);
 
-    while (!viewer->wasStopped())
-	{
-        cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
-        cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
-        cv::moveWindow(win1, 0, 0);
-        cv::moveWindow(win2, (image.cols + 70), 0);
-        cv::imshow(win1, image);
-        cv::imshow(win2, m.tempMap);
-        int c = cv::waitKey(1000);
-		viewer->spinOnce(1000);
-		std::this_thread::sleep_for(100ms);
+//     while (!viewer->wasStopped())
+// 	{
+//         cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
+//         cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
+//         cv::moveWindow(win1, 0, 0);
+//         cv::moveWindow(win2, (image.cols + 70), 0);
+//         cv::imshow(win1, image);
+//         cv::imshow(win2, m.tempMap);
+//         int c = cv::waitKey(1000);
+// 		viewer->spinOnce(1000);
+// 		std::this_thread::sleep_for(100ms);
 
-        // check whether to terminate the programme. 
-        if (c == 32 || c == 13 || TERMINATE == true)
-        {
-            printf("\n\nThe programme is terminated by keyboard. \n\n");
-            TERMINATE = true;
-            break;
-        }
-	}
+//         // check whether to terminate the programme. 
+//         if (c == 32 || c == 13 || TERMINATE == true)
+//         {
+//             printf("\n\nThe programme is terminated by keyboard. \n\n");
+//             TERMINATE = true;
+//             break;
+//         }
+// 	}
 
-    // reset. 
-    cv::destroyAllWindows();
-    pc_layers.clear();
-    viewer->removeAllPointClouds();
-    p.stop();
+//     // reset. 
+//     cv::destroyAllWindows();
+//     pc_layers.clear();
+//     viewer->removeAllPointClouds();
+//     p.stop();
     
-    return 0;
-}
+//     return 0;
+// }
 
 
 /**
@@ -1683,258 +1641,258 @@ int  recording(std::shared_ptr<Mike> node)
 }
 
 
-/**
- * @brief Create the map with environment infomation while streaming and robot moving. (from recording)
- * 
- * This is for working offline. 
- * 
- * @param file folder name that contains all necessary recording and logs. 
- * @param width width of the map in meter. 
- * @param height height of the map in meter.
- * @param res resolution of the map. 
-*/
-int stream_map_test_from_recording(string folder, int width, int height, int res)
-{
-    // Prepare folders and other paths.  
-    int count = 0;  // serial number of color images, trajectories, maps, depth info. 
-    Logging l;
-    l.createDir("stream_map");
+// /**
+//  * @brief Create the map with environment infomation while streaming and robot moving. (from recording)
+//  * 
+//  * This is for working offline. 
+//  * 
+//  * @param file folder name that contains all necessary recording and logs. 
+//  * @param width width of the map in meter. 
+//  * @param height height of the map in meter.
+//  * @param res resolution of the map. 
+// */
+// int stream_map_test_from_recording(string folder, int width, int height, int res)
+// {
+//     // Prepare folders and other paths.  
+//     int count = 0;  // serial number of color images, trajectories, maps, depth info. 
+//     Logging l;
+//     l.createDir("stream_map");
 
-    // Initialize rs2 objects. 
-    rs2::pipeline p;
-    rs2::frameset frames;
-    rs2::frame color, depth;
-    rs2::config cfg;
-    rs2::pointcloud pointcloud;
-    rs2::points points;
-    // string temp = folder + "record.bag";
-    cfg.enable_device_from_file(folder + "record.bag", false);
-    int stream_color_width = 1280;
-    int stream_color_height = 720;
-    int stream_depth_width = 1280;
-    int stream_depth_height = 720;
+//     // Initialize rs2 objects. 
+//     rs2::pipeline p;
+//     rs2::frameset frames;
+//     rs2::frame color, depth;
+//     rs2::config cfg;
+//     rs2::pointcloud pointcloud;
+//     rs2::points points;
+//     // string temp = folder + "record.bag";
+//     cfg.enable_device_from_file(folder + "record.bag", false);
+//     int stream_color_width = 1280;
+//     int stream_color_height = 720;
+//     int stream_depth_width = 1280;
+//     int stream_depth_height = 720;
 
-    // Initialize pcl objects.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PassThrough<pcl::PointXYZRGB> filter;
+//     // Initialize pcl objects.
+//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+//     pcl::PassThrough<pcl::PointXYZRGB> filter;
 
-    // Initialize cv objects. 
-    const string win1 = "Color Image";
-    const string win2 = "Map";
-    const string win3 = "Trajectory";
-    cv::namedWindow(win1, WINDOW_NORMAL);
-    cv::namedWindow(win2, WINDOW_NORMAL);
-    cv::namedWindow(win3, WINDOW_NORMAL);
-    cv::resizeWindow(win1, 1280 / 2, 720 / 2);
-    cv::resizeWindow(win2, 500, 500);
-    cv::resizeWindow(win3, 500, 500);
-    cv::Mat image;
+//     // Initialize cv objects. 
+//     const string win1 = "Color Image";
+//     const string win2 = "Map";
+//     const string win3 = "Trajectory";
+//     cv::namedWindow(win1, WINDOW_NORMAL);
+//     cv::namedWindow(win2, WINDOW_NORMAL);
+//     cv::namedWindow(win3, WINDOW_NORMAL);
+//     cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+//     cv::resizeWindow(win2, 500, 500);
+//     cv::resizeWindow(win3, 500, 500);
+//     cv::Mat image;
 
-    // Initialize general objects.
-    My_Map m(width, height, res, true);
-    My_Map t(width, height, res);
+//     // Initialize general objects.
+//     My_Map m(width, height, res, true);
+//     My_Map t(width, height, res);
 
-    // Initialize object and variables for file reading. 
-    fstream f;
-    vector<string> row;
-    string line, word, temp;
-    string odo_path = folder + "OdoLog.csv";
-    vector<Odo> odoLog;
-    Odo tempOdo;
+//     // Initialize object and variables for file reading. 
+//     fstream f;
+//     vector<string> row;
+//     string line, word, temp;
+//     string odo_path = folder + "OdoLog.csv";
+//     vector<Odo> odoLog;
+//     Odo tempOdo;
 
-    // Initialize general variables.
-    Img ImgLog;
-    int i = 0;
-    int mark = 0;
-    double currentTime = 0.0; // sec
-    double timeRange = 200 * MILLI; // sec
-    // double timeRange = 0.3; // sec
+//     // Initialize general variables.
+//     Img ImgLog;
+//     int i = 0;
+//     int mark = 0;
+//     double currentTime = 0.0; // sec
+//     double timeRange = 200 * MILLI; // sec
+//     // double timeRange = 0.3; // sec
 
-    // Read OdoLog.csv. 
-    f.open(odo_path, ios::in);
+//     // Read OdoLog.csv. 
+//     f.open(odo_path, ios::in);
 
-    while (getline(f, line))
-    {
-        row.clear();
-        stringstream linestream(line);
+//     while (getline(f, line))
+//     {
+//         row.clear();
+//         stringstream linestream(line);
 
-        while(getline(linestream, word, ','))
-        {
-            row.push_back(word);
-        }
+//         while(getline(linestream, word, ','))
+//         {
+//             row.push_back(word);
+//         }
 
-        tempOdo.timestamp = stod(row[0]);
-        tempOdo.serial_number = stoi(row[1]);
-        tempOdo.px = stod(row[2]);
-        tempOdo.py = stod(row[3]);
-        tempOdo.pz = stod(row[4]);
-        tempOdo.ox = stod(row[5]);
-        tempOdo.oy = stod(row[6]);
-        tempOdo.oz = stod(row[7]);
-        tempOdo.ow = stod(row[8]);
-        odoLog.push_back(tempOdo);
-    }
+//         tempOdo.timestamp = stod(row[0]);
+//         tempOdo.serial_number = stoi(row[1]);
+//         tempOdo.px = stod(row[2]);
+//         tempOdo.py = stod(row[3]);
+//         tempOdo.pz = stod(row[4]);
+//         tempOdo.ox = stod(row[5]);
+//         tempOdo.oy = stod(row[6]);
+//         tempOdo.oz = stod(row[7]);
+//         tempOdo.ow = stod(row[8]);
+//         odoLog.push_back(tempOdo);
+//     }
 
-    f.close();
+//     f.close();
 
-    // Start the pipeline. 
-    p.start(cfg);
+//     // Start the pipeline. 
+//     p.start(cfg);
 
-    // Start streaming. 
-    while (1)
-    {
-        // Get frame. 
-        frames = p.wait_for_frames();
-        color = frames.get_color_frame();
-        depth = frames.get_depth_frame();
+//     // Start streaming. 
+//     while (1)
+//     {
+//         // Get frame. 
+//         frames = p.wait_for_frames();
+//         color = frames.get_color_frame();
+//         depth = frames.get_depth_frame();
 
-        // Create color image and save it. 
-        const int w = color.as<rs2::video_frame>().get_width();
-        const int h = color.as<rs2::video_frame>().get_height();
-        stream_color_height = h;
-        stream_color_width = w;
-        stream_depth_height = depth.as<rs2::video_frame>().get_height();
-        stream_depth_width = depth.as<rs2::video_frame>().get_width();
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
-        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+//         // Create color image and save it. 
+//         const int w = color.as<rs2::video_frame>().get_width();
+//         const int h = color.as<rs2::video_frame>().get_height();
+//         stream_color_height = h;
+//         stream_color_width = w;
+//         stream_depth_height = depth.as<rs2::video_frame>().get_height();
+//         stream_depth_width = depth.as<rs2::video_frame>().get_width();
+//         image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
+//         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
-        // Image and timestamp logging. 
-        ImgLog.number = count;
-        ImgLog.timestamp = color.get_timestamp() / 1000;
-        count ++;
-        l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-        l.img_path = l.img_folder + l.img_suffix;
-        cv::imwrite(l.img_path, image);
-        f.open(l.time_path, ios::app | ios::out);
-        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
-        f.close();
+//         // Image and timestamp logging. 
+//         ImgLog.number = count;
+//         ImgLog.timestamp = color.get_timestamp() / 1000;
+//         count ++;
+//         l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+//         l.img_path = l.img_folder + l.img_suffix;
+//         cv::imwrite(l.img_path, image);
+//         f.open(l.time_path, ios::app | ios::out);
+//         f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+//         f.close();
 
-        // Match the current camera timestamp to the OdoLog.csv. 
-        currentTime = ImgLog.timestamp;
-        i = mark;
-        Odo currentOdo;
+//         // Match the current camera timestamp to the OdoLog.csv. 
+//         currentTime = ImgLog.timestamp;
+//         i = mark;
+//         Odo currentOdo;
 
-        for (; i < odoLog.size(); i++)
-        {
-            if (odoLog[i].timestamp >= (currentTime - timeRange) && 
-            odoLog[i].timestamp <= (currentTime + timeRange))
-            {
-                currentOdo = odoLog[i];
-                mark = i;
-                break;
-            }
-        }
+//         for (; i < odoLog.size(); i++)
+//         {
+//             if (odoLog[i].timestamp >= (currentTime - timeRange) && 
+//             odoLog[i].timestamp <= (currentTime + timeRange))
+//             {
+//                 currentOdo = odoLog[i];
+//                 mark = i;
+//                 break;
+//             }
+//         }
 
-        // Debug
-        f.open(DEBUG_FILE, ios::app | ios::out);
-        f << to_string(currentTime) << ", " \
-        << to_string(currentOdo.timestamp) << "\n";
-        f.close();
+//         // Debug
+//         f.open(DEBUG_FILE, ios::app | ios::out);
+//         f << to_string(currentTime) << ", " \
+//         << to_string(currentOdo.timestamp) << "\n";
+//         f.close();
 
-        // Gather the odometry data to update the pose of the robot on the map. 
-        Quaternion_ q;
-        q.w = currentOdo.ow;
-        q.x = currentOdo.ox;
-        q.y = currentOdo.oy;
-        q.z = currentOdo.oz;
-        m.poseUpdate(
-            ImgLog.number, 
-            currentOdo.px, 
-            currentOdo.py,
-            q);
-        t.poseUpdate(
-            ImgLog.number, 
-            currentOdo.px, 
-            currentOdo.py,
-            q);
+//         // Gather the odometry data to update the pose of the robot on the map. 
+//         Quaternion_ q;
+//         q.w = currentOdo.ow;
+//         q.x = currentOdo.ox;
+//         q.y = currentOdo.oy;
+//         q.z = currentOdo.oz;
+//         m.poseUpdate(
+//             ImgLog.number, 
+//             currentOdo.px, 
+//             currentOdo.py,
+//             q);
+//         t.poseUpdate(
+//             ImgLog.number, 
+//             currentOdo.px, 
+//             currentOdo.py,
+//             q);
 
-        // Calculate realsense pointcloud and convert it into PCL format.
-        points = pointcloud.calculate(depth);
-        cloud = Points2PCL(points);
+//         // Calculate realsense pointcloud and convert it into PCL format.
+//         points = pointcloud.calculate(depth);
+//         cloud = Points2PCL(points);
 
-        // Filter the depth map with z-value. 
-		filter.setInputCloud(cloud);
-		filter.setFilterFieldName("z");
-		filter.setFilterLimits(0, 4);
-		filter.filter(*cloud_filtered);
+//         // Filter the depth map with z-value. 
+// 		filter.setInputCloud(cloud);
+// 		filter.setFilterFieldName("z");
+// 		filter.setFilterLimits(0, 4);
+// 		filter.filter(*cloud_filtered);
 
-        // Project the pointcloud to the map. 
-        Score S(cloud_filtered); 
-        S.setStartZ(0.0);
-        S.setSearchRange(3.5);
-        S.setSearchStep(0.40);
-        S.setSize(0.40);
-        S.setStride(1.0 * S.size);
-        S.rendering();
+//         // Project the pointcloud to the map. 
+//         Score S(cloud_filtered); 
+//         S.setStartZ(0.0);
+//         S.setSearchRange(3.5);
+//         S.setSearchStep(0.40);
+//         S.setSize(0.40);
+//         S.setStride(1.0 * S.size);
+//         S.rendering();
 
-        for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-        {
-            S.get_boundary(z);
-            S.get_slices(z);
-            S.get_height(z);
-            // S.get_score(z);
-            if (m.isMap)
-            {
-                m.mapUpdate(S);
-            }
+//         for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
+//         {
+//             S.get_boundary(z);
+//             S.get_slices(z);
+//             S.get_height(z);
+//             // S.get_score(z);
+//             if (m.isMap)
+//             {
+//                 m.mapUpdate(S);
+//             }
 
-        }
+//         }
 
-        m.renderingFromInfoMap();
-        m.originShow();
-        m.locShow();
-        m.mapShow();
-        m.flagReset();
-        t.headingShow();
-        t.mapShow();
-        t.flagReset();
+//         m.renderingFromInfoMap();
+//         m.originShow();
+//         m.locShow();
+//         m.mapShow();
+//         m.flagReset();
+//         t.headingShow();
+//         t.mapShow();
+//         t.flagReset();
 
-        // Trajectory logging. 
-        l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
-        l.traj_path = l.traj_folder + l.traj_suffix;
-        cv::imwrite(l.traj_path, t.tempMap);
+//         // Trajectory logging. 
+//         l.traj_suffix = "/trajectory_" + to_string(ImgLog.number) + ".png";
+//         l.traj_path = l.traj_folder + l.traj_suffix;
+//         cv::imwrite(l.traj_path, t.tempMap);
 
-        // Map logging. 
-        l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
-        l.map_path = l.map_folder + l.map_suffix;
-        cv::imwrite(l.map_path, m.tempMap);
+//         // Map logging. 
+//         l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
+//         l.map_path = l.map_folder + l.map_suffix;
+//         cv::imwrite(l.map_path, m.tempMap);
 
-        // Visualization. 
-        cv::moveWindow(win1, 0, 0);
-        cv::moveWindow(win2, (image.cols / 2 + 75), 0);
-        cv::moveWindow(win3, (image.cols / 2 + 580), 0);
-        cv::putText(
-            image, 
-            to_string(ImgLog.timestamp),
-		    cv::Point(50, 50),
-		    FONT_HERSHEY_DUPLEX,
-		    1.0,
-		    cv::Scalar(0, 0, 255),
-		    1);
-        cv::imshow(win1, image);
-        cv::imshow(win2, m.tempMap);
-        cv::imshow(win3, t.tempMap);
-        char c = cv::waitKey(10);
+//         // Visualization. 
+//         cv::moveWindow(win1, 0, 0);
+//         cv::moveWindow(win2, (image.cols / 2 + 75), 0);
+//         cv::moveWindow(win3, (image.cols / 2 + 580), 0);
+//         cv::putText(
+//             image, 
+//             to_string(ImgLog.timestamp),
+// 		    cv::Point(50, 50),
+// 		    FONT_HERSHEY_DUPLEX,
+// 		    1.0,
+// 		    cv::Scalar(0, 0, 255),
+// 		    1);
+//         cv::imshow(win1, image);
+//         cv::imshow(win2, m.tempMap);
+//         cv::imshow(win3, t.tempMap);
+//         char c = cv::waitKey(10);
 
-        // Check whether to terminate the programme. 
-        if (c == 32 || c == 13 || TERMINATE == true)
-        {
-            printf("\n\nThe programme is terminated by keyboard. \n\n");
-            TERMINATE = true;
-            break;
-        }
-    }
+//         // Check whether to terminate the programme. 
+//         if (c == 32 || c == 13 || TERMINATE == true)
+//         {
+//             printf("\n\nThe programme is terminated by keyboard. \n\n");
+//             TERMINATE = true;
+//             break;
+//         }
+//     }
 
-    // Document the general info.
-    f.open(l.info_path, ios::app | ios::out);
-    // f << "Map Information" << "\n\n";
-    f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
-    f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n\n";
-    f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n\n";
-    f << "Size of color image (width x height): " << to_string(image.cols) << " x " << to_string(image.rows) << "\n\n";
-    f << "Size of depth image (width x height): " << to_string(stream_depth_width) << " x " << to_string(stream_depth_height) << "\n\n";
-    f.close();
+//     // Document the general info.
+//     f.open(l.info_path, ios::app | ios::out);
+//     // f << "Map Information" << "\n\n";
+//     f << "Size of the map (width x height) [meter]: " << to_string(m.width_meter) << " x " << to_string(m.height_meter) << "\n\n";
+//     f << "Resolution of the map [pixel / meter]: " << to_string(m.res) << "\n\n";
+//     f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n\n";
+//     f << "Size of color image (width x height): " << to_string(image.cols) << " x " << to_string(image.rows) << "\n\n";
+//     f << "Size of depth image (width x height): " << to_string(stream_depth_width) << " x " << to_string(stream_depth_height) << "\n\n";
+//     f.close();
 
-    return 0;
-}
+//     return 0;
+// }

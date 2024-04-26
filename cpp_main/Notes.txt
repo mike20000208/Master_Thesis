@@ -34,3 +34,14 @@
 
     4. Create a new struct CellKF and class KF, but not really sure if the latter is 
         necessary or not. 
+
+
+2024/04/26
+
+    1. Complete the new map building with Kalman Filter. 
+
+    2. Wait for test.....
+
+    3. Also, maybe need to clean up the codes. 
+
+    4. Also, try to discuss the details in the Kalman filter with Christian tomorrow. 

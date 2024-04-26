@@ -482,11 +482,11 @@ class KF
 {
 private:
 
-    // Measurement error. (in meter)
-    double sigma_34 = 0.08; 
-    double sigma_23 = 0.03; 
-    double sigma_12 = 0.01; 
-    double sigma_01 = 0.0025; 
+    // // Measurement error. (in meter)
+    // double sigma_34 = 0.08; 
+    // double sigma_23 = 0.03; 
+    // double sigma_12 = 0.01; 
+    // double sigma_01 = 0.0025; 
 
 public:
 
@@ -494,7 +494,16 @@ public:
     KF();
 
     // Select standard deviation for following variance update. 
-    double selectSigma(double z);
+    static double selectSigma(double z);
+
+    // Update the Kalman gain. 
+    static double updateKalmanGain(double predictedCov, double measuredCov);
+
+    // Update the estimated state. 
+    static double updateState(double gain, double measurement, double priorState);
+
+    // Update the variance of the estimated state. 
+    static double updateCov(double gain, double priorCov);
 
 };
 
@@ -574,11 +583,9 @@ public:
 
     // Coordinate transformation method (camera to map).
     void cam2map();
-    // cv::Vec3d cam2map(cv::Vec3d p);
 
     //Project the slice area on the map. 
-    void sliceProject(Score S, int index);  // slower way. 
-    void cellProject(double height); // faster way. 
+    // void cellProject(double height); // faster way. (without KF)
     void cellProject(double height, double depth); // faster way, and with more info. 
 
     // Get the current pose of the robot
@@ -588,7 +595,6 @@ public:
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
     // Map info update method. 
-    void mapUpdate(Score S);  // the slower method. 
     void mapUpdate(GridAnalysis G);  // the faster method. 
 
     // Show the heading. 
