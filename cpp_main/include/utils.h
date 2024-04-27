@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <queue>
 #include <fstream>
 #include <iostream>
 #include <stdio.h>
@@ -212,6 +213,14 @@ struct CellKF
     double pre_cov = 0.0;
 };
 
+enum CellType
+{
+    Map_Open,
+    Map_Close,
+    Frontier_Open,
+    Frontier_Close
+};
+
 
 
 class Mike : public rclcpp::Node
@@ -306,6 +315,7 @@ public:
     string info_path;
     string bag_path;
     string time_path;
+    string detailed_time_path;
     string traj_final_path;
     string map_final_path;
 
@@ -512,7 +522,6 @@ public:
 class My_Map
 {
 public:
-
     // size of map in pixel. 
     int width_pixel;
     int height_pixel;
@@ -524,6 +533,9 @@ public:
     // resolution of map. [pixel/meter]
     int res;
 
+    // Threshold of height to determine the traversability. 
+    double height_threshold = .10;  // in meter. 
+
     // Map itself. 
     cv::Mat map_;
 
@@ -533,9 +545,6 @@ public:
     // Info map that stores the projection info. 
     // cv::Mat infoMap;
     vector<vector<CellKF>> infoMap;
-
-    // Threshold of height to determine the traversability. 
-    double height_threshold = .10;  // in meter. 
 
     // Poses. 
     Pose startPoint;
@@ -565,15 +574,32 @@ public:
     // 
     bool isPosShown = false;
 
+    // Flag of is map or trajectory.
+    bool isMap = false;
+
+    /**
+     * List used in frontier search. 
+     * 
+     * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map, 
+     * and the value is its status. 
+    */
+    map<pair<int, int>, CellType> cellTypeList;
+
+    /**
+     * Queues used in frontier search. 
+     * 
+     * Especially, each element is the coordinate of the cell (row, col) in info map or map. 
+    */
+    queue<pair<int, int>> map_queue;
+    queue<pair<int, int>> frontier_queue;
+    queue<pair<int, int>> new_frontier_queue;
+
     // Constructor. 
     My_Map();
     My_Map(int w, int h, int r, bool isMap = false);
 
-    // Initialize the info map. 
+    // Initialize the info map. (only the time)
     void initialize(double timestamp);
-
-    // Flag of is map or trajectory.
-    bool isMap = false;
 
     // Get the orientation. 
     EulerAngle_ Quater2Euler(Quaternion_ q);
@@ -618,6 +644,15 @@ public:
 
     // Reset all the flags. 
     void flagReset();
+
+    // Determine whether this cell is qualified to be the frontier. 
+    bool isFrontierCell(pair<int, int> cell);
+
+    // Find the frontier in the current map. 
+    void findFrontier();
+
+    // Predict the most drivable path for the robot. 
+    void predictPath();
 
 };
 
@@ -667,4 +702,4 @@ double get_mode(vector<double> data);
 double getDistance(vector<double> data);
 
 
-MyTime getDuration(clock_t start, clock_t end, bool isLast=false);
+MyTime getDuration(clock_t start, clock_t end, string path, bool isLast=false);

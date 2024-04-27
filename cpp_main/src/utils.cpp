@@ -235,6 +235,7 @@ Logging::Logging(std::shared_ptr<Mike> node)
     info_path = node->log_path + "/Info.txt";
     bag_path = node->log_path + "/record.bag";
     time_path = node->log_path + "/TimeLog.csv";
+	detailed_time_path = node->log_path + "/Time_for_each_component.csv";
 
     traj_final_path = node->log_path + "/Trajectory_final.png";
     map_final_path = node->log_path + "/Map_final.png";
@@ -788,7 +789,7 @@ void My_Map::cam2map()
 
 
 /**
- * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
+ * @brief Project one of the cells in the grid made from class GridAnalysis on the info map. 
  * @param height the height data of this cell. (as the measurement in the KF)
  * @param depth the depth data of this cell. (relative to the robot in the camera frame) (used to determine the variance)
  * @param timestamp the time when this cell is updated. (in second)
@@ -964,14 +965,14 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 /**
  * @brief Update the map with the info from camera. 
  * @param G an instance of the class GridAnalysis that contains the information to update the map. 
- * @param timestamp the time when this map is updated. (in second)
+ * @param timestamp the time when the info map is updated. (in second)
 */
 void My_Map::mapUpdate(GridAnalysis G, double timestamp)
 {
 	// Assign the height threshold. 
 	My_Map::height_threshold = G.heightThreshold;
 
-	// Project the info map in class GridAnalysis to the image used to display the map. 
+	// Project the grid in class GridAnalysis to the info map. 
 	for (int i = 0; i < G.grid.size(); i++)
 	{
 		for (int j = 0; j < G.grid[0].size(); j++)
@@ -1081,8 +1082,8 @@ void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	// fstream f;
-	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
+	fstream f;
+	f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1129,11 +1130,11 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			// // Debug. 
-			// f << to_string(i) << ", " << to_string(j) << ", " \
-			// << to_string(infoMap[i][j].est_state) << ", " \
-			// << to_string(infoMap[i][j].measurement) << ", " \
-			// << to_string(infoMap[i][j].gain) << "\n";
+			// Debug. 
+			f << to_string(i) << ", " << to_string(j) << ", " \
+			<< to_string(infoMap[i][j].est_state) << ", " \
+			<< to_string(infoMap[i][j].measurement) << ", " \
+			<< to_string(infoMap[i][j].gain) << "\n";
 			
 			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
@@ -1158,7 +1159,7 @@ void My_Map::renderingFromInfoMap()
 		}
 	}
 
-	// f.close();
+	f.close();
 }
 
 
@@ -1209,6 +1210,122 @@ void My_Map::flagReset()
     isRendered = false;
 	isPosShown = false;
 }
+
+
+/**
+ * @brief Determine whether this cell is qualified to be the frontier. 
+ * 
+ * Especially, use 8-connection method to check it's surroundings. 
+ * 
+ * @param cell the cell is going to examinated if it's qualified to be the frontier.
+*/
+bool My_Map::isFrontierCell(pair<int, int> cell)
+{
+	bool is = false;
+	int dx[] = {0, 0, 1, 1, 1, -1, -1, -1};
+	int dy[] = {1, -1, 0, 1, -1, -1, 0, 1};
+
+	if (My_Map::infoMap[cell.first][cell.second].iteration == -1)  // an unknown cell. 
+	{
+		for (int i = 0; i < 8; i++)
+		{
+			// Check if the adjacent is open-space. 
+			if (My_Map::infoMap[cell.first + dy[i]][cell.second + dx[i]].est_state >= -My_Map::height_threshold && 
+			My_Map::infoMap[i][j].est_state <= My_Map::height_threshold)
+			{
+				is = true;
+				break;
+			}
+			else
+			{
+				continue;
+			}
+		}
+	}
+	else
+	{
+		return is;
+	}
+
+	return is;
+}
+
+
+/**
+ * @brief Apply WFD algorithm to find the frontier in the current info map or map. 
+ * 
+ * Especially, run the BSF twice to find it. Specifically, the first 
+ * BFS runs on the entire grid (info map or map) to get the frontier points. 
+ * Next, another BFS is run on the collected frontier points to obtain the 
+ * final frontier. 
+ * 
+*/
+void My_Map::findFrontier()
+{
+	// Initialize some general vairables. 
+	pair<int, int> cell;
+	
+	// Initialize the map queue.
+	My_Map::map_queue = {};
+
+	// Push the current point into the queue. Also mark it as Map_Open. 
+	cell.first = My_Map::currentPoint.y_pixel_img;
+	cell.second = My_Map::currentPoint.x_pixel_img;
+	map_queue.push(cell);
+	My_Map::cellTypeList[cell] = Map_Open;
+
+	// Perform the first BFS. (the outer)
+	while(!My_Map::map_queue.empty())
+	{
+		cell = My_Map::map_queue.front();
+		My_Map::map_queue.pop();
+
+		if (My_Map::cellTypeList[cell] = Map_Close)
+		{
+			continue;
+		}
+
+		// Check if this cell is a frontier cell. 
+		if (My_Map::isFrontierCell(cell))
+		{
+			My_Map::frontier_queue = {};
+			My_Map::new_frontier_queue = {};
+			My_Map::frontier_queue.push(cell);
+			My_Map::cellTypeList[cell] = Frontier_Open;
+
+			// Perform the second BFS. (the inner)
+			while (!My_Map::frontier_queue.empty())
+			{
+				cell = My_Map::frontier_queue.front();
+				My_Map::frontier_queue.pop();
+
+				if (My_Map::cellTypeList[cell] == Map_Close || 
+				My_Map::cellTypeList[cell] == Frontier_Close)
+				{
+					continue;
+				}
+
+				if (My_Map::isFrontierCell(cell))
+				{
+					My_Map::new_frontier_queue.push(cell);
+					// There are some missing lines here. (line 19 - line 22)
+				}
+
+				My_Map::cellTypeList[cell] == Frontier_Close;
+			}
+		}
+	}
+}
+
+
+/**
+ * @brief Predict the most drivable path for the robot. 
+*/
+void My_Map::predictPath()
+{
+	;
+}
+
 
 
 /**
@@ -2263,14 +2380,15 @@ double getDistance(vector<double> data)
  * @brief Calculate the spent time of a specific function. Also log the spent time to debug. 
  * @param start the start time of the function. 
  * @param end the end time of the function. 
+ * @param path the path to logging file. 
  * @param isLast the flag to see if this is the last data in this row. 
 */
-MyTime getDuration(clock_t start, clock_t end, bool isLast)
+MyTime getDuration(clock_t start, clock_t end, string path, bool isLast)
 {
 	fstream f;
-	string file = "spent_time_for_each_component.csv";
-	file = DEBUG_FOLDER + file;
-	f.open(file, ios::app | ios::out);
+	// string file = "spent_time_for_each_component.csv";
+	// file = DEBUG_FOLDER + file;
+	f.open(path, ios::app | ios::out);
 	MyTime time;
 
 	double duration = double(end - start) / double(CLOCKS_PER_SEC);  // in second. 

@@ -596,14 +596,14 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
 
         mut.unlock();
         end = clock();
-        getDuration(start, end); // Get the spent time. (1)
+        getDuration(start, end, l.detailed_time_path); // Get the spent time. (1)
 
         // Calculate realsense pointcloud and convert it into PCL format.
         start = clock();
         points = pointcloud.calculate(depth);
         cloud = Points2PCL(points);
         end = clock();
-        getDuration(start, end); // Get the spent time. (2)
+        getDuration(start, end, l.detailed_time_path); // Get the spent time. (2)
 
         // Filter the depth map with z-value.
         start = clock();
@@ -612,7 +612,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         filter.setFilterLimits(0, 4);
         filter.filter(*cloud_filtered);
         end = clock();
-        getDuration(start, end); // Get the spent time. (3)
+        getDuration(start, end, l.detailed_time_path); // Get the spent time. (3)
 
         // Divide the pointcloud into grid.
         start = clock();
@@ -625,11 +625,20 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         // Project the grid divided from the pointcloud on the map.
         if (m.isMap)
         {
-            m.mapUpdate(G, ImgLog.timestamp);
+            m.mapUpdate(G, ImgLog.timestamp);  // at this point, the info map is being updated. 
         }
 
         end = clock();
-        getDuration(start, end); // Get the spent time. (4)
+        getDuration(start, end, l.detailed_time_path); // Get the spent time. (4)
+
+        /**
+         * If the path prediction is going to be performed on the map, do it right here. 
+         * (or after the function renderingFromInfoMap)
+         * 
+         * For now, the function findFrontier should be a part of the function predictPath, 
+         * which means it's one of the criteria to determine the path. 
+        */
+
 
         // Display the map and trajectory.
         m.renderingFromInfoMap();
@@ -701,7 +710,7 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         viewer->removeAllPointClouds();
 
         end_whole = clock();
-        getDuration(start_whole, end_whole, true); // Get the spent time. (5)
+        getDuration(start_whole, end_whole, l.detailed_time_path, true); // Get the spent time. (5)
     }
 
     // Document the general info.
