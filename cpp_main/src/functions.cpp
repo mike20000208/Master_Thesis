@@ -631,18 +631,13 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (4)
 
-        /**
-         * If the path prediction is going to be performed on the map, do it right here. 
-         * (or after the function renderingFromInfoMap)
-         * 
-         * For now, the function findFrontier should be a part of the function predictPath, 
-         * which means it's one of the criteria to determine the path. 
-        */
-
+        // Find the frontier to explore as much as it can. 
+        m.findFrontier();
 
         // Display the map and trajectory.
         m.renderingFromInfoMap();
         m.originShow();
+        m.frontierShow();
         m.locShow();
         m.mapShow();
         m.flagReset();
@@ -1560,12 +1555,26 @@ int simple_test()
     //     printf("\n");
     // }
 
-    double minZ = -3.87;
-    double z = -2.87;
-    cout << "\n\n"
-         << (z - minZ) / 0.2 << "\n\n";
-    cout << "\n\n"
-         << fmod((z - minZ), 0.2) << "\n\n";
+    // double minZ = -3.87;
+    // double z = -2.87;
+    // cout << "\n\n"
+    //      << (z - minZ) / 0.2 << "\n\n";
+    // cout << "\n\n"
+    //      << fmod((z - minZ), 0.2) << "\n\n";
+
+    // map<CellType, bool> typeList;
+    // typeList[Map_Close] = true;
+    printf("\n\n");
+    // cout << typeList[Map_Close] << endl;
+    // cout << typeList[Map_Open] << endl;
+
+    vector<CellType> test;
+    test.push_back(Map_Close);
+    test = {Map_Open, Frontier_Close};
+    for (int i = 0; i < test.size(); i++)
+    {
+        cout << test[i] << endl;
+    }
 
     return 0;
 }

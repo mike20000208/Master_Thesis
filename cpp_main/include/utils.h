@@ -521,6 +521,12 @@ public:
 
 class My_Map
 {
+private:
+    // The offsets to check the neighbors. (using 8-connection method)
+    int connectivity = 8;
+	int dx[8] = {0, 0, 1, 1, 1, -1, -1, -1};
+	int dy[8] = {1, -1, 0, 1, -1, -1, 0, 1};
+
 public:
     // size of map in pixel. 
     int width_pixel;
@@ -583,16 +589,18 @@ public:
      * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map, 
      * and the value is its status. 
     */
-    map<pair<int, int>, CellType> cellTypeList;
+    map<pair<int, int>, map<CellType, bool>> cellTypeList;
+    // map<pair<int, int>, CellType> cellTypeList;
 
     /**
-     * Queues used in frontier search. 
+     * Queues or other containers used in frontier search. 
      * 
      * Especially, each element is the coordinate of the cell (row, col) in info map or map. 
     */
     queue<pair<int, int>> map_queue;
     queue<pair<int, int>> frontier_queue;
-    queue<pair<int, int>> new_frontier_queue;
+    vector<pair<int, int>> new_frontier;
+    vector<pair<int, int>> frontier;
 
     // Constructor. 
     My_Map();
@@ -646,13 +654,22 @@ public:
     void flagReset();
 
     // Determine whether this cell is qualified to be the frontier. 
-    bool isFrontierCell(pair<int, int> cell);
+    bool isFrontierCell(pair<int, int> cell);   
+
+    // Check if this cell has at least one open-space neighbor. 
+    bool hasLeastOneOpenSpaceNeighbor(pair<int, int> cell);
+
+    // Check the type of a cell.
+    bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
 
     // Find the frontier in the current map. 
     void findFrontier();
 
     // Predict the most drivable path for the robot. 
     void predictPath();
+
+    // Show the frontier on the map. 
+    void frontierShow();
 
 };
 

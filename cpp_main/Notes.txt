@@ -55,3 +55,12 @@
     8. For instance, the choice of sigma. 
 
     9. For example, the choice of the threshold of time span. 
+
+
+2024/04/28
+
+    1. The WFD cannot find any frontier right now. 
+
+    2. Now, the WFD can find the frontier, but cannot keep updating it. 
+
+    3. Need to read that paper again to know the principle. 
