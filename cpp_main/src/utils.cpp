@@ -841,7 +841,7 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 			sigma = KF::selectSigma(depth, timeSpan);
 			variance = pow(sigma, 2);
 
-			if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // Initialization of KF
+			if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // initialization of KF
 			{
 				// Initialize the estmated state and its variance with the measurement directly. 
 				My_Map::infoMap[center_img.y][center_img.x].est_state = height;
