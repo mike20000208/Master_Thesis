@@ -64,3 +64,18 @@
     2. Now, the WFD can find the frontier, but cannot keep updating it. 
 
     3. Need to read that paper again to know the principle. 
+
+
+2024/04/29
+
+    1. Need to add the process noise to the KF. 
+
+    2. Also, need to change the way of determine variance according to the corrseponding time span. 
+
+    3. Found a porblem in the mapping. the location of the wall, for instance, will deviate from 
+        the original one if the robot goes through that region multiple time with some orientation. 
+
+    4. Can we fuse the odometry data with the measurement from the camera? So that we can have more 
+        accurate position of objects instead of solely relying on the odometry, which will accumulate 
+        the error. Also, is it possible to apply Kalman filter on the odometry and distance data as 
+        well? 

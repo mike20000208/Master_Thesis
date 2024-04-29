@@ -396,6 +396,11 @@ void Logging::createDir(string mode)
 			break;
 		}
 
+		case 13: 
+		{
+			break;
+		}
+
         default:
         {
             break;
@@ -416,10 +421,10 @@ KF::KF()
 /**
  * @brief Select standard deviation for following variance update. 
  * @param z the z component of the centroid of this cell. (depth, in meter)
- * @param timeSpan the time between now and the last time this cell was updated. (in millisecond)
+ * @param timeSpan the time between now and the last time this cell was updated. (in second)
  * @return measurement error in this depth range. 
 */
-double KF::selectSigma(double z, double timeSpan)
+double KF::selectSigma(double z)
 {
 	double sigma = 0.0;
 
@@ -429,61 +434,136 @@ double KF::selectSigma(double z, double timeSpan)
     double sigma_12_normal = .01; 
     double sigma_01_normal = .005; 
 
-	double sigma_34_latest = .008; 
-    double sigma_23_latest = .003; 
-    double sigma_12_latest = .001; 
-    double sigma_01_latest = .0005; 
-
-	if (timeSpan > 3000)
+	if (z >= 3.0 && z < 4.0)
 	{
-		if (z >= 3.0 && z < 4.0)
-		{
-			sigma = sigma_34_latest;
-		}
-		else if (z >= 2.0 && z < 3.0)
-		{
-			sigma = sigma_23_latest;
-		}
-		else if (z >= 1.0 && z < 2.0)
-		{
-			sigma = sigma_12_latest;
-		}
-		else if (z < 1.0)
-		{
-			sigma = sigma_01_latest;
-		}
-		else
-		{
-			cerr << "\n\nInvalid coordinate of this cell\n\n";
-			exit(-1);
-		}
+		sigma = sigma_34_normal;
+	}
+	else if (z >= 2.0 && z < 3.0)
+	{
+		sigma = sigma_23_normal;
+	}
+	else if (z >= 1.0 && z < 2.0)
+	{
+		sigma = sigma_12_normal;
+	}
+	else if (z < 1.0)
+	{
+		sigma = sigma_01_normal;
 	}
 	else
 	{
-		if (z >= 3.0 && z < 4.0)
-		{
-			sigma = sigma_34_normal;
-		}
-		else if (z >= 2.0 && z < 3.0)
-		{
-			sigma = sigma_23_normal;
-		}
-		else if (z >= 1.0 && z < 2.0)
-		{
-			sigma = sigma_12_normal;
-		}
-		else if (z < 1.0)
-		{
-			sigma = sigma_01_normal;
-		}
-		else
-		{
-			cerr << "\n\nInvalid coordinate of this cell\n\n";
-			exit(-1);
-		}
+		cerr << "\n\nInvalid coordinate of this cell\n\n";
+		exit(-1);
 	}
 
 	return sigma;
+}
+
+
+// /**
+//  * @brief Select standard deviation for following variance update. 
+//  * @param z the z component of the centroid of this cell. (depth, in meter)
+//  * @param timeSpan the time between now and the last time this cell was updated. (in second)
+//  * @return measurement error in this depth range. 
+// */
+// double KF::selectSigma(double z, double timeSpan)
+// {
+// 	double sigma = 0.0;
+
+// 	// Measurement error. (in meter)
+//     double sigma_34_normal = .08; 
+//     double sigma_23_normal = .03; 
+//     double sigma_12_normal = .01; 
+//     double sigma_01_normal = .005; 
+
+// 	double sigma_34_latest = .008; 
+//     double sigma_23_latest = .003; 
+//     double sigma_12_latest = .001; 
+//     double sigma_01_latest = .0005; 
+
+// 	if (timeSpan > 3)
+// 	{
+// 		if (z >= 3.0 && z < 4.0)
+// 		{
+// 			sigma = sigma_34_latest;
+// 		}
+// 		else if (z >= 2.0 && z < 3.0)
+// 		{
+// 			sigma = sigma_23_latest;
+// 		}
+// 		else if (z >= 1.0 && z < 2.0)
+// 		{
+// 			sigma = sigma_12_latest;
+// 		}
+// 		else if (z < 1.0)
+// 		{
+// 			sigma = sigma_01_latest;
+// 		}
+// 		else
+// 		{
+// 			cerr << "\n\nInvalid coordinate of this cell\n\n";
+// 			exit(-1);
+// 		}
+// 	}
+// 	else
+// 	{
+// 		if (z >= 3.0 && z < 4.0)
+// 		{
+// 			sigma = sigma_34_normal;
+// 		}
+// 		else if (z >= 2.0 && z < 3.0)
+// 		{
+// 			sigma = sigma_23_normal;
+// 		}
+// 		else if (z >= 1.0 && z < 2.0)
+// 		{
+// 			sigma = sigma_12_normal;
+// 		}
+// 		else if (z < 1.0)
+// 		{
+// 			sigma = sigma_01_normal;
+// 		}
+// 		else
+// 		{
+// 			cerr << "\n\nInvalid coordinate of this cell\n\n";
+// 			exit(-1);
+// 		}
+// 	}
+
+// 	return sigma;
+// }
+
+
+/**
+ * @brief Select process noise to add to the KF. 
+ * @param timeSpan the time between now and the last time this cell was updated or initialized. (in second)
+ * @return a process noise determined by a saturattion function. 
+*/
+double KF::selectProcessNoise(double timeSpan)
+{
+	// Define the parameters of the saturation function. 
+	double q = 0.0;
+	double q_lower_bound = pow(.0, 2);  // square meter. 
+	double q_upper_bound = pow(.01, 2);  // square meter 
+	double t_lower_bound = 4.0;
+	double t_upper_bound = 7.0;
+	double slope = (q_upper_bound - q_lower_bound) / (t_upper_bound - t_lower_bound);
+	
+	if (timeSpan < t_lower_bound)
+	{
+		q = q_lower_bound;
+	}
+	else if (timeSpan >= t_lower_bound && timeSpan <= t_upper_bound)
+	{
+		q = slope * (timeSpan - t_upper_bound) + q_upper_bound;
+	}
+	else
+	{
+		q = q_upper_bound;
+	}
+	
+
+	return q;
 }
 
 
@@ -797,6 +877,11 @@ void My_Map::cam2map()
 
 /**
  * @brief Project one of the cells in the grid made from class GridAnalysis on the info map. 
+ * 
+ * Especially, a one-dimensional Kalman filter is applied. The filter takes the measurement
+ * 
+ * from the camera (depth and height) as inputs and outputs the examinated height. 
+ * 
  * @param height the height data of this cell. (as the measurement in the KF)
  * @param depth the depth data of this cell. (relative to the robot in the camera frame) (used to determine the variance)
  * @param timestamp the time when this cell is updated. (in second)
@@ -807,7 +892,7 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 	Point2D center_map, center_img;
 
 	// Initialize general variables. 
-	double sigma = 0.0, variance = 0.0, gain = 0.0, state = 0.0, cov = 0.0, timeSpan = 0.0;
+	double sigma = 0.0, variance = 0.0, gain = 0.0, state = 0.0, cov = 0.0, timeSpan = 0.0, noise = 0.0;
 
 	if (My_Map::isTransformed)
 	{
@@ -840,13 +925,15 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 			My_Map::infoMap[center_img.y][center_img.x].iteration += 1;
 
 			// Check the time span. 
-			timeSpan = timestamp - infoMap[center_img.y][center_img.x].timestamp * 1000;  // in millisecond. 
+			timeSpan = timestamp - infoMap[center_img.y][center_img.x].timestamp;  // in second. 
 			infoMap[center_img.y][center_img.x].timestamp = timestamp;
 
 			// Measurement. 
 			My_Map::infoMap[center_img.y][center_img.x].measurement = height;
-			sigma = KF::selectSigma(depth, timeSpan);
+			sigma = KF::selectSigma(depth);
+			// sigma = KF::selectSigma(depth, timeSpan);
 			variance = pow(sigma, 2);
+			noise = KF::selectProcessNoise(timeSpan);
 
 			if (My_Map::infoMap[center_img.y][center_img.x].iteration == 0)  // initialization of KF
 			{
@@ -856,7 +943,7 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 
 				// Predict. 
 				My_Map::infoMap[center_img.y][center_img.x].pre_state = height;
-				My_Map::infoMap[center_img.y][center_img.x].pre_cov = variance;
+				My_Map::infoMap[center_img.y][center_img.x].pre_cov = variance + noise;
 			}
 			else  // normal iteration. 
 			{
@@ -877,7 +964,7 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 				
 				// Predict. 	
 				My_Map::infoMap[center_img.y][center_img.x].pre_state = state;
-				My_Map::infoMap[center_img.y][center_img.x].pre_cov = cov;
+				My_Map::infoMap[center_img.y][center_img.x].pre_cov = cov + noise;
 			}
 		}
 
@@ -1089,8 +1176,8 @@ void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	// fstream f;
-	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
+	fstream f;
+	f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1137,11 +1224,11 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			// // Debug. 
-			// f << to_string(i) << ", " << to_string(j) << ", " \
-			// << to_string(infoMap[i][j].est_state) << ", " \
-			// << to_string(infoMap[i][j].measurement) << ", " \
-			// << to_string(infoMap[i][j].gain) << "\n";
+			// Debug. 
+			f << to_string(i) << ", " << to_string(j) << ", " \
+			<< to_string(infoMap[i][j].est_state) << ", " \
+			<< to_string(infoMap[i][j].measurement) << ", " \
+			<< to_string(infoMap[i][j].gain) << "\n";
 			
 			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
@@ -1166,7 +1253,7 @@ void My_Map::renderingFromInfoMap()
 		}
 	}
 
-	// f.close();
+	f.close();
 }
 
 

@@ -347,7 +347,8 @@ public:
         {"delay_test", 10}, 
         {"field_trip", 11},
         {"recording", 12},
-        {"stream_map_from_recording", 13}};
+        {"stream_map_from_recording", 13}
+        };
 
     Logging(std::shared_ptr<Mike> node);
     Logging();
@@ -512,7 +513,11 @@ public:
     KF();
 
     // Select standard deviation for following variance update. 
-    static double selectSigma(double z, double timeSpan);
+    static double selectSigma(double z);
+    // static double selectSigma(double z, double timeSpan);
+
+    // Select process noise to add to the KF. 
+    static double selectProcessNoise(double timeSpan);
 
     // Update the Kalman gain. 
     static double updateKalmanGain(double predictedCov, double measuredCov);
