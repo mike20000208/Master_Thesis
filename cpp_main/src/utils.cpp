@@ -488,7 +488,7 @@ double KF::selectSigma(double z, double timeSpan)
 
 
 /**
- * @brief 
+ * @brief Update the Kalman gain. 
  * @param predictedCov
  * @param measuredCov
  * @return updated Kalman gain. 
@@ -554,6 +554,13 @@ My_Map::My_Map()
 
 /**
  * @brief Constrctor of class My_Map. 
+ * 
+ * There are two modes of the instance: map and trajectory. (the default mode is trajectory)
+ * 
+ * Map shows the pose of the robot and the relatively detailed information of the environment. 
+ * 
+ * Trajectory shows the pose of the robot and the trajactory it went through. 
+ * 
  * @param w width of the map in meter.
  * @param h height of the map in meter.
  * @param r resolution of the map. [pixel/meter]
@@ -1209,7 +1216,7 @@ void My_Map::flagReset()
     isHeadingShown = false;
     isRendered = false;
 	isPosShown = false;
-	frontier.clear();
+	// frontier.clear();
 }
 
 
@@ -1218,7 +1225,9 @@ void My_Map::flagReset()
  * 
  * Especially, a cell can be seen as a part of the frontier only it's unexplored and 
  * 
- * has at least one open-space neighbor. Besides, 8-connection method is used to check 
+ * has at least one open-space neighbor. Open-space means a region is explored and obstacle-free.  
+ * 
+ * Besides, 8-connection method is used to check 
  * 
  * it's surroundings. 
  * 
@@ -1280,47 +1289,47 @@ bool My_Map::hasLeastOneOpenSpaceNeighbor(pair<int, int> cell)
 }
 
 
-/**
- * @brief Check the type of a cell.
- * @param cell
- * @param types
- * @param mode
- * @return 
-*/
-bool My_Map::checkCellType(pair<int, int> cell, vector<CellType> types, string mode)
-{
-	bool isMatched = true;
+// /**
+//  * @brief Check the type of a cell.
+//  * @param cell
+//  * @param types
+//  * @param mode
+//  * @return 
+// */
+// bool My_Map::checkCellType(pair<int, int> cell, vector<CellType> types, string mode)
+// {
+// 	bool isMatched = true;
 
-	if (mode == "is")
-	{
-		for (int i = 0; i < types.size(); i++)
-		{
-			if (!My_Map::cellTypeList[cell][types[i]])
-			{
-				isMatched = false;
-				return isMatched;
-			}
-		}
-	}
-	else if (mode == "is not")
-	{
-		for (int i = 0; i < types.size(); i++)
-		{
-			if (My_Map::cellTypeList[cell][types[i]])
-			{
-				isMatched = false;
-				return isMatched;
-			}
-		}
-	}
-	else
-	{
-		cerr << "\n\nInvalid mode! \n\n";
-		exit(-1);
-	}
+// 	if (mode == "is")
+// 	{
+// 		for (int i = 0; i < types.size(); i++)
+// 		{
+// 			if (!My_Map::cellTypeList[cell][types[i]])
+// 			{
+// 				isMatched = false;
+// 				return isMatched;
+// 			}
+// 		}
+// 	}
+// 	else if (mode == "is not")
+// 	{
+// 		for (int i = 0; i < types.size(); i++)
+// 		{
+// 			if (My_Map::cellTypeList[cell][types[i]])
+// 			{
+// 				isMatched = false;
+// 				return isMatched;
+// 			}
+// 		}
+// 	}
+// 	else
+// 	{
+// 		cerr << "\n\nInvalid mode! \n\n";
+// 		exit(-1);
+// 	}
 
-	return isMatched;
-}
+// 	return isMatched;
+// }
 
 
 /**
@@ -1337,38 +1346,41 @@ bool My_Map::checkCellType(pair<int, int> cell, vector<CellType> types, string m
 */
 void My_Map::findFrontier()
 {
-	// Initialize variables for debug.
-	fstream f;
-	f.open(string(DEBUG_FOLDER) + string("frontier.csv"), ios::app | ios::out);
+	// // Initialize variables for debug.
+	// fstream f;
+	// f.open(string(DEBUG_FOLDER) + string("frontier.csv"), ios::app | ios::out);
 	
 	// Initialize some general vairables. 
 	pair<int, int> pose, f_cell, frontier, neighbor;
-	vector<CellType> types;
+	// vector<CellType> types;
 	
 	// Initialize the map queue.
 	// Line 1. 
 
-	// Debug. 
-	f << "Line 1" << "\n";
+	// // Debug. 
+	// f << "Line 1" << "\n";
 
 	My_Map::map_queue = {};
+	My_Map::Map_Open.clear();
+	My_Map::Map_Close.clear();
 
 	// Push the current point into the queue. Also mark it as Map_Open. 
 	// Line 2 - 3. 
 	pose.first = My_Map::currentPoint.y_pixel_img;
 	pose.second = My_Map::currentPoint.x_pixel_img;
 	My_Map::map_queue.push(pose);
-	My_Map::cellTypeList[pose][Map_Open] = true;
+	My_Map::Map_Open.insert(pose);
+	// My_Map::cellTypeList[pose][Map_Open] = true;
 
 	// Perform the first BFS. (the outer one)
 	// Line 4. 
 	while(!My_Map::map_queue.empty())
 	{
-		// Debug. 
-		f << "Line 4" << ", " \
-		<< to_string(My_Map::map_queue.size()) << ", " \
-		<< to_string(My_Map::map_queue.front().first) << ", " \
-		<< to_string(My_Map::map_queue.front().second) << "\n";
+		// // Debug. 
+		// f << "Line 4" << ", " \
+		// << to_string(My_Map::map_queue.size()) << ", " \
+		// << to_string(My_Map::map_queue.front().first) << ", " \
+		// << to_string(My_Map::map_queue.front().second) << "\n";
 
 		// Line 5. 
 		f_cell = My_Map::map_queue.front();
@@ -1376,14 +1388,15 @@ void My_Map::findFrontier()
 
 		// Only the cells that are not marked as Map_Open are enqueued to the frontier queue.
 		// Line 6. 
-		types = {Map_Close};
+		// types = {Map_Close};
 
-		// Debug. 
-		f << "Line 6" << ", " \
-		<< to_string(My_Map::checkCellType(f_cell, types)) << ", " \
-		<< to_string(My_Map::map_queue.size()) << "\n";
+		// // Debug. 
+		// f << "Line 6" << ", " \
+		// << to_string(My_Map::checkCellType(f_cell, types)) << ", " \
+		// << to_string(My_Map::map_queue.size()) << "\n";
 
-		if (My_Map::checkCellType(f_cell, types))
+		// if (My_Map::checkCellType(f_cell, types))
+		if (My_Map::Map_Close.count(f_cell) == 1)
 		{
 			continue;
 		}
@@ -1391,18 +1404,22 @@ void My_Map::findFrontier()
 		// Check if this cell is a frontier cell. 
 		// Line 8. 
 
-		// Debug. 
-		f << "Line 8" << ", " \
-		<< to_string(My_Map::isFrontierCell(f_cell)) << ", " \
-		<< to_string(My_Map::map_queue.size()) << "\n";
+		// // Debug. 
+		// f << "Line 8" << ", " \
+		// << to_string(My_Map::isFrontierCell(f_cell)) << ", " \
+		// << to_string(My_Map::map_queue.size()) << "\n";
 
 		if (My_Map::isFrontierCell(f_cell))
 		{
 			// Line 9 - 12. 
 			My_Map::frontier_queue = {};
 			My_Map::new_frontier.clear();
+			My_Map::Frontier_Open.clear();
+			My_Map::Frontier_Close.clear();
+
 			My_Map::frontier_queue.push(f_cell);
-			My_Map::cellTypeList[f_cell][Frontier_Open] = true;
+			My_Map::Frontier_Open.insert(f_cell);
+			// My_Map::cellTypeList[f_cell][Frontier_Open] = true;
 
 			// Perform the second BFS. (the inner one)
 			// Line 13. 
@@ -1413,8 +1430,10 @@ void My_Map::findFrontier()
 				My_Map::frontier_queue.pop();
 
 				// Line 15. 
-				types = {Map_Close, Frontier_Close};
-				if (My_Map::checkCellType(frontier, types))
+				// types = {Map_Close, Frontier_Close};
+				// if (My_Map::checkCellType(frontier, types))
+				if (My_Map::Map_Close.count(frontier) == 1 && 
+				My_Map::Frontier_Close.count(frontier) == 1)
 				{
 					continue;
 				}
@@ -1433,26 +1452,33 @@ void My_Map::findFrontier()
 
 						// Only the cells are not a part of Frontier_Open, Frontier_Close, or Map_Close can be added to the frontier queue. 
 						// Line 20. 
-						types = {Frontier_Open, Frontier_Close, Map_Close};
-						if (My_Map::checkCellType(neighbor, types, "is not"))
+						// types = {Frontier_Open, Frontier_Close, Map_Close};
+						// if (My_Map::checkCellType(neighbor, types, "is not"))
+						if (My_Map::Frontier_Open.count(neighbor) == 0 && 
+						My_Map::Frontier_Close.count(neighbor) == 0 && 
+						My_Map::Map_Close.count(neighbor) == 0)
 						{
 							My_Map::frontier_queue.push(neighbor);
-							My_Map::cellTypeList[neighbor][Frontier_Open] = true;
+							My_Map::Frontier_Open.insert(neighbor);
+							// My_Map::cellTypeList[neighbor][Frontier_Open] = true;
 						}
 					}
 				}
 
 				// Line 23. 
-				My_Map::cellTypeList[frontier][Frontier_Close] = true;
+				My_Map::Frontier_Close.insert(frontier);
+				// My_Map::cellTypeList[frontier][Frontier_Close] = true;
 			}
 
 			// Line 24. 
+			// This line could be one of the problems. 
 			My_Map::frontier = My_Map::new_frontier;
 
 			// line 25. 
 			for (int k = 0; k < My_Map::new_frontier.size(); k++)
 			{
-				My_Map::cellTypeList[My_Map::new_frontier[k]][Map_Close] = true;
+				My_Map::Map_Close.insert(My_Map::new_frontier[k]);
+				// My_Map::cellTypeList[My_Map::new_frontier[k]][Map_Close] = true;
 			}
 		}
 
@@ -1464,31 +1490,35 @@ void My_Map::findFrontier()
 			neighbor.second = f_cell.second + dx[j];
 
 			// Line 27. 
-			types = {Map_Open, Map_Close};
+			// types = {Map_Open, Map_Close};
 
-			// Debug. 
-			f << "Line 26 & 27" << ", " \
-			<< to_string(neighbor.first) << ", " \
-			<< to_string(neighbor.second) << ", " \
-			<< to_string(My_Map::checkCellType(neighbor, types, "is not")) << ", " \
-			<< to_string(My_Map::hasLeastOneOpenSpaceNeighbor(neighbor)) << "\n";
+			// // Debug. 
+			// f << "Line 26 & 27" << ", " \
+			// << to_string(neighbor.first) << ", " \
+			// << to_string(neighbor.second) << ", " \
+			// << to_string(My_Map::checkCellType(neighbor, types, "is not")) << ", " \
+			// << to_string(My_Map::hasLeastOneOpenSpaceNeighbor(neighbor)) << "\n";
 
-			if (My_Map::checkCellType(neighbor, types, "is not"))
+			// if (My_Map::checkCellType(neighbor, types, "is not"))
+			if (My_Map::Map_Close.count(neighbor) == 0 && 
+			My_Map::Map_Close.count(neighbor) == 0)
 			{
 				if (My_Map::isFrontierCell(neighbor))
 				// if (My_Map::hasLeastOneOpenSpaceNeighbor(neighbor))
 				{
 					My_Map::map_queue.push(neighbor);
-					My_Map::cellTypeList[neighbor][Map_Open] = true;
+					My_Map::Map_Close.insert(neighbor);
+					// My_Map::cellTypeList[neighbor][Map_Open] = true;
 				}
 			}
 		}
 
 		// Line 30. 
-		My_Map::cellTypeList[f_cell][Map_Close] = true;
+		My_Map::Map_Close.insert(f_cell);
+		// My_Map::cellTypeList[f_cell][Map_Close] = true;
 	}
 
-	f.close();
+	// f.close();
 }
 
 

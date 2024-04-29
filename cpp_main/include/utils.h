@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <queue>
 #include <fstream>
 #include <iostream>
@@ -163,11 +164,13 @@ struct Pose
     Heading heading;  // as a direction vector. 
 };
 
+
 struct Point2D
 {
     int x = 0.0;
     int y = 0.0;
 };
+
 
 struct Point3D
 {
@@ -201,6 +204,7 @@ struct Cell
     int counter = 0;
 };
 
+
 struct CellKF
 {
     double timestamp = 0.0;
@@ -213,14 +217,14 @@ struct CellKF
     double pre_cov = 0.0;
 };
 
-enum CellType
-{
-    Map_Open,
-    Map_Close,
-    Frontier_Open,
-    Frontier_Close
-};
 
+// enum CellType
+// {
+//     Map_Open,
+//     Map_Close,
+//     Frontier_Open,
+//     Frontier_Close
+// };
 
 
 class Mike : public rclcpp::Node
@@ -491,13 +495,16 @@ public:
 
 class KF
 {
-private:
+	// // Measurement error. (in meter)
+    // double sigma_34_normal = .08; 
+    // double sigma_23_normal = .03; 
+    // double sigma_12_normal = .01; 
+    // double sigma_01_normal = .005; 
 
-    // // Measurement error. (in meter)
-    // double sigma_34 = 0.08; 
-    // double sigma_23 = 0.03; 
-    // double sigma_12 = 0.01; 
-    // double sigma_01 = 0.0025; 
+	// double sigma_34_latest = .008; 
+    // double sigma_23_latest = .003; 
+    // double sigma_12_latest = .001; 
+    // double sigma_01_latest = .0005; 
 
 public:
 
@@ -589,8 +596,12 @@ public:
      * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map, 
      * and the value is its status. 
     */
-    map<pair<int, int>, map<CellType, bool>> cellTypeList;
+    // map<pair<int, int>, map<CellType, bool>> cellTypeList;
     // map<pair<int, int>, CellType> cellTypeList;
+    set<pair<int, int>> Map_Open;
+    set<pair<int, int>> Map_Close;
+    set<pair<int, int>> Frontier_Open;
+    set<pair<int, int>> Frontier_Close;
 
     /**
      * Queues or other containers used in frontier search. 
@@ -659,8 +670,8 @@ public:
     // Check if this cell has at least one open-space neighbor. 
     bool hasLeastOneOpenSpaceNeighbor(pair<int, int> cell);
 
-    // Check the type of a cell.
-    bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
+    // // Check the type of a cell.
+    // bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
 
     // Find the frontier in the current map. 
     void findFrontier();

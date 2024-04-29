@@ -1568,13 +1568,13 @@ int simple_test()
     // cout << typeList[Map_Close] << endl;
     // cout << typeList[Map_Open] << endl;
 
-    vector<CellType> test;
-    test.push_back(Map_Close);
-    test = {Map_Open, Frontier_Close};
-    for (int i = 0; i < test.size(); i++)
-    {
-        cout << test[i] << endl;
-    }
+    // vector<CellType> test;
+    // test.push_back(Map_Close);
+    // test = {Map_Open, Frontier_Close};
+    // for (int i = 0; i < test.size(); i++)
+    // {
+    //     cout << test[i] << endl;
+    // }
 
     return 0;
 }
