@@ -736,3 +736,6 @@ double getDistance(vector<double> data);
 
 
 MyTime getDuration(clock_t start, clock_t end, string path, bool isLast=false);
+
+
+double getActualDuration(double duration);

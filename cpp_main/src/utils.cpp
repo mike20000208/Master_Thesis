@@ -544,9 +544,9 @@ double KF::selectProcessNoise(double timeSpan)
 	// Define the parameters of the saturation function. 
 	double q = 0.0;
 	double q_lower_bound = pow(.0, 2);  // square meter. 
-	double q_upper_bound = pow(.01, 2);  // square meter 
+	double q_upper_bound = pow(.03, 2);  // square meter 
 	double t_lower_bound = 4.0;
-	double t_upper_bound = 7.0;
+	double t_upper_bound = 10.0;
 	double slope = (q_upper_bound - q_lower_bound) / (t_upper_bound - t_lower_bound);
 	
 	if (timeSpan < t_lower_bound)
@@ -561,7 +561,6 @@ double KF::selectProcessNoise(double timeSpan)
 	{
 		q = q_upper_bound;
 	}
-	
 
 	return q;
 }
@@ -1176,8 +1175,8 @@ void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	fstream f;
-	f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
+	// fstream f;
+	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1224,11 +1223,11 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			// Debug. 
-			f << to_string(i) << ", " << to_string(j) << ", " \
-			<< to_string(infoMap[i][j].est_state) << ", " \
-			<< to_string(infoMap[i][j].measurement) << ", " \
-			<< to_string(infoMap[i][j].gain) << "\n";
+			// // Debug. 
+			// f << to_string(i) << ", " << to_string(j) << ", " \
+			// << to_string(infoMap[i][j].est_state) << ", " \
+			// << to_string(infoMap[i][j].measurement) << ", " \
+			// << to_string(infoMap[i][j].gain) << "\n";
 			
 			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
@@ -1253,7 +1252,7 @@ void My_Map::renderingFromInfoMap()
 		}
 	}
 
-	f.close();
+	// f.close();
 }
 
 
@@ -2763,3 +2762,26 @@ MyTime getDuration(clock_t start, clock_t end, string path, bool isLast)
 	return time;
 }
 
+
+/**
+ * @brief Calculate the actual execution time. 
+ * 
+ * Especially, six tests were run to get the data to fit a quadratic function, 
+ * 
+ * ax^2 + bx + c = y, to predict the actual execution time. 
+ * 
+ * @param duration the desired execution time. 
+ * @return the actual execution time. 
+*/
+double getActualDuration(double duration)
+{
+	double time = .0;
+	double a = -4.2501e-4;
+	double b = .6857;
+	double c = -.835;
+	// double a = .002;
+	// double b = 1.4247;
+	// double c = 1.5241;
+	time = a * pow(duration, 2) + b * duration + c;
+	return time;
+}

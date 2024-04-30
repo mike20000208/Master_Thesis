@@ -1577,6 +1577,19 @@ int simple_test()
     //     cout << test[i] << endl;
     // }
 
+
+    fstream f;
+    double q;
+    f.open(DEBUG_FILE, ios::app | ios::out);
+
+    for (float t = 0; t <= 10; t+=0.1)  // in second. 
+    {
+        q = KF::selectProcessNoise(t);
+        f << to_string(q) << ", " << to_string(t) << "\n";
+    }
+
+    f.close();
+
     return 0;
 }
 
@@ -1592,8 +1605,11 @@ int simple_test()
  * VelLog.csv,
  *
  * record.bag.
+ * 
+ * @param node a ROS node responsible for the communuication between the application and the robot. 
+ * @param duration how long the user wants to record. (in second)
  */
-int recording(std::shared_ptr<Mike> node)
+int recording(std::shared_ptr<Mike> node, double duration)
 {
     // Prepare folders and other paths.
     int count = 0; // serial number of color images, trajectories, maps, depth info.
@@ -1601,7 +1617,8 @@ int recording(std::shared_ptr<Mike> node)
 
     // Initialize rs2 objects.
     rs2::pipeline p;
-    rs2::frameset frames;
+    rs2::frameset* frames = new rs2::frameset;
+    // rs2::frameset frames;
     rs2::frame color, depth;
     rs2::config cfg;
     int stream_color_width = 848;
@@ -1613,6 +1630,7 @@ int recording(std::shared_ptr<Mike> node)
     // int stream_depth_width = 1280;
     // int stream_depth_height = 720;
     int frame_rate = 30;
+    bool flag;
 
     // Configure the Intel camera.
     cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
@@ -1627,15 +1645,43 @@ int recording(std::shared_ptr<Mike> node)
     cv::Mat image;
     // cv::Mat image(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
 
+    // Initialize some general variables. 
+    vector<string> indicators = {
+        "Recording", 
+        "Recording.", 
+        "Recording..", 
+        "Recording...", 
+        "Recording....", 
+        "Recording.....", 
+        "Recording......", 
+        "Recording.......",
+        "Recording........"
+        };
+    int indicator_cnt = 0;
+    clock_t start, end;
+
     // Start the pipeline.
     p.start(cfg);
+    start = clock();
+    end = clock();
 
     // Start streaming.
-    while (1)
+    // while (1)
+    while ((double(end - start) / double(CLOCKS_PER_SEC)) <= duration)
     {
         // Get frame.
-        frames = p.wait_for_frames();
-        color = frames.get_color_frame();
+        end = clock();
+        // frames = p.wait_for_frames(5000);
+        flag = p.try_wait_for_frames(frames, 2500);
+
+        if (!flag)
+        {
+            TERMINATE = true;
+            break;
+        }
+
+        color = frames->get_color_frame();
+        // color = frames.get_color_frame();
 
         // Create color image.
         const int w = color.as<rs2::video_frame>().get_width();
@@ -1644,18 +1690,20 @@ int recording(std::shared_ptr<Mike> node)
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
 
         // Visualization.
-        cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
+        cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+        // cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
         cv::moveWindow(win1, 0, 0);
+        // Choose indicator. 
         cv::putText(
             image,
-            "Recording",
+            indicators[indicator_cnt % static_cast<int>(indicators.size())],
             cv::Point(50, 50),
             FONT_HERSHEY_DUPLEX,
             1.0,
             cv::Scalar(0, 0, 255),
             1);
         cv::imshow(win1, image);
-        char c = cv::waitKey(10);
+        char c = cv::waitKey(1);
 
         if (c == 32 || c == 13 || TERMINATE == true)
         {
@@ -1663,7 +1711,11 @@ int recording(std::shared_ptr<Mike> node)
             TERMINATE = true;
             break;
         }
+
+        indicator_cnt++;
     }
+
+    TERMINATE = true;
     return 0;
 }
 
@@ -1686,7 +1738,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
     // Initialize rs2 objects.
     rs2::pipeline p;
-    rs2::frameset frames;
+    rs2::frameset* frames = new rs2::frameset;
+    // rs2::frameset frames;
     rs2::frame color, depth;
     rs2::config cfg;
     rs2::pointcloud pointcloud;
@@ -1697,6 +1750,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     int stream_color_height = 720;
     int stream_depth_width = 1280;
     int stream_depth_height = 720;
+    bool flag;
 
     // Initialize pcl objects.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -1775,9 +1829,19 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     while (1)
     {
         // Get frame.
-        frames = p.wait_for_frames();
-        color = frames.get_color_frame();
-        depth = frames.get_depth_frame();
+        // frames = p.wait_for_frames(5000);
+        flag = p.try_wait_for_frames(frames, 2000);
+
+        if (!flag)
+        {
+            TERMINATE = true;
+            break;
+        }
+
+        color = frames->get_color_frame();
+        depth = frames->get_depth_frame();
+        // color = frames.get_color_frame();
+        // depth = frames.get_depth_frame();
 
         // Create color image and save it.
         const int w = color.as<rs2::video_frame>().get_width();
@@ -1899,8 +1963,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         // Current scene, map, and trajectory visualization. 
         cv::moveWindow(win1, 0, 0);
-        cv::moveWindow(win2, (image.cols / 2 + 75), 0);
-        cv::moveWindow(win3, (image.cols / 2 + 580), 0);
+        cv::moveWindow(win2, (1280 / 2 + 75), 0);
+        cv::moveWindow(win3, (1280 / 2 + 580), 0);
         cv::putText(
             image,
             to_string(ImgLog.timestamp),

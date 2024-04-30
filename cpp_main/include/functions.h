@@ -29,7 +29,7 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res);
 int simple_test();
 
 
-int recording(std::shared_ptr<Mike> node);
+int recording(std::shared_ptr<Mike> node, double duration);
 
 
 int stream_map_test_from_recording(string folder, int width=30, int height=30, int res=10);

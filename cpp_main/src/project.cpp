@@ -449,9 +449,36 @@ int main(int argc, char * argv[])
             f << "Command [recording] is used. \n";
             f.close(); 
 
+            printf("\n\nHow long you want to record? \n\nChoose the unit first: (second [s] or minute [m]) \n\nOr record until termination keys are pressed. ([u]) \n\n" );
+            string unit;
+            double duration = .0;
+            cin >> unit;
+            
+            if (unit == "m" || unit == "s")
+            {
+                printf("\n\nHow long you want to record? \n\n" );
+                cin >> duration;
+
+                if (unit == "m")
+                {
+                    duration *= 60;
+                }
+
+                duration = getActualDuration(duration);
+            }
+            else if (unit == "u")
+            {
+                duration = 10 * 60;
+            }
+            else
+            {
+                cerr << "\n\nWrong unit is selected! \n\n";
+                exit(-1);
+            }
+
             // Start threading. 
             thread thread1 (Communication, node);
-            thread thread2 (recording, node);
+            thread thread2 (recording, node, duration);
             thread1.join();
             thread2.join();
 

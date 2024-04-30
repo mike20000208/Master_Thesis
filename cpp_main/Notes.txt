@@ -79,3 +79,9 @@
         accurate position of objects instead of solely relying on the odometry, which will accumulate 
         the error. Also, is it possible to apply Kalman filter on the odometry and distance data as 
         well? 
+
+    
+2024/04/30
+
+    1. For the data fusion used for odometry, maybe GPS could also be an options, if we are 
+        operating outdoors. 
