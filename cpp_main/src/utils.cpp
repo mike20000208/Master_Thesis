@@ -209,6 +209,7 @@ Logging::Logging()
     map_folder = main_folder + "/Maps";
 
     info_path = main_folder + "/Info.txt";
+	mode_path = main_folder + "/Mode.txt";
     bag_path = main_folder + "/record.bag";
     time_path = main_folder + "/TimeLog.csv";
 
@@ -233,6 +234,7 @@ Logging::Logging(std::shared_ptr<Mike> node)
     map_folder = node->log_path + "/Maps";
 
     info_path = node->log_path + "/Info.txt";
+	mode_path = node->log_path + "/Mode.txt";
     bag_path = node->log_path + "/record.bag";
     time_path = node->log_path + "/TimeLog.csv";
 	detailed_time_path = node->log_path + "/Time_for_each_component.csv";
@@ -397,7 +399,18 @@ void Logging::createDir(string mode)
 		}
 
 		case 13: 
-		{
+		{		
+			if (create_directories(img_folder) && 
+			create_directories(traj_folder) && 
+			create_directories(depth_folder) && 
+			create_directories(map_folder))
+			{
+				printf("\n\nDirectories are created. \n\n");
+			}
+			else
+			{
+				printf("\n\nDirectory creation is failed. \n\n");
+			}
 			break;
 		}
 

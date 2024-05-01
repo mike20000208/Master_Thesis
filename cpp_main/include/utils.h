@@ -317,6 +317,7 @@ public:
     string map_folder;
 
     string info_path;
+    string mode_path;
     string bag_path;
     string time_path;
     string detailed_time_path;

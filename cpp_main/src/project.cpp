@@ -476,9 +476,13 @@ int main(int argc, char * argv[])
                 exit(-1);
             }
 
+            printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");
+            int map_width_meter, map_height_meter, map_res;
+            cin >> map_width_meter >> map_height_meter >> map_res; 
+
             // Start threading. 
             thread thread1 (Communication, node);
-            thread thread2 (recording, node, duration);
+            thread thread2 (recording, node, duration, map_width_meter, map_height_meter, map_res);
             thread1.join();
             thread2.join();
 

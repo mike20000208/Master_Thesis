@@ -1390,32 +1390,19 @@ int field_trip(std::shared_ptr<Mike> node, int width, int height, int res)
     rs2::config cfg;
     rs2::pointcloud pointcloud;
     rs2::points points;
-    int stream_color_width = 1280;
-    int stream_color_height = 720;
-    int stream_depth_width = 1280;
-    int stream_depth_height = 720;
-    // int stream_depth_width = 848;
-    // int stream_depth_height = 480;
+    int stream_color_width = 848;
+    int stream_color_height = 480;
+     int stream_depth_width = 848;
+    int stream_depth_height = 480;
     int frame_rate = 30;
 
-    if (isEnableFromFile)
-    {
-        cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
-    }
-    else
-    {
-        cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
-        cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
-    }
-
-    if (isRecording)
-    {
-        cfg.enable_record_to_file(l.bag_path);
-    }
+    // Configure the Intel camera.
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    cfg.enable_record_to_file(l.bag_path);
 
     // Initialize cv objects.
     const string win1 = "Color Image";
-    // const string win2 = "Map";
     const string win3 = "Trajectory";
     cv::namedWindow(win1, WINDOW_NORMAL);
     // cv::namedWindow(win2, WINDOW_NORMAL);
@@ -1608,8 +1595,11 @@ int simple_test()
  * 
  * @param node a ROS node responsible for the communuication between the application and the robot. 
  * @param duration how long the user wants to record. (in second)
+ * @param width
+ * @param height
+ * @param res
  */
-int recording(std::shared_ptr<Mike> node, double duration)
+int recording(std::shared_ptr<Mike> node, double duration, int width, int height, int res)
 {
     // Prepare folders and other paths.
     int count = 0; // serial number of color images, trajectories, maps, depth info.
@@ -1618,17 +1608,12 @@ int recording(std::shared_ptr<Mike> node, double duration)
     // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frameset* frames = new rs2::frameset;
-    // rs2::frameset frames;
-    rs2::frame color, depth;
+    // rs2::frame color, depth;
     rs2::config cfg;
     int stream_color_width = 848;
     int stream_color_height = 480;
-    // int stream_color_width = 1280;
-    // int stream_color_height = 720;
     int stream_depth_width = 848;
     int stream_depth_height = 480;
-    // int stream_depth_width = 1280;
-    // int stream_depth_height = 720;
     int frame_rate = 30;
     bool flag;
 
@@ -1640,25 +1625,30 @@ int recording(std::shared_ptr<Mike> node, double duration)
     cfg.enable_record_to_file(l.bag_path);
 
     // Initialize cv objects.
-    const string win1 = "Color Image";
+    const string win1 = "Trajecotry";
     cv::namedWindow(win1, WINDOW_NORMAL);
-    cv::Mat image;
+    cv::resizeWindow(win1, 1000, 1000);
+    // cv::Mat image;
     // cv::Mat image(720, 1280, CV_8UC3, cv::Scalar(0, 0, 0));
 
     // Initialize some general variables. 
-    vector<string> indicators = {
-        "Recording", 
-        "Recording.", 
-        "Recording..", 
-        "Recording...", 
-        "Recording....", 
-        "Recording.....", 
-        "Recording......", 
-        "Recording.......",
-        "Recording........"
-        };
-    int indicator_cnt = 0;
+    // vector<string> indicators = {
+    //     "Recording", 
+    //     "Recording.", 
+    //     "Recording..", 
+    //     "Recording...", 
+    //     "Recording....", 
+    //     "Recording.....", 
+    //     "Recording......", 
+    //     "Recording.......",
+    //     "Recording........"
+    //     };
+    // int indicator_cnt = 0;
     clock_t start, end;
+
+    // Initialize some general objects. 
+    My_Map t(width, height, res);
+    std::mutex mut;
 
     // Start the pipeline.
     p.start(cfg);
@@ -1666,12 +1656,10 @@ int recording(std::shared_ptr<Mike> node, double duration)
     end = clock();
 
     // Start streaming.
-    // while (1)
     while ((double(end - start) / double(CLOCKS_PER_SEC)) <= duration)
     {
         // Get frame.
         end = clock();
-        // frames = p.wait_for_frames(5000);
         flag = p.try_wait_for_frames(frames, 2500);
 
         if (!flag)
@@ -1680,29 +1668,36 @@ int recording(std::shared_ptr<Mike> node, double duration)
             break;
         }
 
-        color = frames->get_color_frame();
-        // color = frames.get_color_frame();
-
-        // Create color image.
-        const int w = color.as<rs2::video_frame>().get_width();
-        const int h = color.as<rs2::video_frame>().get_height();
-        image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
-        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+        // Show the trajectory. 
+        mut.lock();
+        Quaternion_ q;
+        q.w = node->odo_data.ow;
+        q.x = node->odo_data.ox;
+        q.y = node->odo_data.oy;
+        q.z = node->odo_data.oz;
+        t.poseUpdate(
+            count,
+            node->odo_data.px,
+            node->odo_data.py,
+            q);
+        mut.unlock();
+        t.headingShow();
+        t.mapShow();
+        t.flagReset();
 
         // Visualization.
-        cv::resizeWindow(win1, 1280 / 2, 720 / 2);
-        // cv::resizeWindow(win1, cv::Size((int)image.cols / 2, (int)image.rows));
         cv::moveWindow(win1, 0, 0);
-        // Choose indicator. 
-        cv::putText(
-            image,
-            indicators[indicator_cnt % static_cast<int>(indicators.size())],
-            cv::Point(50, 50),
-            FONT_HERSHEY_DUPLEX,
-            1.0,
-            cv::Scalar(0, 0, 255),
-            1);
-        cv::imshow(win1, image);
+
+        // // Choose indicator. 
+        // cv::putText(
+        //     t.tempMap,
+        //     indicators[indicator_cnt % static_cast<int>(indicators.size())],
+        //     cv::Point(0, 0),
+        //     FONT_HERSHEY_DUPLEX,
+        //     0.5,
+        //     cv::Scalar(0, 0, 255),
+        //     1);
+        cv::imshow(win1, t.tempMap);
         char c = cv::waitKey(1);
 
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -1712,7 +1707,8 @@ int recording(std::shared_ptr<Mike> node, double duration)
             break;
         }
 
-        indicator_cnt++;
+        // indicator_cnt++;
+        count++;
     }
 
     TERMINATE = true;
@@ -2001,6 +1997,12 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     f << "Size of the map (width x height) [pixel]: " << to_string(m.width_pixel) << " x " << to_string(m.height_pixel) << "\n\n";
     f << "Size of color image (width x height): " << to_string(image.cols) << " x " << to_string(image.rows) << "\n\n";
     f << "Size of depth image (width x height): " << to_string(stream_depth_width) << " x " << to_string(stream_depth_height) << "\n\n";
+    f.close();
+
+    // Document the mode info.
+    f.open(l.mode_path, ios::app | ios::out);
+    f << "Command [stream_map_test_from_recording] is used. \n";
+    f << "All the data is from the folder: [ " << folder << " ]. \n";
     f.close();
 
     return 0;
