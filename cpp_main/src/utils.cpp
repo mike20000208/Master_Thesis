@@ -556,9 +556,9 @@ double KF::selectProcessNoise(double timeSpan)
 {
 	// Define the parameters of the saturation function. 
 	double q = 0.0;
-	double q_lower_bound = pow(.0, 2);  // square meter. 
+	double q_lower_bound = pow(.001, 2);  // square meter. 
 	double q_upper_bound = pow(.03, 2);  // square meter 
-	double t_lower_bound = 4.0;
+	double t_lower_bound = 2.0;
 	double t_upper_bound = 10.0;
 	double slope = (q_upper_bound - q_lower_bound) / (t_upper_bound - t_lower_bound);
 	
@@ -1083,7 +1083,7 @@ void My_Map::mapUpdate(GridAnalysis G, double timestamp)
 	{
 		for (int j = 0; j < G.grid[0].size(); j++)
 		{
-			// Chech if the current cell is empty. 
+			// Check if the current cell is empty. 
 			if (G.grid[i][j].counter == 0 || 
 			cv::Vec3d(G.grid[i][j].X, G.grid[i][j].Y, G.grid[i][j].Z) == cv::Vec3d(0.0, 0.0, 0.0))
 			{

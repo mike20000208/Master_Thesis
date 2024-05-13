@@ -1765,7 +1765,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
-    cv::resizeWindow(win1, 1280 / 2, 720 / 2);
+    cv::resizeWindow(win1, stream_color_width / 2, stream_color_height / 2);
     cv::resizeWindow(win2, 500, 500);
     cv::resizeWindow(win3, 500, 500);
     cv::Mat image;
@@ -1791,7 +1791,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     // double timeRange = 0.3; // sec
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
-    // Read OdoLog.csv.
+    // Read and load OdoLog.csv.
     f.open(odo_path, ios::in);
 
     while (getline(f, line))
