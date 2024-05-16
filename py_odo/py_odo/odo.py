@@ -60,7 +60,7 @@ DEBUG_PATH = '/home/mike/Debug/delay_test_MQTT.csv'
 NANO = 1e-9
 frameID = 0
 isUpdated = False
-semaphore = Semaphore(2)
+semaphore = Semaphore(1)
 
 # define ROS node publisher.
 ros_topic = '/my_odo'
@@ -97,7 +97,7 @@ class Publisher(Node):
         #         semaphore.release()
         
     def timer_callback(self):
-        global isUpdated, data_publishing, data_receiving
+        global data_publishing, data_receiving
         semaphore.acquire()
         try:
             msg = Odo()
