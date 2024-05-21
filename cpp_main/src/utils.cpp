@@ -817,7 +817,7 @@ Point2D My_Map::map2img(Point2D p)
 */
 void My_Map::cam2map()
 {
-	// Convert the corners from camera frame to robot frame. (in meter)
+	// Convert the center from camera frame to robot frame. (in meter)
 	My_Map::center_robot[0] = My_Map::center_cam[2];
 	My_Map::center_robot[1] = My_Map::center_cam[0];
 	My_Map::center_robot[2] = My_Map::center_cam[1];

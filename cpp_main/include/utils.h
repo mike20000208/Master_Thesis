@@ -154,8 +154,6 @@ struct Pose
     int y_pixel_img = 0;
     int x_pixel_map = 0;
     int y_pixel_map = 0;
-    // int x_mm = 0;
-    // int y_mm = 0;
     double x_meter = 0.0;
     double y_meter = 0.0;
     double roll = 0.0;  // about x-axis.
