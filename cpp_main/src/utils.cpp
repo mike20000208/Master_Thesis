@@ -1188,8 +1188,8 @@ void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	// fstream f;
-	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
+	fstream f;
+	f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1236,11 +1236,11 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			// // Debug. 
-			// f << to_string(i) << ", " << to_string(j) << ", " \
-			// << to_string(infoMap[i][j].est_state) << ", " \
-			// << to_string(infoMap[i][j].measurement) << ", " \
-			// << to_string(infoMap[i][j].gain) << "\n";
+			// Debug of Kalman filter.
+			f << to_string(i) << ", " << to_string(j) << ", " \
+			<< to_string(infoMap[i][j].est_state) << ", " \
+			<< to_string(infoMap[i][j].measurement) << ", " \
+			<< to_string(infoMap[i][j].gain) << "\n";
 			
 			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
@@ -2439,7 +2439,7 @@ void GridAnalysis::divide()
 	for (auto& p : GridAnalysis::cloud->points)
 	{
 		// Determine which row it is in. 
-		if (!(p.z < 0.5))  // filter out the points in the invalid range. 
+		if (!(p.z < 0.65))  // filter out the points in the invalid range. 
 		{
 			if ((int)round((p.z - GridAnalysis::minZ) * 1e3) % (int)round(GridAnalysis::cellSize * 1e3) == 0)  // in mm. 
 			{
@@ -2490,23 +2490,23 @@ void GridAnalysis::divide()
 		}
 	}
 
-	// // Debug
-	// fstream f;
-	// string file = "division.csv";
-	// file = DEBUG_FOLDER + file;
-	// f.open(file, ios::out | ios::app);
-	// for (int i = 0; i < GridAnalysis::grid.size(); i++)
-	// {
-	// 	for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
-	// 	{
-	// 		f << to_string(i) << ", " << to_string(j) << ", " \
-	// 		<< to_string(GridAnalysis::grid[i][j].counter) << ", " \
-	// 		<< to_string(GridAnalysis::grid[i][j].X) << ", " \
-	// 		<< to_string(GridAnalysis::grid[i][j].Y) << ", " \
-	// 		<< to_string(GridAnalysis::grid[i][j].Z) << "\n";
-	// 	}
-	// }
-	// f.close();
+	// Debug for division. 
+	fstream f;
+	string file = "division_1.csv";
+	file = DEBUG_FOLDER + file;
+	f.open(file, ios::out | ios::app);
+	for (int i = 0; i < GridAnalysis::grid.size(); i++)
+	{
+		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+		{
+			f << to_string(i) << ", " << to_string(j) << ", " \
+			<< to_string(GridAnalysis::grid[i][j].counter) << ", " \
+			<< to_string(GridAnalysis::grid[i][j].X) << ", " \
+			<< to_string(GridAnalysis::grid[i][j].Y) << ", " \
+			<< to_string(GridAnalysis::grid[i][j].Z) << "\n";
+		}
+	}
+	f.close();
 }
 
 

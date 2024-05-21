@@ -1223,31 +1223,6 @@ int delay_test(std::shared_ptr<Mike> node)
     int count = 0; // serial number of color images, trajectories, maps, depth info.
     Logging l(node);
     l.createDir("delay_test");
-    // mut.lock();
-    // string img_folder = node->log_path + "/Images";
-    // string traj_folder = node->log_path + "/Trajectories";
-    // string depth_folder = node->log_path + "/Depth";
-    // string map_folder = node->log_path + "/Map";
-
-    // string info_path = node->log_path + "/Info.txt";
-    // string bag_path = node->log_path + "/record.bag";
-    // string time_path = node->log_path + "/TimeLog.csv";
-    // string traj_final_path = node->log_path + "/Trajectory_final.png";
-    // string map_final_path = node->log_path + "/Map_final.png";
-    // string record_path = node->log_path + "/record.bag";
-    // string coordinate_path = node->log_path + "/CoordinateLog.csv";
-    // // string debug_path = node->log_path + "/delay_test_only_scene.csv";
-    // string debug_path = node->log_path + "/delay_test_scene_and_trajectory.csv";
-    // mut.unlock();
-
-    // string traj_suffix;
-    // string img_suffix;
-    // string depth_suffix;
-    // string map_suffix;
-    // string img_path;
-    // string traj_path;
-    // string depth_path;
-    // string map_path;
 
     // Initialize rs2 objects.
     rs2::pipeline p;
@@ -1274,18 +1249,6 @@ int delay_test(std::shared_ptr<Mike> node)
 
     // Start the pipeline.
     auto profile = p.start(cfg);
-
-    // // Create the folders for logging.
-    // if (
-    //     create_directories(img_folder) &&
-    //     create_directories(traj_folder))
-    // {
-    //     printf("\n\nDirectories are created. \n\n");
-    // }
-    // else
-    // {
-    //     printf("\n\nDirectory creation is failed. \n\n");
-    // }
 
     // Start streaming.
     while (1)
@@ -1608,8 +1571,10 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
     // Initialize rs2 objects.
     rs2::pipeline p;
     rs2::frameset* frames = new rs2::frameset;
-    // rs2::frame color, depth;
+    rs2::frame color, depth;
+    rs2::points points;
     rs2::config cfg;
+    rs2::pointcloud pointcloud;
     int stream_color_width = 848;
     int stream_color_height = 480;
     int stream_depth_width = 848;
@@ -1623,6 +1588,20 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
     // cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     // cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
     cfg.enable_record_to_file(l.bag_path);
+
+    // Initialize pcl objects.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PassThrough<pcl::PointXYZRGB> filter;
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    viewer->setPosition(450, 450);
+    // viewer->setPosition(50, 70);
+    viewer->addCoordinateSystem(5, "global");
+    viewer->initCameraParameters();
+
+    // Initialize general variables.
+    vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
 
     // Initialize cv objects.
     const string win1 = "Trajecotry";
@@ -1668,6 +1647,13 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
             break;
         }
 
+        // color = frames->get_color_frame();
+        depth = frames->get_depth_frame();
+
+        // Calculate realsense pointcloud and convert it into PCL format.
+        points = pointcloud.calculate(depth);
+        cloud = Points2PCL(points);
+
         // Show the trajectory. 
         mut.lock();
         Quaternion_ q;
@@ -1685,6 +1671,20 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
         t.mapShow();
         t.flagReset();
 
+        // Pointcloud visualization.
+        pc_layers.push_back(cloud);
+
+        for (int i = 0; i < pc_layers.size(); i++)
+        {
+            viewer->addPointCloud(
+                pc_layers[i],
+                to_string(i));
+            viewer->setPointCloudRenderingProperties(
+                pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
+                4,
+                to_string(i));
+        }
+
         // Visualization.
         cv::moveWindow(win1, 0, 0);
 
@@ -1699,6 +1699,8 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
         //     1);
         cv::imshow(win1, t.tempMap);
         char c = cv::waitKey(1);
+
+        viewer->spinOnce(1);
 
         if (c == 32 || c == 13 || TERMINATE == true)
         {
@@ -1790,6 +1792,13 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     // double timeRange = 200 * MILLI; // sec
     // double timeRange = 0.3; // sec
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
+
+    // Clear the debug folder.
+    std::filesystem::path P {DEBUG_FOLDER};
+    for (auto& p : std::filesystem::directory_iterator(P))
+    {
+        std::filesystem::remove(p);
+    }
 
     // Read and load OdoLog.csv.
     f.open(odo_path, ios::in);

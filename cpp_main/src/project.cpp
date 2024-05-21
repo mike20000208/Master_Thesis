@@ -16,7 +16,7 @@ int main(int argc, char * argv[])
         {"replay_from_odometry", 7},
         // {"communication", 8}, 
         // {"map_demo", 9},
-        // {"delay_test", 10}, 
+        {"delay_test", 10}, 
         {"field_trip", 11},
         {"recording", 12},
         {"stream_map_from_recording", 13}
@@ -31,7 +31,7 @@ int main(int argc, char * argv[])
         "replay_from_odometry", 
         // "communication", 
         // "map_demo", 
-        // "delay_test", 
+        "delay_test", 
         "field_trip",
         "recording",
         "stream_map_from_recording"
@@ -58,7 +58,7 @@ int main(int argc, char * argv[])
         }
         else
         {
-            printf("\n\nPlease select one of below commands after planner: \n\n");
+            printf("\n\nPlease select one of below functions: \n\n");
 
             for (int i = 0; i < temp_commands.size(); i++)
             {
@@ -398,6 +398,7 @@ int main(int argc, char * argv[])
 
         case 10:
         {
+            // Delay test
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
             thread thread1 (Communication, node);
@@ -417,6 +418,7 @@ int main(int argc, char * argv[])
 
         case 11:
         {
+            // Field trip
             rclcpp::init(argc, argv);
             std::shared_ptr<Mike> node = std::make_shared<Mike>();
             printf("\n\nPlease enter the size of map (width & height [meter]) and the resolution of the map [pixel / meter]: \n\n");

@@ -60,7 +60,7 @@ DEBUG_PATH = '/home/mike/Debug/delay_test_MQTT.csv'
 NANO = 1e-9
 frameID = 0
 isUpdated = False
-semaphore = Semaphore(1)
+semaphore = Semaphore(2)
 
 # define ROS node publisher.
 ros_topic = '/my_odo'
@@ -133,7 +133,7 @@ class Publisher(Node):
             # data[-1][10] = msg.header.stamp.sec + msg.header.stamp.nanosec * NANO
             # isUpdated = False
 
-            # # logging the data to test delay
+            # # Debug for delay test
             # with open(DEBUG_PATH, mode='a', newline='') as f:
             #     writer = csv.writer(f, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             #     writer.writerow(data_publishing)
