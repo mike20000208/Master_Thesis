@@ -513,7 +513,6 @@ public:
 
     // Select standard deviation for following variance update. 
     static double selectSigma(double z);
-    // static double selectSigma(double z, double timeSpan);
 
     // Select process noise to add to the KF. 
     static double selectProcessNoise(double timeSpan);
