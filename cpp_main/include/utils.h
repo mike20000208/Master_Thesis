@@ -16,6 +16,7 @@
 #include <ctime>
 #include <algorithm>
 
+#include <GeographicLib/LambertConformalConic.hpp> 
 #include "time.h"
 #include "math.h"
 #include "rclcpp/rclcpp.hpp"
@@ -51,6 +52,7 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std::chrono;
 using namespace std::filesystem;
+using namespace GeographicLib; 
 
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
 #define DEVICE "Intel RealSense D455"

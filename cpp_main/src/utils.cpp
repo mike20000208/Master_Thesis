@@ -560,20 +560,33 @@ double KF::selectProcessNoise(double timeSpan)
 	double q_upper_bound = pow(.03, 2);  // square meter 
 	double t_lower_bound = 2.0;
 	double t_upper_bound = 10.0;
-	double slope = (q_upper_bound - q_lower_bound) / (t_upper_bound - t_lower_bound);
+	// double slope = (q_upper_bound - q_lower_bound) / (t_upper_bound - t_lower_bound);
+	double slope = pow(.001, 2) * 10 * 5;
 	
-	if (timeSpan < t_lower_bound)
+	// // Saturation function 
+	// if (timeSpan < t_lower_bound)
+	// {
+	// 	q = q_lower_bound;
+	// }
+	// else if (timeSpan >= t_lower_bound && timeSpan <= t_upper_bound)
+	// {
+	// 	q = slope * (timeSpan - t_upper_bound) + q_upper_bound;
+	// }
+	// else
+	// {
+	// 	q = q_upper_bound;
+	// }
+
+	// Piecewise function 
+	if (timeSpan <= t_lower_bound)
 	{
 		q = q_lower_bound;
 	}
-	else if (timeSpan >= t_lower_bound && timeSpan <= t_upper_bound)
-	{
-		q = slope * (timeSpan - t_upper_bound) + q_upper_bound;
-	}
 	else
 	{
-		q = q_upper_bound;
+		q = slope * (timeSpan - t_lower_bound) + q_lower_bound;
 	}
+
 
 	return q;
 }

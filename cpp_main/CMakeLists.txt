@@ -23,6 +23,12 @@ find_package(nav_msgs REQUIRED)
 find_package(realsense2 REQUIRED)
 find_package(OpenCV REQUIRED)
 
+# GeographicLib
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/share/cmake/geographiclib/")
+# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/usr/local/share/cmake/GeographicLib/")
+find_package (GeographicLib REQUIRED)
+include_directories (${GeographicLib_INCLUDE_DIRS})
+
 # PCL
 find_package(PCL 1.3 REQUIRED)
 include_directories(${PCL_INCLUDE_DIRS})
@@ -33,9 +39,9 @@ add_definitions(${PCL_DEFINITIONS})
 add_executable(planner ${SOURCES})
 include_directories(include)
 include_directories(${OpenCV_INCLUDE_DIRS})
-ament_target_dependencies(planner rclcpp sensor_msgs nav_msgs geometry_msgs realsense2 OpenCV)
-# ament_target_dependencies(planner rclcpp sensor_msgs nav_msgs geometry_msgs tf2_msgs realsense2 OpenCV)
-target_link_libraries(planner ${realsense2_LIBRARY} ${OpenCV_LIBS} ${PCL_LIBRARIES})
+ament_target_dependencies(planner rclcpp sensor_msgs nav_msgs geometry_msgs realsense2 OpenCV GeographicLib)
+# ament_target_dependencies(planner rclcpp sensor_msgs nav_msgs geometry_msgs tf2_msgs realsense2 OpenCV GeographicLib)
+target_link_libraries(planner ${realsense2_LIBRARY} ${OpenCV_LIBS} ${PCL_LIBRARIES} ${GeographicLib_LIBRARIES})
 # target_link_libraries(planner ${OpenCV_LIBS})
 
 # GPS node

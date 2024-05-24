@@ -1530,9 +1530,9 @@ int simple_test()
 
     fstream f;
     double q;
-    f.open(DEBUG_FILE, ios::app | ios::out);
+    f.open(string(DEBUG_FOLDER) + string("selectProcessNoise.csv"), ios::app | ios::out);
 
-    for (float t = 0; t <= 10; t+=0.1)  // in second. 
+    for (float t = 0; t <= 20; t+=0.001)  // in second. 
     {
         q = KF::selectProcessNoise(t);
         f << to_string(q) << ", " << to_string(t) << "\n";
