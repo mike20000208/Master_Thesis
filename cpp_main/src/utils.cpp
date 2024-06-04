@@ -1278,7 +1278,7 @@ void My_Map::renderingFromInfoMap()
 		}
 	}
 
-	// f.close();
+	f.close();
 }
 
 
@@ -2550,24 +2550,16 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 		p.y = vert->y * (-1);
 		p.z = vert->z;
 
+		// Perform PC correction. 
 		temp_x = p.x;
 		temp_y = p.y;
 		temp_z = p.z;
-
-		// p.x = sin(theta) * temp_y + cos(theta) * temp_z + 15e-3;
-		// p.y = temp_x;
-		// p.z = cos(theta) * temp_y - sin(theta) * temp_z + 27e-3;
-
 		p.y = cos(theta) * temp_y - sin(theta) * temp_z;
 		p.z = sin(theta) * temp_y + cos(theta) * temp_z;
-
 		p.y += 65 * CENTI;  // in meter. 
 		p.z += 15 * CENTI;  // in meter. 
 
-		// f << to_string(p.x) << ", " \
-		// << to_string(p.y) << ", " \
-		// << to_string(p.z) << "\n";
-
+		// Debug for PC correction. 
 		// f << to_string(temp_x) << ", " \
 		// << to_string(temp_y) << ", " \
 		// << to_string(temp_z) << ", " \
@@ -2575,9 +2567,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points)
 		// << to_string(p.y) << ", " \
 		// << to_string(p.z) << "\n";
 
-		// p.r = 0;
-		// p.g = 127;
-		// p.b = 0;
 		p.r = 255;
 		p.g = 255;
 		p.b = 255;
