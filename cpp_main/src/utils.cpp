@@ -3,8 +3,6 @@
 
 bool TERMINATE = false;
 
-bool isEnableFromFile = false;
-
 bool isRecording = false;
 
 bool isUseKF = true;
@@ -400,6 +398,7 @@ void Logging::createDir(string mode)
 
 		case 13: 
 		{		
+			// steaam_map_from_recording. 
 			if (create_directories(img_folder) && 
 			create_directories(traj_folder) && 
 			create_directories(depth_folder) && 
@@ -2452,7 +2451,7 @@ void GridAnalysis::divide()
 	for (auto& p : GridAnalysis::cloud->points)
 	{
 		// Determine which row it is in. 
-		if (!(p.z < 0.65))  // filter out the points in the invalid range. 
+		if (!(p.z < 0.7))  // filter out the points in the invalid range. 
 		{
 			if ((int)round((p.z - GridAnalysis::minZ) * 1e3) % (int)round(GridAnalysis::cellSize * 1e3) == 0)  // in mm. 
 			{

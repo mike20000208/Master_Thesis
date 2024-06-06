@@ -479,17 +479,10 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     int stream_depth_height = 480;
     int frame_rate = 30;
 
-    if (isEnableFromFile)
-    {
-        cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
-    }
-    else
-    {
-        cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
-        cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
-        // cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
-        // cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
-    }
+    cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
+    cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
+    // cfg.enable_stream(RS2_STREAM_INFRARED, 1, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
+    // cfg.enable_stream(RS2_STREAM_INFRARED, 2, stream_depth_width, stream_depth_height, RS2_FORMAT_Y8, frame_rate);
 
     if (isRecording)
     {
@@ -1713,7 +1706,6 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
         count++;
     }
 
-    TERMINATE = true;
     return 0;
 }
 
@@ -1777,11 +1769,13 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     My_Map m(width, height, res, true);
     My_Map t(width, height, res);
 
-    // Initialize object and variables for file reading.
+    // Initialize object and variables for file reading and transferring.
     fstream f;
     vector<string> row;
     string line, word, temp;
-    string odo_path = folder + "OdoLog.csv";
+    string odo_path = folder + string("OdoLog.csv");
+    string gps_path = folder + string("GPSLog.csv");
+    string vel_path = folder + string("VelLog.csv");
     vector<Odo> odoLog;
     Odo tempOdo, currentOdo;;
 
@@ -1799,6 +1793,24 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     for (auto& p : std::filesystem::directory_iterator(P))
     {
         std::filesystem::remove(p);
+    }
+
+    // Copy all the logs in the read folder and move them to the target folder. 
+    try
+    {
+        fs::path source_odo = odo_path;
+        fs::path target_odo = l.main_folder + string("/OdoLog.csv");
+        fs::path source_gps = gps_path;
+        fs::path target_gps = l.main_folder + string("/GPSLog.csv");
+        fs::path source_vel = vel_path;
+        fs::path target_vel = l.main_folder + string("/VelLog.csv");
+        fs::copy_file(source_odo, target_odo);
+        fs::copy_file(source_gps, target_gps);
+        fs::copy_file(source_vel, target_vel);
+    }
+    catch(fs::filesystem_error& e)
+    {
+        cout << "\n\n" << e.what() << "\n\n";
     }
 
     // Read and load OdoLog.csv.

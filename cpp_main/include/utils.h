@@ -53,6 +53,7 @@ using namespace Eigen;
 using namespace std::chrono;
 using namespace std::filesystem;
 using namespace GeographicLib; 
+namespace fs = std::filesystem;
 
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
 #define DEVICE "Intel RealSense D455"
@@ -76,7 +77,6 @@ using namespace GeographicLib;
 
 
 extern bool TERMINATE;
-extern bool isEnableFromFile;
 extern bool isRecording;
 extern bool isUseKF;
 
