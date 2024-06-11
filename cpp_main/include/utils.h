@@ -16,7 +16,7 @@
 #include <ctime>
 #include <algorithm>
 
-#include <GeographicLib/LambertConformalConic.hpp> 
+#include <GeographicLib/LambertConformalConic.hpp>
 #include "time.h"
 #include "math.h"
 #include "rclcpp/rclcpp.hpp"
@@ -52,7 +52,7 @@ using namespace pcl;
 using namespace Eigen;
 using namespace std::chrono;
 using namespace std::filesystem;
-using namespace GeographicLib; 
+using namespace GeographicLib;
 namespace fs = std::filesystem;
 
 #define OPENCV_TRAITS_ENABLE_DEPRECATED
@@ -75,11 +75,9 @@ namespace fs = std::filesystem;
 // #define ODO_TOPIC "/mike/odo"
 // #define GPS_TOPIC "/mike/gps"
 
-
 extern bool TERMINATE;
 extern bool isRecording;
 extern bool isUseKF;
-
 
 struct GPS
 {
@@ -89,7 +87,6 @@ struct GPS
     double altitude = 0.0;
     int serial_number = 0;
 };
-
 
 struct Odo
 {
@@ -104,7 +101,6 @@ struct Odo
     int serial_number = 0;
 };
 
-
 struct Vel
 {
     double timestamp = 0.0;
@@ -117,21 +113,18 @@ struct Vel
     int serial_number = 0;
 };
 
-
 struct Img
 {
     int number = 0;
     double timestamp = 0.0;
 };
 
-
 struct EulerAngle_
 {
     double roll = 0.0;  // about x-axis.
-    double yaw = 0.0;  // about z-axis. 
-    double pitch = 0.0;  // about y-axis. 
+    double yaw = 0.0;   // about z-axis.
+    double pitch = 0.0; // about y-axis.
 };
-
 
 struct Quaternion_
 {
@@ -141,14 +134,12 @@ struct Quaternion_
     double w = 0.0;
 };
 
-
 struct Heading
 {
     double x = 0.0;
     double y = 0.0;
     double norm = 0.0;
 };
-
 
 struct Pose
 {
@@ -159,18 +150,16 @@ struct Pose
     double x_meter = 0.0;
     double y_meter = 0.0;
     double roll = 0.0;  // about x-axis.
-    double yaw = 0.0;  // about z-axis. 
-    double pitch = 0.0;  // about y-axis. 
-    Heading heading;  // as a direction vector. 
+    double yaw = 0.0;   // about z-axis.
+    double pitch = 0.0; // about y-axis.
+    Heading heading;    // as a direction vector.
 };
-
 
 struct Point2D
 {
     int x = 0.0;
     int y = 0.0;
 };
-
 
 struct Point3D
 {
@@ -179,21 +168,18 @@ struct Point3D
     double z = 0.0;
 };
 
-
 struct Slice
 {
-	double score = 0.0;
-	cv::Vec3d centroid = cv::Vec3d(0.0, 0.0, 0.0);
-	vector<int> indices;
+    double score = 0.0;
+    cv::Vec3d centroid = cv::Vec3d(0.0, 0.0, 0.0);
+    vector<int> indices;
 };
-
 
 struct MyTime
 {
-	double time;
-	bool is_ms;
+    double time;
+    bool is_ms;
 };
-
 
 struct Cell
 {
@@ -202,8 +188,8 @@ struct Cell
     double Y = 0.0;
     double Z = 0.0;
     int counter = 0;
+    bool iaPath = false;
 };
-
 
 struct CellKF
 {
@@ -217,7 +203,6 @@ struct CellKF
     double pre_cov = 0.0;
 };
 
-
 // enum CellType
 // {
 //     Map_Open,
@@ -227,10 +212,18 @@ struct CellKF
 // };
 
 
+class TEST
+{
+public:
+    int a = 0;
+    int b = 10;
+    TEST();
+}; 
+
+
 class Mike : public rclcpp::Node
 {
 public:
-
     // Node (contains two subscribers)
     Mike() : Node("mike")
     {
@@ -249,15 +242,15 @@ public:
                 &Mike::odo_callback,
                 this,
                 std::placeholders::_1));
-        
+
         pubs_1 = this->create_publisher<geometry_msgs::msg::TwistStamped>(
-            VEL_TOPIC, 
+            VEL_TOPIC,
             10);
 
         vel_timer_ = this->create_wall_timer(
-            100ms, 
+            100ms,
             std::bind(
-                &Mike::vel_timer_callback, 
+                &Mike::vel_timer_callback,
                 this));
 
         createDir();
@@ -268,7 +261,7 @@ public:
     Odo odo_data;
     Vel vel_data;
 
-    // Current log path. 
+    // Current log path.
     string log_path;
 
     // GPS log method.
@@ -280,36 +273,33 @@ public:
     // Vel log method.
     void vellog();
 
-    // Create directories. 
+    // Create directories.
     void createDir();
 
 private:
-
-    // GPS subscriber callback function. 
+    // GPS subscriber callback function.
     void gps_callback(const sensor_msgs::msg::NavSatFix &msg);
 
-    // Odo subscriber callback function. 
+    // Odo subscriber callback function.
     void odo_callback(const nav_msgs::msg::Odometry &msg);
 
     // Vel publisher callback function.
     void vel_timer_callback();
 
-    // Subscribers. 
+    // Subscribers.
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr subs_1;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subs_2;
 
     // Publishers.
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr pubs_1;
 
-    // Timer. 
+    // Timer.
     rclcpp::TimerBase::SharedPtr vel_timer_;
 };
-
 
 class Logging
 {
 public:
-
     string main_folder;
     string img_folder;
     string traj_folder;
@@ -336,211 +326,208 @@ public:
     string debug_path;
 
     map<string, int> commands = {
-        {"replay_from_images", 1}, 
-        {"trajectory", 2}, 
+        {"replay_from_images", 1},
+        {"trajectory", 2},
         {"stream_map", 3},
-        {"single_frame_map", 4}, 
+        {"single_frame_map", 4},
         {"None", 5},
         {"debug", 6},
         {"replay_from_odometry", 7},
-        {"communication", 8}, 
+        {"communication", 8},
         {"map_demo", 9},
-        {"delay_test", 10}, 
+        {"delay_test", 10},
         {"field_trip", 11},
         {"recording", 12},
-        {"stream_map_from_recording", 13}
-        };
+        {"stream_map_from_recording", 13}};
 
     Logging(std::shared_ptr<Mike> node);
     Logging();
 
     void createDir(string mode);
-
 };
-
 
 class Score
 {
 public:
-    // Pointcloud to process. 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+    // Pointcloud to process.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
     // Maximum and minimum score of the whole region.
     double maxScore = 0.0, minScore = 0.0;
 
     // X border in the specified depth range. (in meter)
-	double maxX = -1e6, minX = 1e6;  
+    double maxX = -1e6, minX = 1e6;
 
-    // Lateral length in the specified depth range. 
-	double x_len = 0;  
+    // Lateral length in the specified depth range.
+    double x_len = 0;
 
     // Stride along x-direction and window size
-	double stride = 0.3, size = 0.6;  
+    double stride = 0.3, size = 0.6;
 
-    // The start to divide the pointcloud along z-axis. 
+    // The start to divide the pointcloud along z-axis.
     double start_z = 0.0;
 
     // Search step along z-direction
-	double search_step = 1.0;  
+    double search_step = 1.0;
 
     // Search range within z-direction
-	double search_range = 5.0;  
+    double search_range = 5.0;
 
     // Number of slice along x-direction
-	double num_slices = 0;  
+    double num_slices = 0;
 
-    // Flag to check whether the prerequisition is fulfilled. 
-	bool found_boundary = false;
+    // Flag to check whether the prerequisition is fulfilled.
+    bool found_boundary = false;
 
-    // Tunable parameter of the scoring system. 
-	double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
+    // Tunable parameter of the scoring system.
+    double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
 
-    // Threshold of height to determine the traversability. 
-    double height_threshold = .10;  // in meter. 
+    // Threshold of height to determine the traversability.
+    double height_threshold = .10; // in meter.
 
-    // Pointcloud basic statistics. 
+    // Pointcloud basic statistics.
     double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
     double maxHeight = 0.0, minHeight = 0.0;
 
     // Slices within specific z range
-	vector<Slice> slices;  
+    vector<Slice> slices;
 
     // vector pointing the the destination
-	cv::Vec3d dir = cv::Vec3d(-1.0, 0.0, 1.0);  
+    cv::Vec3d dir = cv::Vec3d(-1.0, 0.0, 1.0);
 
     // best slice in each z range
-	vector<Slice> best_paths;  
+    vector<Slice> best_paths;
 
-    // Constructor. 
-	Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
+    // Constructor.
+    Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
 
-    // Methods to setup scoring parameters. 
+    // Methods to setup scoring parameters.
     void setStartZ(double z);
-	void setSearchRange(double z);
-	void setSearchStep(double step);
-	void setStride(double instride);
-	void setSize(double insize);
+    void setSearchRange(double z);
+    void setSearchStep(double step);
+    void setStride(double instride);
+    void setSize(double insize);
     void setHeightThreshold(double ht);
-	void setInlierWeight(double iw);
-	void setOutlierWeight(double ow);
-	void setDisWeight(double dw);
-	void setDir(cv::Vec3d newDir);
-	void setAngleWeight(double aw);
-
-    // 
-	void get_boundary(double z);
+    void setInlierWeight(double iw);
+    void setOutlierWeight(double ow);
+    void setDisWeight(double dw);
+    void setDir(cv::Vec3d newDir);
+    void setAngleWeight(double aw);
 
     //
-	void get_slices(double z);
+    void get_boundary(double z);
 
     //
-	double get_angle(cv::Vec3d v);
-
-    // 
-	static double get_distance(cv::Vec3d v1, cv::Vec3d v2);
+    void get_slices(double z);
 
     //
-	bool get_score(double z, bool have_dst = true);
+    double get_angle(cv::Vec3d v);
 
     //
-    bool get_roughness(double z);  // for debug. (temporarily)
+    static double get_distance(cv::Vec3d v1, cv::Vec3d v2);
 
-    // 
+    //
+    bool get_score(double z, bool have_dst = true);
+
+    //
+    bool get_roughness(double z); // for debug. (temporarily)
+
+    //
     bool get_height(double z);
 
-
-    // Render the pointcloud based on the height. 
+    // Render the pointcloud based on the height.
     void rendering();
 
     //
-	bool find_best_path();
+    bool find_best_path();
 
     //
-	void visualization(pcl::visualization::PCLVisualizer::Ptr viewer, 
-		Slice slice);
+    void visualization(pcl::visualization::PCLVisualizer::Ptr viewer,
+                       Slice slice);
 };
-
 
 class GridAnalysis
 {
 public:
-    // Pointcloud to process. 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
+    // Pointcloud to process.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
 
     // Grid size. (in meter)
     double cellSize = 1e-3;
 
     // X and Z border of the pointcloud. (in meter)
-	double maxX = -1e6, minX = 1e6;  
+    double maxX = -1e6, minX = 1e6;
     double minZ = -1e6, maxZ = 1e6;
 
     // Threshold of height to determine the traversability. (in meter)
     double heightThreshold = .10;
 
-    // Grid to store the information of each cell. 
+    // Grid to store the information of each cell.
     vector<vector<Cell>> grid;
 
-    // Constructor. 
+    // Vector to store the results of potential path. 
+    vector<pair<int, int>> cells, bestCells;
+
+    // Constructor.
     GridAnalysis(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
 
-    // Methods to setup the attributes. 
+    // Methods to setup the attributes.
     void setCellSize(double size);
     void setHeightThreshold(double threshold);
 
-    // Render the pointcloud based on the height. 
+    // Render the pointcloud based on the height.
     void rendering();
 
-    // Divide the pointcloud into a grid. 
+    // Divide the pointcloud into a grid.
     void divide();
-};
 
+    // Find the path on the divided grid.
+    void findPath(); 
+};
 
 class KF
 {
-	// // Measurement error. (in meter)
-    // double sigma_34_normal = .08; 
-    // double sigma_23_normal = .03; 
-    // double sigma_12_normal = .01; 
-    // double sigma_01_normal = .005; 
+    // // Measurement error. (in meter)
+    // double sigma_34_normal = .08;
+    // double sigma_23_normal = .03;
+    // double sigma_12_normal = .01;
+    // double sigma_01_normal = .005;
 
-	// double sigma_34_latest = .008; 
-    // double sigma_23_latest = .003; 
-    // double sigma_12_latest = .001; 
-    // double sigma_01_latest = .0005; 
+    // double sigma_34_latest = .008;
+    // double sigma_23_latest = .003;
+    // double sigma_12_latest = .001;
+    // double sigma_01_latest = .0005;
 
 public:
-
-    // Constructor. 
+    // Constructor.
     KF();
 
-    // Select standard deviation for following variance update. 
+    // Select standard deviation for following variance update.
     static double selectSigma(double z);
 
-    // Select process noise to add to the KF. 
+    // Select process noise to add to the KF.
     static double selectProcessNoise(double timeSpan);
 
-    // Update the Kalman gain. 
+    // Update the Kalman gain.
     static double updateKalmanGain(double predictedCov, double measuredCov);
 
-    // Update the estimated state. 
+    // Update the estimated state.
     static double updateState(double gain, double measurement, double priorState);
 
-    // Update the variance of the estimated state. 
+    // Update the variance of the estimated state.
     static double updateCov(double gain, double priorCov);
-
 };
-
 
 class My_Map
 {
 private:
     // The offsets to check the neighbors. (using 8-connection method)
     int connectivity = 8;
-	int dx[8] = {0, 0, 1, 1, 1, -1, -1, -1};
-	int dy[8] = {1, -1, 0, 1, -1, -1, 0, 1};
+    int dx[8] = {0, 0, 1, 1, 1, -1, -1, -1};
+    int dy[8] = {1, -1, 0, 1, -1, -1, 0, 1};
 
 public:
-    // size of map in pixel. 
+    // size of map in pixel.
     int width_pixel;
     int height_pixel;
 
@@ -551,28 +538,28 @@ public:
     // resolution of map. [pixel/meter]
     int res;
 
-    // Threshold of height to determine the traversability. 
-    double height_threshold = .10;  // in meter. 
+    // Threshold of height to determine the traversability.
+    double height_threshold = .10; // in meter.
 
-    // Map itself. 
+    // Map itself.
     cv::Mat map_;
 
-    // Temporary map for drawing an arrow indicating the heading. 
+    // Temporary map for drawing an arrow indicating the heading.
     cv::Mat tempMap;
 
-    // Info map that stores the projection info. 
+    // Info map that stores the projection info.
     // cv::Mat infoMap;
     vector<vector<CellKF>> infoMap;
 
-    // Poses. 
+    // Poses.
     Pose startPoint;
     Pose previousPoint;
     Pose currentPoint;
 
     /**
-     * Centroid of the cell being projected. Will be in camera frame first, 
-     * then converted to robot frame. follewed by being converted to map frame. 
-    */
+     * Centroid of the cell being projected. Will be in camera frame first,
+     * then converted to robot frame. follewed by being converted to map frame.
+     */
     cv::Vec3d center_cam;
     cv::Vec3d center_map;
     cv::Vec3d center_robot;
@@ -580,7 +567,7 @@ public:
     // Flag to check whether the area is already transformed to map frame.
     bool isTransformed = false;
 
-    // 
+    //
     bool isOriginShown = false;
 
     //
@@ -589,18 +576,18 @@ public:
     //
     bool isRendered = false;
 
-    // 
+    //
     bool isPosShown = false;
 
     // Flag of is map or trajectory.
     bool isMap = false;
 
     /**
-     * List used in frontier search. 
-     * 
-     * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map, 
-     * and the value is its status. 
-    */
+     * List used in frontier search.
+     *
+     * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map,
+     * and the value is its status.
+     */
     // map<pair<int, int>, map<CellType, bool>> cellTypeList;
     // map<pair<int, int>, CellType> cellTypeList;
     set<pair<int, int>> Map_Open;
@@ -609,133 +596,119 @@ public:
     set<pair<int, int>> Frontier_Close;
 
     /**
-     * Queues or other containers used in frontier search. 
-     * 
-     * Especially, each element is the coordinate of the cell (row, col) in info map or map. 
-    */
+     * Queues or other containers used in frontier search.
+     *
+     * Especially, each element is the coordinate of the cell (row, col) in info map or map.
+     */
     queue<pair<int, int>> map_queue;
     queue<pair<int, int>> frontier_queue;
     vector<pair<int, int>> new_frontier;
     vector<pair<int, int>> frontier;
+    pair<int, int> frontierCentroid;
 
-    // Constructor. 
+    // Constructor.
     My_Map();
     My_Map(int w, int h, int r, bool isMap = false);
 
     // Initialize the info map. (only the time)
     void initialize(double timestamp);
 
-    // Get the orientation. 
+    // Get the orientation.
     EulerAngle_ Quater2Euler(Quaternion_ q);
 
-    // Extract the heading. 
+    // Extract the heading.
     Heading getHeading(EulerAngle_ e);
 
     // Coordinate transformation method (map to image).
-    void map2img(Pose& p);
+    void map2img(Pose &p);
     Point2D map2img(Point2D p);
 
     // Coordinate transformation method (camera to map).
     void cam2map();
 
-    //Project the slice area on the map. 
-    // void cellProject(double height); // faster way. (without KF)
-    void cellProject(double height, double depth, double timestamp); // faster way, and with more info. 
+    // Project the slice area on the map.
+    //  void cellProject(double height); // faster way. (without KF)
+    double cellProject(double height, double depth, double timestamp); // faster way, and with more info.
 
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
 
-    // Pose update method. 
+    // Pose update method.
     void poseUpdate(int number, double x, double y, Quaternion_ q);
 
-    // Map info update method. 
-    void mapUpdate(GridAnalysis G, double timestamp);  // the faster method. 
+    // Map info update method.
+    void mapUpdate(GridAnalysis &G, double timestamp); // the faster method.
 
-    // Show the heading. 
+    // Show the heading.
     void headingShow();
 
-    // Show the origin. 
+    // Show the origin.
     void originShow();
 
-    // Render the map with the info map. 
+    // Render the map with the info map.
     void renderingFromInfoMap();
 
-    // Show the current location. 
+    // Show the current location.
     void locShow();
 
     // Show the map.
     void mapShow();
 
-    // Reset all the flags. 
+    // Reset all the flags.
     void flagReset();
 
-    // Determine whether this cell is qualified to be the frontier. 
-    bool isFrontierCell(pair<int, int> cell);   
+    // Determine whether this cell is qualified to be the frontier.
+    bool isFrontierCell(pair<int, int> cell);
 
-    // Check if this cell has at least one open-space neighbor. 
+    // Check if this cell has at least one open-space neighbor.
     bool hasLeastOneOpenSpaceNeighbor(pair<int, int> cell);
 
     // // Check the type of a cell.
     // bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
 
-    // Find the frontier in the current map. 
+    // Find the frontier in the current map.
     void findFrontier();
 
-    // Predict the most drivable path for the robot. 
+    // Predict the most drivable path for the robot.
     void predictPath();
 
-    // Show the frontier on the map. 
+    // Show the frontier on the map.
     void frontierShow();
-
 };
-
 
 double rad2deg(double rad);
 
-
 double deg2rad(double deg);
-
 
 void ProcessDone();
 
-
 int Communication(std::shared_ptr<Mike> node);
-
 
 string getTime();
 
-
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points& points);
-
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points &points);
 
 void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 
-
 void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path);
-
 
 pcl::visualization::PCLVisualizer::Ptr
 Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
-	Scalar color,
-	string window = "3D viewer");
-
+              Scalar color,
+              string window = "3D viewer");
 
 int getFilesNum(string folder);
 
-
 double get_mean(vector<double> data);
-
 
 double get_median(vector<double> data);
 
-
 double get_mode(vector<double> data);
-
 
 double getDistance(vector<double> data);
 
-
-MyTime getDuration(clock_t start, clock_t end, string path, bool isLast=false);
-
+MyTime getDuration(clock_t start, clock_t end, string path, bool isLast = false);
 
 double getActualDuration(double duration);
+
+void changeTest(TEST &t);

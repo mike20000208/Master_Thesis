@@ -910,7 +910,7 @@ void My_Map::cam2map()
  * @param depth the depth data of this cell. (relative to the robot in the camera frame) (used to determine the variance)
  * @param timestamp the time when this cell is updated. (in second)
 */
-void My_Map::cellProject(double height, double depth, double timestamp)
+double My_Map::cellProject(double height, double depth, double timestamp)
 {
 	// Initialize center point in map frame and image frame. 
 	Point2D center_map, center_img;
@@ -1000,6 +1000,8 @@ void My_Map::cellProject(double height, double depth, double timestamp)
 		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
 		exit(-1);
 	}
+
+	return My_Map::infoMap[center_img.y][center_img.x].est_state;
 }
 
 
@@ -1085,8 +1087,11 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
  * @param G an instance of the class GridAnalysis that contains the information to update the map. 
  * @param timestamp the time when the info map is updated. (in second)
 */
-void My_Map::mapUpdate(GridAnalysis G, double timestamp)
+void My_Map::mapUpdate(GridAnalysis &G, double timestamp)
 {
+	// Initialzie general variables
+	double newHeight = 0.0;
+	
 	// Assign the height threshold. 
 	My_Map::height_threshold = G.heightThreshold;
 
@@ -1114,7 +1119,8 @@ void My_Map::mapUpdate(GridAnalysis G, double timestamp)
 
 				// Transformation from map frame to image frame. (the image used to display the map)
 				// My_Map::cellProject(G.grid[i][j].Y);  // the older method, and it's verified working. 
-				My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z, timestamp);  // the newer method, but still in test. 
+				newHeight = My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z, timestamp);  // the newer method, but still in test. 
+				G.grid[i][j].Y = newHeight;
 			}
 		}
 	}
@@ -1463,6 +1469,8 @@ void My_Map::findFrontier()
 	
 	// Initialize some general vairables. 
 	pair<int, int> pose, f_cell, frontier, neighbor;
+	vector<double> rows, cols;
+	int centroid_row = 0, centroid_col = 0;
 	// vector<CellType> types;
 	
 	// Initialize the map queue.
@@ -1629,12 +1637,35 @@ void My_Map::findFrontier()
 		// My_Map::cellTypeList[f_cell][Map_Close] = true;
 	}
 
+	// Calculate the centroid of the found frontier. 
+    // printf("\n\nCalculate the centroid of the found frontier. \n\n");
+
+	for (int i = 0; i < My_Map::frontier.size(); i++)
+	{
+		rows.push_back(double(My_Map::frontier[i].first));
+		cols.push_back(double(My_Map::frontier[i].second));
+	}
+
+	printf("\n\nCalculate the median. \n\n");
+	centroid_row = int(get_median(rows));
+	centroid_col = int(get_median(cols));
+	// printf("\n\n%f. \n\n", centroid_row);
+	// printf("\n\n%f. \n\n", centroid_col);
+	// printf("\n\nAssign the values. \n\n");
+	My_Map::frontierCentroid.first = centroid_row;
+	My_Map::frontierCentroid.second = centroid_col;
+	printf("\n\nMedian calculation is done. \n\n");
+
 	// f.close();
 }
 
 
 /**
  * @brief Predict the most drivable path for the robot. 
+ * 
+ * Specifically, combine the local conditions and the found frontier 
+ * 
+ * (global conditio) to determine the path.
 */
 void My_Map::predictPath()
 {
@@ -1648,15 +1679,15 @@ void My_Map::predictPath()
 void My_Map::frontierShow()
 {
 	vector<double> rows, cols;
-	int centroid_row = 0, centroid_col = 0;
+	// int centroid_row = 0, centroid_col = 0;
 
 	// Mark all the cells in the frontier. 
 	if (!My_Map::frontier.empty())
 	{
 		for (int i = 0; i < My_Map::frontier.size(); i++)
 		{
-			rows.push_back(My_Map::frontier[i].first);
-			cols.push_back(My_Map::frontier[i].second);
+			// rows.push_back(My_Map::frontier[i].first);
+			// cols.push_back(My_Map::frontier[i].second);
 
 			My_Map::tempMap.at<Vec3b>(
 				My_Map::frontier[i].first, 
@@ -1680,8 +1711,8 @@ void My_Map::frontierShow()
 		}
 
 		// Mark the centroid of the frontier. 
-		centroid_row = get_median(rows);
-		centroid_col = get_median(cols);
+		// centroid_row = get_median(rows);
+		// centroid_col = get_median(cols);
 
 		// My_Map::tempMap.at<Vec3b>(
 		// 		centroid_row, 
@@ -1695,9 +1726,19 @@ void My_Map::frontierShow()
 		// 		centroid_row, 
 		// 		centroid_col)[2] = 0;
 
+		// cv::circle(
+		// 	My_Map::tempMap,
+		// 	cv::Point(centroid_col, centroid_row),
+		// 	1,
+		// 	cv::Scalar(168, 50, 168),
+		// 	-1
+		// );		
+
 		cv::circle(
 			My_Map::tempMap,
-			cv::Point(centroid_col, centroid_row),
+			cv::Point(
+				round(My_Map::frontierCentroid.second), 
+				round(My_Map::frontierCentroid.first)),
 			1,
 			cv::Scalar(168, 50, 168),
 			-1
@@ -2523,6 +2564,58 @@ void GridAnalysis::divide()
 
 
 /**
+ * @brief Find the local path on the grid.  
+ */
+void GridAnalysis::findPath()
+{
+	vector<int> rows;
+	pair<int, int> index;
+	double minHeight = 1e6;
+	pair<int, int> minHeightIndex;
+
+	// Find the valid row indices. 
+	for (int i = GridAnalysis::grid.size()-1; i >= 0; i--)
+	{
+		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+		{
+			if (GridAnalysis::grid[i][j].counter != 0)
+			{
+				rows.push_back(i);
+				break;
+			}
+		}
+	}
+
+	// Collect all the traversable cell.
+	for(int k = 0; k < static_cast<int>(rows.size()); k++)
+	{
+		minHeight = 1e6;
+		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+		{
+			if (grid[rows[k]][j].counter != 0)  // check if empty first. 
+			{
+				if (grid[rows[k]][j].Y <= GridAnalysis::heightThreshold &&
+				grid[rows[k]][j].Y >= -GridAnalysis::heightThreshold)  // check if traversable then. 
+				{
+					index.first = rows[k];
+					index.second = j;
+					GridAnalysis::cells.push_back(index);
+
+					if (grid[rows[k]][j].Y < minHeight)
+					{
+						minHeight = grid[rows[k]][j].Y;
+						minHeightIndex.first = rows[k];
+						minHeightIndex.second = j;
+					}
+				}
+			}
+		}
+		GridAnalysis::bestCells.push_back(minHeightIndex);
+	}
+}
+
+
+/**
  * @brief Convert realsense pointcloud to pcl pointcloud.
  * @param points pointcloud in realsense format.
  * @return cloud pointcloud in pcl format.
@@ -2679,17 +2772,25 @@ double get_mean(vector<double> data)
 */
 double get_median(vector<double> data)
 {
+	printf("\n\nGet into the get_median. \n\n");
 	double median = 0.0;
 	int len = static_cast<int>(data.size());
 	sort(data.begin(), data.end());
 
-	if (len % 2 == 0)
+	if (len == 0)
 	{
-		median = (data[len / 2] + data[len / 2 + 1]) / 2.0;
+		median = -9999;
 	}
 	else
 	{
-		median = data[len / 2 + 1];
+		if (len % 2 == 0)
+		{
+			median = (data[len / 2] + data[len / 2 + 1]) / 2.0;
+		}
+		else
+		{
+			median = data[len / 2 + 1];
+		}
 	}
 
 	return median;
@@ -2798,4 +2899,17 @@ double getActualDuration(double duration)
 	// double c = 1.5241;
 	time = a * pow(duration, 2) + b * duration + c;
 	return time;
+}
+
+
+TEST::TEST()
+{
+	a = 0;
+	b - 10;
+}
+
+void changeTest(TEST &t)
+{
+	t.a = 56;
+	t.b = 100;
 }

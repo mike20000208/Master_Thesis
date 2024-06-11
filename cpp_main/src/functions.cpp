@@ -1521,17 +1521,22 @@ int simple_test()
     // }
 
 
-    fstream f;
-    double q;
-    f.open(string(DEBUG_FOLDER) + string("selectProcessNoise.csv"), ios::app | ios::out);
+    // fstream f;
+    // double q;
+    // f.open(string(DEBUG_FOLDER) + string("selectProcessNoise.csv"), ios::app | ios::out);
 
-    for (float t = 0; t <= 20; t+=0.001)  // in second. 
-    {
-        q = KF::selectProcessNoise(t);
-        f << to_string(q) << ", " << to_string(t) << "\n";
-    }
+    // for (float t = 0; t <= 20; t+=0.001)  // in second. 
+    // {
+    //     q = KF::selectProcessNoise(t);
+    //     f << to_string(q) << ", " << to_string(t) << "\n";
+    // }
 
-    f.close();
+    // f.close();
+
+    TEST t;
+    printf("\n\n%d, %d\n\n", t.a, t.b);
+    changeTest(t);
+    printf("\n\n%d, %d\n\n", t.a, t.b);
 
     return 0;
 }
@@ -1747,11 +1752,11 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
-    // viewer->setBackgroundColor(0, 0, 0);
-    // viewer->setPosition(0, 450);
-    // viewer->addCoordinateSystem(5, "global");
-    // viewer->initCameraParameters();
+    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    viewer->setPosition(0, 450);
+    viewer->addCoordinateSystem(5, "global");
+    viewer->initCameraParameters();
 
     // Initialize cv objects.
     const string win1 = "Color Image";
@@ -1939,6 +1944,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         G.setHeightThreshold(.10);
         G.rendering();
         G.divide();
+        // G.findPath();
 
         // Project the grid divided from the pointcloud on the map.
         if (m.isMap)
@@ -1946,7 +1952,14 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
             m.mapUpdate(G, ImgLog.timestamp);  // at this point, the info map is being updated. 
         }
 
+        // Find the frontier to explore as much as it can. 
+        // printf("\n\nGet into findFrontier. \n\n");
+        // m.findFrontier();
+
+        // Display the map and trajectory.
         m.renderingFromInfoMap();
+        // printf("\n\nGet into frontierShow. \n\n");
+        // m.frontierShow();
         m.originShow();
         m.locShow();
         m.mapShow();
@@ -1965,20 +1978,20 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
 
-        // // Pointcloud visualization.
-        // // pc_layers.push_back(cloud_filtered);
-        // pc_layers.push_back(G.cloud);    
+        // Pointcloud visualization.
+        // pc_layers.push_back(cloud_filtered);
+        pc_layers.push_back(G.cloud);    
 
-        // for (int i = 0; i < pc_layers.size(); i++)
-        // {
-        //     viewer->addPointCloud(
-        //         pc_layers[i],
-        //         to_string(i));
-        //     viewer->setPointCloudRenderingProperties(
-        //         pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
-        //         4,
-        //         to_string(i));
-        // }
+        for (int i = 0; i < pc_layers.size(); i++)
+        {
+            viewer->addPointCloud(
+                pc_layers[i],
+                to_string(i));
+            viewer->setPointCloudRenderingProperties(
+                pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
+                4,
+                to_string(i));
+        }
 
         // Current scene, map, and trajectory visualization. 
         cv::moveWindow(win1, 0, 0);
@@ -1997,7 +2010,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         cv::imshow(win3, t.tempMap);
         char c = cv::waitKey(1);
         
-        // viewer->spinOnce(1);
+        viewer->spinOnce(1);
 
         // Check whether to terminate the programme.
         if (c == 32 || c == 13 || TERMINATE == true)
@@ -2008,8 +2021,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         }
 
         // Reset.
-        // pc_layers.clear();
-        // viewer->removeAllPointClouds();
+        pc_layers.clear();
+        viewer->removeAllPointClouds();
     }
 
     // Document the general info.
