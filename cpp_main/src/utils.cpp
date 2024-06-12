@@ -210,6 +210,7 @@ Logging::Logging()
 	mode_path = main_folder + "/Mode.txt";
     bag_path = main_folder + "/record.bag";
     time_path = main_folder + "/TimeLog.csv";
+	detailed_time_path = main_folder + "/Time_for_each_component.csv";
 
     traj_final_path = main_folder + "/Trajectory_final.png";
     map_final_path = main_folder + "/Map_final.png";
@@ -1006,6 +1007,37 @@ double My_Map::cellProject(double height, double depth, double timestamp)
 
 
 /**
+ * @brief Project the cells in best path on the map.
+ */
+void My_Map::cellProjectForPath()
+{
+	// Initialize center point in map frame and image frame. 
+	Point2D center_map, center_img;
+
+	if (My_Map::isTransformed)
+	{
+		// Make sure the numebers will be integers. but still in the map frame  
+		center_map.x = round(My_Map::center_map[0]);
+		center_map.y = round(My_Map::center_map[1]);
+
+		// Convert the center from map frame to image frame. 
+		center_img = My_Map::map2img(center_map);
+
+		// Mark the corresponding cell as best path.
+		My_Map::infoMap[center_img.y][center_img.x].isPath = true;
+
+		// Reset the flag. 
+		My_Map::isTransformed = false;
+	}
+	else
+	{
+		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
+		exit(-1);
+	}
+}
+
+
+/**
  * @brief Get the current pose and heading of the robot. 
  * @param x x data from odometry in meter.
  * @param y y data from odometry in meter.
@@ -1128,6 +1160,30 @@ void My_Map::mapUpdate(GridAnalysis &G, double timestamp)
 
 
 /**
+ * Update the path found in class GridAnalysis. 
+ */
+void My_Map::pathUpdate(GridAnalysis &G)
+{
+	int len = static_cast<int>(G.bestCells.size());
+
+	for (int i = 0; i < len; i++)
+	{
+		// Get the coordinates of a cell, but still in camera frame. 
+		My_Map::center_cam = cv::Vec3d(
+			G.grid[G.bestCells[i].first][G.bestCells[i].second].X, 
+			G.grid[G.bestCells[i].first][G.bestCells[i].second].Y, 
+			G.grid[G.bestCells[i].first][G.bestCells[i].second].Z);
+
+		// Transformation from camera frame to map frame.
+		My_Map::cam2map();
+
+		// Transformation from map frame to image frame. (the image used to display the map)
+		My_Map::cellProjectForPath();
+	}
+}
+
+
+/**
  * @brief Visualize the heading on the map. 
 */
 void My_Map::headingShow()
@@ -1206,8 +1262,8 @@ void My_Map::renderingFromInfoMap()
 {
 	My_Map::isRendered = true;
 	cv::Scalar color;
-	fstream f;
-	f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
+	// fstream f;
+	// f.open(string(DEBUG_FOLDER) + string("KF.csv"), ios::out | ios::app);
 
 	if (!My_Map::isHeadingShown && !My_Map::isOriginShown)
 	{
@@ -1254,11 +1310,11 @@ void My_Map::renderingFromInfoMap()
 	{
 		for (int j = 0; j < My_Map::infoMap[0].size(); j++)
 		{
-			// Debug of Kalman filter.
-			f << to_string(i) << ", " << to_string(j) << ", " \
-			<< to_string(infoMap[i][j].est_state) << ", " \
-			<< to_string(infoMap[i][j].measurement) << ", " \
-			<< to_string(infoMap[i][j].gain) << "\n";
+			// // Debug of Kalman filter.
+			// f << to_string(i) << ", " << to_string(j) << ", " \
+			// << to_string(infoMap[i][j].est_state) << ", " \
+			// << to_string(infoMap[i][j].measurement) << ", " \
+			// << to_string(infoMap[i][j].gain) << "\n";
 			
 			if (My_Map::infoMap[i][j].iteration == -1)  // this cell hasn't been explored. 
 			{
@@ -1279,11 +1335,19 @@ void My_Map::renderingFromInfoMap()
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+
+				if (My_Map::infoMap[i][j].isPath)
+				{
+					color = cv::Scalar(168, 50, 168);
+					My_Map::tempMap.at<cv::Vec3b>(i, j)[0] = color[0];
+					My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
+					My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
+				}
 			}
 		}
 	}
 
-	f.close();
+	// f.close();
 }
 
 
@@ -1333,7 +1397,15 @@ void My_Map::flagReset()
     isHeadingShown = false;
     isRendered = false;
 	isPosShown = false;
-	// frontier.clear();
+
+	// Reset the path attribute in the infomap. 
+	for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
+	{
+		for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
+		{
+			My_Map::infoMap[i][j].isPath = false;
+		}
+	}
 }
 
 
@@ -2543,23 +2615,168 @@ void GridAnalysis::divide()
 		}
 	}
 
-	// Debug for division. 
-	fstream f;
-	string file = "division_1.csv";
-	file = DEBUG_FOLDER + file;
-	f.open(file, ios::out | ios::app);
-	for (int i = 0; i < GridAnalysis::grid.size(); i++)
+	// // Debug for division. 
+	// fstream f;
+	// string file = "division_1.csv";
+	// file = DEBUG_FOLDER + file;
+	// f.open(file, ios::out | ios::app);
+	// for (int i = 0; i < GridAnalysis::grid.size(); i++)
+	// {
+	// 	for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+	// 	{
+	// 		f << to_string(i) << ", " << to_string(j) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].counter) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].X) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].Y) << ", " \
+	// 		<< to_string(GridAnalysis::grid[i][j].Z) << "\n";
+	// 	}
+	// }
+	// f.close();
+}
+
+
+/**
+ * @brief Scale to score. 
+ */
+void GridAnalysis::scale(vector<double> &scores, vector<double> data, string mode)
+{
+	int len = static_cast<int>(data.size());
+	double min = 0, max = 0, score = 0;
+	double upperBound = 1, lowerBound = 0;
+
+
+	if (mode == "height")
 	{
-		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+		for (int i = 0; i < len; i++)
 		{
-			f << to_string(i) << ", " << to_string(j) << ", " \
-			<< to_string(GridAnalysis::grid[i][j].counter) << ", " \
-			<< to_string(GridAnalysis::grid[i][j].X) << ", " \
-			<< to_string(GridAnalysis::grid[i][j].Y) << ", " \
-			<< to_string(GridAnalysis::grid[i][j].Z) << "\n";
+			data[i] = pow(data[i], 2);
+		}
+
+		min = *min_element(data.begin(), data.end());
+		max = *max_element(data.begin(), data.end());
+
+		for (int i = 0; i < len; i++)
+		{
+			score = ((data[i] - min) / (max - min)) * (lowerBound - upperBound) + upperBound;
+			scores.push_back(score);
 		}
 	}
-	f.close();
+	else if (mode == "number")
+	{
+		min = *min_element(data.begin(), data.end());
+		max = *max_element(data.begin(), data.end());
+
+		for (int i = 0; i < len; i++)
+		{
+			score = ((data[i] - min) / (max - min)) * (upperBound - lowerBound) + lowerBound;
+			scores.push_back(score);
+		}
+	}
+	else if (mode == "continuity")
+	{
+		min = *min_element(data.begin(), data.end());
+		max = *max_element(data.begin(), data.end());
+
+		for (int i = 0; i < len; i++)
+		{
+			score = ((data[i] - min) / (max - min)) * (lowerBound - upperBound) + upperBound;
+			scores.push_back(score);
+		}
+	}
+	else
+	{
+		exit(-1);
+	}
+}
+
+
+/**
+ * @brief Score the cells based on the first criterion. 
+ */
+vector<double> GridAnalysis::firstCriterion()
+{
+	// Initialize general variables. 
+	int len = static_cast<int>(GridAnalysis::cells.size());
+	vector<double> numScore, heightScore, heights, numbers, score;
+
+	// Log all the necessary data.
+	for (int i = 0; i < len; i++)
+	{
+		heights.push_back(GridAnalysis::grid[GridAnalysis::cells[i].first][GridAnalysis::cells[i].second].Y);
+		// numbers.push_back(GridAnalysis::grid[GridAnalysis::cells[i].first][GridAnalysis::cells[i].second].counter);
+	}
+
+	GridAnalysis::scale(heightScore, heights, "height");
+	// GridAnalysis::scale(numScore, numbers, "number");
+
+	for (int k = 0; k < len; k++)
+	{
+		score.push_back(heightScore[k]);
+		// score.push_back(heightScore[k] + numScore[k]);
+	}
+	
+	return score;
+}
+
+
+/**
+ * @brief Score the cells based on the second criterion. 
+ */
+vector<double> GridAnalysis::secondCriterion(int iter)
+{
+	// Initialize general variables. 
+	int len = static_cast<int>(GridAnalysis::cells.size());
+	vector<double> diss, score;
+	double dis = 0.0;
+	int center = 0;
+	bool isEven = false;
+
+	if (iter == 0)
+	{
+		if (len % 2 == 0)
+		{
+			center = len / 2 - 1;
+			isEven = true;
+		}
+		else
+		{
+			center = len / 2;
+			isEven = false;
+		}
+
+		for (int i = 0; i < len; i++)
+		{
+			if (isEven)
+			{
+				dis = sqrt(
+					pow((grid[cells[i].first][cells[i].second].X - \
+					((grid[cells[center].first][cells[center].second].X + grid[cells[center+1].first][cells[center+1].second].X) / 2)), 2) + \
+					pow((grid[cells[i].first][cells[i].second].Z - \
+					((grid[cells[center].first][cells[center].second].Z + grid[cells[center+1].first][cells[center+1].second].Z) / 2)), 2));
+			}
+			else
+			{
+				dis = sqrt(
+					pow((grid[cells[i].first][cells[i].second].X - grid[cells[center].first][cells[center].second].X), 2) + \
+					pow((grid[cells[i].first][cells[i].second].Z - grid[cells[center].first][cells[center].second].Z), 2));
+			}
+
+			diss.push_back(dis);
+		}
+	}
+	else
+	{
+		for (int j = 0; j < len; j++)
+		{
+			dis = sqrt(
+				pow((grid[cells[j].first][cells[j].second].X - grid[bestCells[iter-1].first][bestCells[iter-1].second].X), 2) + \
+				pow((grid[cells[j].first][cells[j].second].Z - grid[bestCells[iter-1].first][bestCells[iter-1].second].Z), 2));
+			diss.push_back(dis);
+		}
+	}
+
+	GridAnalysis::scale(score, diss, "continuity");
+	return score;
 }
 
 
@@ -2569,9 +2786,11 @@ void GridAnalysis::divide()
 void GridAnalysis::findPath()
 {
 	vector<int> rows;
+	double maxScore = -1e6;
+	int maxIndex = 0;
 	pair<int, int> index;
-	double minHeight = 1e6;
-	pair<int, int> minHeightIndex;
+	vector<double> score1, score2, gScore;
+	double weight1 = .55, weight2 = .45;
 
 	// Find the valid row indices. 
 	for (int i = GridAnalysis::grid.size()-1; i >= 0; i--)
@@ -2586,31 +2805,49 @@ void GridAnalysis::findPath()
 		}
 	}
 
-	// Collect all the traversable cell.
+	// Collect all the non-empty cells.
 	for(int k = 0; k < static_cast<int>(rows.size()); k++)
 	{
-		minHeight = 1e6;
-		for (int j = 0; j < GridAnalysis::grid[0].size(); j++)
+		// Initialize the containers for each iteration. 
+		GridAnalysis::cells.clear();
+		score1.clear();
+		score2.clear();
+		gScore.clear();
+		maxScore = -1e6;
+		maxIndex = 0;
+
+		for (int j = 0; j < static_cast<int>(GridAnalysis::grid[0].size()); j++)
 		{
 			if (grid[rows[k]][j].counter != 0)  // check if empty first. 
 			{
-				if (grid[rows[k]][j].Y <= GridAnalysis::heightThreshold &&
-				grid[rows[k]][j].Y >= -GridAnalysis::heightThreshold)  // check if traversable then. 
-				{
-					index.first = rows[k];
-					index.second = j;
-					GridAnalysis::cells.push_back(index);
-
-					if (grid[rows[k]][j].Y < minHeight)
-					{
-						minHeight = grid[rows[k]][j].Y;
-						minHeightIndex.first = rows[k];
-						minHeightIndex.second = j;
-					}
-				}
+				index.first = rows[k];
+				index.second = j;
+				GridAnalysis::cells.push_back(index);
 			}
 		}
-		GridAnalysis::bestCells.push_back(minHeightIndex);
+
+		// Get the scores based on two criteria. 
+		score1 = GridAnalysis::firstCriterion();
+		score2 = GridAnalysis::secondCriterion(k);
+
+		// Get the general score.
+		for (int n = 0; n < static_cast<int>(GridAnalysis::cells.size()); n++)
+		{
+			gScore.push_back(weight1 * score1[n] + weight2 * score2[n]);
+		}
+
+		// Find the index of the highest score.
+		for (int m = 0; m < static_cast<int>(GridAnalysis::cells.size()); m++)
+		{
+			if (gScore[m] >= maxScore)
+			{
+				maxScore = gScore[m];
+				maxIndex = m;
+			}
+		}
+
+		// Add it into the bestcells. 
+		GridAnalysis::bestCells.push_back(GridAnalysis::cells[maxIndex]);
 	}
 }
 
@@ -2772,7 +3009,7 @@ double get_mean(vector<double> data)
 */
 double get_median(vector<double> data)
 {
-	printf("\n\nGet into the get_median. \n\n");
+	// printf("\n\nGet into the get_median. \n\n");
 	double median = 0.0;
 	int len = static_cast<int>(data.size());
 	sort(data.begin(), data.end());

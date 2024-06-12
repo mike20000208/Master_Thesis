@@ -201,6 +201,7 @@ struct CellKF
     double gain = 0.0;
     double pre_state = 0.0;
     double pre_cov = 0.0;
+    bool isPath = false;
 };
 
 // enum CellType
@@ -481,6 +482,15 @@ public:
     // Divide the pointcloud into a grid.
     void divide();
 
+    // Scale to score. 
+    void scale(vector<double> &scores, vector<double> data, string mode);
+
+    // Score the cells based on the first criterion.
+    vector<double> firstCriterion();
+
+    // Score the cells based on the second criterion.
+    vector<double> secondCriterion(int iter);
+
     // Find the path on the divided grid.
     void findPath(); 
 };
@@ -630,6 +640,8 @@ public:
     //  void cellProject(double height); // faster way. (without KF)
     double cellProject(double height, double depth, double timestamp); // faster way, and with more info.
 
+    void cellProjectForPath();
+
     // Get the current pose of the robot
     Pose getCurrent(double x, double y, EulerAngle_ e);
 
@@ -638,6 +650,9 @@ public:
 
     // Map info update method.
     void mapUpdate(GridAnalysis &G, double timestamp); // the faster method.
+
+    // Path update method
+    void pathUpdate(GridAnalysis &G);
 
     // Show the heading.
     void headingShow();
