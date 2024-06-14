@@ -2637,13 +2637,15 @@ void GridAnalysis::divide()
 
 /**
  * @brief Scale to score. 
+ * @param scores final score of input data. Scale from lower bound to upper bound.
+ * @param data data needs to be scored.
+ * @param mode which criterion is going to be used to score.
  */
 void GridAnalysis::scale(vector<double> &scores, vector<double> data, string mode)
 {
 	int len = static_cast<int>(data.size());
 	double min = 0, max = 0, score = 0;
 	double upperBound = 1, lowerBound = 0;
-
 
 	if (mode == "height")
 	{
@@ -2790,7 +2792,7 @@ void GridAnalysis::findPath()
 	int maxIndex = 0;
 	pair<int, int> index;
 	vector<double> score1, score2, gScore;
-	double weight1 = .55, weight2 = .45;
+	double weight1 = .58, weight2 = .42;
 
 	// Find the valid row indices. 
 	for (int i = GridAnalysis::grid.size()-1; i >= 0; i--)
