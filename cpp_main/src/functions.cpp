@@ -1537,9 +1537,19 @@ int simple_test()
     // changeTest(t);
     // printf("\n\n%d, %d\n\n", t.a, t.b);
 
-    int i = 5;
-    i = i / 2;
-    printf("\n\n%d \n\n", i);
+    // int i = 5;
+    // i = i / 2;
+    // printf("\n\n%d \n\n", i);
+
+    cv::Mat img = cv::imread("/home/mike/Pictures/map_365.png");
+    int startX = 345;
+    int startY = 345;
+    cv::Rect roi(startX, startY, img.cols-startX, img.rows-startY);
+    // cv::Rect roi(50, 50, 50, 50);
+    cv::Mat extracted = img(roi);
+    cv::imshow("extracted", extracted);
+    cv::waitKey(0);
+    cv::imwrite("/home/mike/Pictures/map_365_extracted.png", extracted);
 
     return 0;
 }
