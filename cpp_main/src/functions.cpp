@@ -1960,6 +1960,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         GridAnalysis G(cloud_filtered);
         G.setCellSize(pow(res, -1));
         G.setHeightThreshold(.10);
+        G.setWeight1(.56);
+        G.setWeight2(.44);
         G.rendering();
         G.divide();
         end = clock();
@@ -1970,8 +1972,13 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         if (m.isMap)
         {
             m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
-            G.findPath();
-            m.pathUpdate(G);
+
+            if (ImgLog.number % 1 == 0)  // decrease the frequency of path updating, make it more stable.
+            {
+                G.findPath();
+                m.pathUpdate(G);
+            }
+
         }
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)

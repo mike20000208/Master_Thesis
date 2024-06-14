@@ -463,6 +463,10 @@ public:
     // Threshold of height to determine the traversability. (in meter)
     double heightThreshold = .10;
 
+    // Weights used fro path planning.
+    double weight1 = .58;
+    double weight2 = .42;
+
     // Grid to store the information of each cell.
     vector<vector<Cell>> grid;
 
@@ -472,9 +476,11 @@ public:
     // Constructor.
     GridAnalysis(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
 
-    // Methods to setup the attributes.
+    // Methods to setup the attributes and parameters.
     void setCellSize(double size);
     void setHeightThreshold(double threshold);
+    void setWeight1(double weight);
+    void setWeight2(double weight);
 
     // Render the pointcloud based on the height.
     void rendering();

@@ -2506,6 +2506,26 @@ void GridAnalysis::setHeightThreshold(double threshold)
 
 
 /**
+ * @brief Set the weight of the score calculated based on the first criterion, which is the traversability. 
+ * @param weight the weight for the traversability. 
+ */
+void GridAnalysis::setWeight1(double weight)
+{
+	GridAnalysis::weight1 = weight;
+}
+
+
+/**
+ * @brief Set the weight of the score calculated based on the second criterion, which is the continuity. 
+ * @param weight the weight for the continuity. 
+ */
+void GridAnalysis::setWeight2(double weight)
+{
+	GridAnalysis::weight2 = weight;
+}
+
+
+/**
  * @brief Render the pointcloud based on the height. 
 */
 void GridAnalysis::rendering()
@@ -2645,7 +2665,7 @@ void GridAnalysis::scale(vector<double> &scores, vector<double> data, string mod
 {
 	int len = static_cast<int>(data.size());
 	double min = 0, max = 0, score = 0;
-	double upperBound = 1, lowerBound = 0;
+	double upperBound = 5, lowerBound = 1;
 
 	if (mode == "height")
 	{
@@ -2792,7 +2812,7 @@ void GridAnalysis::findPath()
 	int maxIndex = 0;
 	pair<int, int> index;
 	vector<double> score1, score2, gScore;
-	double weight1 = .58, weight2 = .42;
+	// double weight1 = .58, weight2 = .42;
 
 	// Find the valid row indices. 
 	for (int i = GridAnalysis::grid.size()-1; i >= 0; i--)
