@@ -1322,6 +1322,7 @@ void My_Map::renderingFromInfoMap()
 			}
 			else
 			{
+				// Render the map based on the height data. 
 				if (My_Map::infoMap[i][j].est_state >= -My_Map::height_threshold && 
 				My_Map::infoMap[i][j].est_state <= My_Map::height_threshold)
 				{
@@ -1336,6 +1337,7 @@ void My_Map::renderingFromInfoMap()
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[1] = color[1];
 				My_Map::tempMap.at<cv::Vec3b>(i, j)[2] = color[2];
 
+				// Render the map based on the path flag. 
 				if (My_Map::infoMap[i][j].isPath)
 				{
 					color = cv::Scalar(168, 50, 168);

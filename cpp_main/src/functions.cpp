@@ -1982,19 +1982,22 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         if (m.isMap)
         {
             m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
-
-            if (ImgLog.number % 1 == 0)  // decrease the frequency of path updating, make it more stable.
-            {
-                G.findPath();
-                m.pathUpdate(G);
-            }
-
         }
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)
 
         // Find the frontier to explore as much as it can.
         // m.findFrontier();
+
+        // Find the path from the updated grid. 
+        if (m.isMap)
+        {
+            if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
+            {
+                G.findPath();
+                m.pathUpdate(G);
+            }
+        }
 
         // Display the map and trajectory.
         start = clock();
