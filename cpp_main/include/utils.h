@@ -78,6 +78,7 @@ namespace fs = std::filesystem;
 extern bool TERMINATE;
 extern bool isRecording;
 extern bool isUseKF;
+extern bool isUseWFD;
 
 struct GPS
 {
@@ -466,6 +467,7 @@ public:
     // Weights used fro path planning.
     double weight1 = .58;
     double weight2 = .42;
+    double weight3 = .00;
 
     // Grid to store the information of each cell.
     vector<vector<Cell>> grid;
@@ -497,8 +499,11 @@ public:
     // Score the cells based on the second criterion.
     vector<double> secondCriterion(int iter);
 
+    // Score the cells based on the third criterion.
+    vector<double> thirdCriterion();
+
     // Find the path on the divided grid.
-    void findPath(); 
+    void findPath(bool isGlobalInvolved); 
 };
 
 class KF
@@ -688,10 +693,7 @@ public:
     // bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
 
     // Find the frontier in the current map.
-    void findFrontier();
-
-    // Predict the most drivable path for the robot.
-    void predictPath();
+    bool findFrontier();
 
     // Show the frontier on the map.
     void frontierShow();

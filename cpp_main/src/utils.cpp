@@ -7,6 +7,8 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
+bool isUseWFD = false;
+
 
 /**
  * @brief Shows that the whole program is done. 
@@ -1535,7 +1537,7 @@ bool My_Map::hasLeastOneOpenSpaceNeighbor(pair<int, int> cell)
  * final frontier. 
  * 
 */
-void My_Map::findFrontier()
+bool My_Map::findFrontier()
 {
 	// // Initialize variables for debug.
 	// fstream f;
@@ -1713,14 +1715,13 @@ void My_Map::findFrontier()
 
 	// Calculate the centroid of the found frontier. 
     // printf("\n\nCalculate the centroid of the found frontier. \n\n");
-
 	for (int i = 0; i < My_Map::frontier.size(); i++)
 	{
 		rows.push_back(double(My_Map::frontier[i].first));
 		cols.push_back(double(My_Map::frontier[i].second));
 	}
 
-	printf("\n\nCalculate the median. \n\n");
+	// printf("\n\nCalculate the median. \n\n");
 	centroid_row = int(get_median(rows));
 	centroid_col = int(get_median(cols));
 	// printf("\n\n%f. \n\n", centroid_row);
@@ -1728,22 +1729,18 @@ void My_Map::findFrontier()
 	// printf("\n\nAssign the values. \n\n");
 	My_Map::frontierCentroid.first = centroid_row;
 	My_Map::frontierCentroid.second = centroid_col;
-	printf("\n\nMedian calculation is done. \n\n");
+	// printf("\n\nMedian calculation is done. \n\n");
 
 	// f.close();
-}
 
-
-/**
- * @brief Predict the most drivable path for the robot. 
- * 
- * Specifically, combine the local conditions and the found frontier 
- * 
- * (global conditio) to determine the path.
-*/
-void My_Map::predictPath()
-{
-	;
+	if (static_cast<int>(My_Map::frontier.size()) != 0)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 
@@ -2805,15 +2802,30 @@ vector<double> GridAnalysis::secondCriterion(int iter)
 
 
 /**
+ * @brief Score the cells based on the third criterion. 
+ */
+vector<double> GridAnalysis::thirdCriterion()
+{
+	// Initialize general variables. 
+	int len = static_cast<int>(GridAnalysis::cells.size());
+	vector<double> diss, score;
+	double dis = 0.0;
+
+	return score;
+}
+
+
+/**
  * @brief Find the local path on the grid.  
  */
-void GridAnalysis::findPath()
+void GridAnalysis::findPath(bool isGlobalInvolved)
 {
 	vector<int> rows;
 	double maxScore = -1e6;
 	int maxIndex = 0;
 	pair<int, int> index;
-	vector<double> score1, score2, gScore;
+	vector<double> score1, score2, score3, gScore;
+	int len = static_cast<int>(GridAnalysis::cells.size());
 	// double weight1 = .58, weight2 = .42;
 
 	// Find the valid row indices. 
@@ -2851,17 +2863,41 @@ void GridAnalysis::findPath()
 		}
 
 		// Get the scores based on two criteria. 
+        // printf("\n\nCalculating the scores. \n\n");
 		score1 = GridAnalysis::firstCriterion();
 		score2 = GridAnalysis::secondCriterion(k);
 
-		// Get the general score.
-		for (int n = 0; n < static_cast<int>(GridAnalysis::cells.size()); n++)
+		if (isGlobalInvolved)
 		{
-			gScore.push_back(weight1 * score1[n] + weight2 * score2[n]);
+			score3 = GridAnalysis::thirdCriterion();
+			GridAnalysis::weight3 = .20;
+			GridAnalysis::weight1 -= GridAnalysis::weight3 / 2;
+			GridAnalysis::weight2 -= GridAnalysis::weight3 / 2;
+		}
+		else
+		{
+			GridAnalysis::weight3 = .00;
+			score3.resize(len, 0.0);
+		}
+
+		// Get the general score.
+        // printf("\n\nCalculating the general scores. \n\n");
+		for (int n = 0; n < len; n++)
+		{
+			if (isGlobalInvolved)
+			{
+				gScore.push_back(weight1 * score1[n] + weight2 * score2[n] + weight3 * score3[n]);
+			}
+			else
+			{
+				gScore.push_back(weight1 * score1[n] + weight2 * score2[n]);
+			}
+			
 		}
 
 		// Find the index of the highest score.
-		for (int m = 0; m < static_cast<int>(GridAnalysis::cells.size()); m++)
+        // printf("\n\nFinding the best score. \n\n");
+		for (int m = 0; m < len; m++)
 		{
 			if (gScore[m] >= maxScore)
 			{
@@ -2871,6 +2907,7 @@ void GridAnalysis::findPath()
 		}
 
 		// Add it into the bestcells. 
+		// printf("\n\nlen = %d and maxIndex = %d\n\n", len, maxIndex);
 		GridAnalysis::bestCells.push_back(GridAnalysis::cells[maxIndex]);
 	}
 }

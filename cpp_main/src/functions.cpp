@@ -1808,6 +1808,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
     clock_t start, end;
     clock_t start_whole, end_whole;
+    bool isWFDInvolved = false;
 
     // Clear the debug folder.
     std::filesystem::path P{DEBUG_FOLDER};
@@ -1979,30 +1980,44 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         // Project the grid divided from the pointcloud on the map.
         start = clock();
-        if (m.isMap)
-        {
-            m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
-        }
-        end = clock();
-        getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)
+        m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
 
         // Find the frontier to explore as much as it can.
-        // m.findFrontier();
-
-        // Find the path from the updated grid. 
-        if (m.isMap)
+        // printf("\n\nGet into frontier searching. \n\n");
+        if (isUseWFD)
         {
-            if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
+            if(m.findFrontier())
             {
-                G.findPath();
-                m.pathUpdate(G);
+                isWFDInvolved = true;
+            }
+            else
+            {
+                isWFDInvolved = false;
             }
         }
+        else
+        {
+            isWFDInvolved = false;
+        }
+
+        // printf("\n\nGet into path searching. \n\n");
+        // Find the path from the updated grid. 
+        if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
+        {
+            G.findPath(isWFDInvolved);
+            m.pathUpdate(G);
+        }
+        // printf("\n\nGet out of the path searching. \n\n");
+        end = clock();
+        getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)
 
         // Display the map and trajectory.
         start = clock();
         m.renderingFromInfoMap();
-        // m.frontierShow();
+        if (isWFDInvolved)
+        {
+            m.frontierShow();
+        }
         m.originShow();
         m.locShow();
         m.mapShow();
@@ -2069,6 +2084,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // Reset.
         pc_layers.clear();
         viewer->removeAllPointClouds();
+        isWFDInvolved = false;
 
         end_whole = clock();
         getDuration(start_whole, end_whole, l.detailed_time_path, true); // Get the spent time. (8)
