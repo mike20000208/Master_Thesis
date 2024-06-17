@@ -7,7 +7,7 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
-bool isUseWFD = true;
+bool isUseWFD = false;
 
 
 /**
@@ -1538,7 +1538,7 @@ bool My_Map::hasLeastOneOpenSpaceNeighbor(pair<int, int> cell)
 void My_Map::findFrontier()
 {	
 	// Initialize some general vairables. 
-	pair<int, int> pose, f_cell, frontier, neighbor;
+	pair<int, int> pose, f_cell, frontier, neighbor, median;
 	vector<double> rows, cols;
 	int centroid_row = 0, centroid_col = 0;
 	
@@ -1622,7 +1622,9 @@ void My_Map::findFrontier()
 
 			// Line 24. Save data of new frontier. 
 			// This line could be a problem. 
-			My_Map::frontier = My_Map::new_frontier;
+			// Not save the whole frontier. Instead, store the centroid of the frontier. 
+			median = My_Map::getCentroid();
+			My_Map::frontier.push_back(median);
 
 			// line 25. 
 			for (int k = 0; k < static_cast<int>(My_Map::new_frontier.size()); k++)
@@ -1654,17 +1656,47 @@ void My_Map::findFrontier()
 		My_Map::Map_Close.insert(f_cell);
 	}
 
-	// Calculate the centroid of the found frontier. 
-	for (int i = 0; i < My_Map::frontier.size(); i++)
+	// // Calculate the centroid of the found frontier. 
+	// for (int i = 0; i < My_Map::frontier.size(); i++)
+	// {
+	// 	rows.push_back(double(My_Map::frontier[i].first));
+	// 	cols.push_back(double(My_Map::frontier[i].second));
+	// }
+
+	// centroid_row = int(get_median(rows));
+	// centroid_col = int(get_median(cols));
+	// My_Map::frontierCentroid.first = centroid_row;
+	// My_Map::frontierCentroid.second = centroid_col;
+}
+
+
+/**
+ * @brief Calculate the centroid (median) of the found frontier. 
+ * @return the median of the found frontier. 
+ */
+pair<int, int> My_Map::getCentroid()
+{
+	pair<int, int> median;
+	vector<double> rows, cols;
+
+	if (!My_Map::new_frontier.empty())
 	{
-		rows.push_back(double(My_Map::frontier[i].first));
-		cols.push_back(double(My_Map::frontier[i].second));
+		for (int i = 0; i < static_cast<int>(My_Map::new_frontier.size()); i++)
+		{
+			rows.push_back(My_Map::new_frontier[i].first);
+			cols.push_back(My_Map::new_frontier[i].second);
+		}
+
+		median.first = int(get_median(rows));
+		median.second = int(get_median(cols));
+	}
+	else
+	{
+		median.first = 0;
+		median.second = 0;
 	}
 
-	centroid_row = int(get_median(rows));
-	centroid_col = int(get_median(cols));
-	My_Map::frontierCentroid.first = centroid_row;
-	My_Map::frontierCentroid.second = centroid_col;
+	return median;
 }
 
 
@@ -1673,28 +1705,33 @@ void My_Map::findFrontier()
 */
 void My_Map::frontierShow()
 {
-	vector<double> rows, cols;
+	vector<double> rows, cols, diss;
+	vector<double> data;
+	double dis = 0;
+	map<double, pair<int, int>> medians;
+	int length = 3;
 	// int centroid_row = 0, centroid_col = 0;
 
-	// Mark all the cells in the frontier. 
+	// Collect all the medians. 
+	printf("\n\nCollecting all the medians\n\n");
 	if (!My_Map::frontier.empty())
 	{
-		for (int i = 0; i < My_Map::frontier.size(); i++)
+		for (int i = 0; i < static_cast<int>(My_Map::frontier.size()); i++)
 		{
 			// rows.push_back(My_Map::frontier[i].first);
 			// cols.push_back(My_Map::frontier[i].second);
 
-			My_Map::tempMap.at<Vec3b>(
-				My_Map::frontier[i].first, 
-				My_Map::frontier[i].second)[0] = 200;
+			// My_Map::tempMap.at<Vec3b>(
+			// 	My_Map::frontier[i].first, 
+			// 	My_Map::frontier[i].second)[0] = 200;
 
-			My_Map::tempMap.at<Vec3b>(
-				My_Map::frontier[i].first, 
-				My_Map::frontier[i].second)[1] = 0;
+			// My_Map::tempMap.at<Vec3b>(
+			// 	My_Map::frontier[i].first, 
+			// 	My_Map::frontier[i].second)[1] = 0;
 
-			My_Map::tempMap.at<Vec3b>(
-				My_Map::frontier[i].first, 
-				My_Map::frontier[i].second)[2] = 0;
+			// My_Map::tempMap.at<Vec3b>(
+			// 	My_Map::frontier[i].first, 
+			// 	My_Map::frontier[i].second)[2] = 0;
 
 			// cv::circle(
 			// 	My_Map::tempMap,
@@ -1703,6 +1740,27 @@ void My_Map::frontierShow()
 			// 	cv::Scalar(200, 0, 0),
 			// 	-1
 			// );
+			data.clear();
+			data.push_back(My_Map::frontier[i].second);
+			data.push_back(My_Map::frontier[i].first);
+			data.push_back(My_Map::currentPoint.x_pixel_img);
+			data.push_back(My_Map::currentPoint.y_pixel_img);
+			dis = getDistance(data);
+
+			diss.push_back(dis);
+			medians.insert(pair<double, pair<int, int>>(dis, My_Map::frontier[i]));
+
+			// if (dis > 15)
+			// {
+			// 	cv::circle(
+			// 		My_Map::tempMap,
+			// 		cv::Point(
+			// 			round(My_Map::frontier[i].second), 
+			// 			round(My_Map::frontier[i].first)),
+			// 		1,
+			// 		cv::Scalar(168, 50, 168),
+			// 		-1);	
+			// }
 		}
 
 		// Mark the centroid of the frontier. 
@@ -1729,15 +1787,43 @@ void My_Map::frontierShow()
 		// 	-1
 		// );		
 
-		cv::circle(
-			My_Map::tempMap,
-			cv::Point(
-				round(My_Map::frontierCentroid.second), 
-				round(My_Map::frontierCentroid.first)),
-			1,
-			cv::Scalar(168, 50, 168),
-			-1
-		);		
+		// cv::circle(
+		// 	My_Map::tempMap,
+		// 	cv::Point(
+		// 		round(My_Map::frontierCentroid.second), 
+		// 		round(My_Map::frontierCentroid.first)),
+		// 	1,
+		// 	cv::Scalar(168, 50, 168),
+		// 	-1
+		// );		
+	}
+
+	// Pick three medians with minimum distance. 
+	printf("\n\nSorting. \n\n");
+	if (!My_Map::frontier.empty())
+	{
+		printf("\n\nDetermine the length. \n\n");
+		if (static_cast<int>(My_Map::frontier.size()) < length)
+		{
+			length = 1;
+			// length = static_cast<int>(My_Map::frontier.size()) - 1;
+		}
+
+		partial_sort(diss.begin(), diss.begin() + length, diss.end());
+		vector<double> extracted(diss.begin(), diss.begin() + length);
+
+		// Display the filtered medians.
+		for (int i = 0; i < static_cast<int>(diss.size()); i++)
+		{
+			cv::circle(
+				My_Map::tempMap,
+				cv::Point(
+					round(medians[extracted[i]].second), 
+					round(medians[extracted[i]].first)),
+				2,
+				cv::Scalar(168, 50, 168),
+				-1);	
+		}
 	}
 }
 

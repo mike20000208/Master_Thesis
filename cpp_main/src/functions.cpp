@@ -1541,15 +1541,39 @@ int simple_test()
     // i = i / 2;
     // printf("\n\n%d \n\n", i);
 
-    cv::Mat img = cv::imread("/home/mike/Pictures/map_365.png");
-    int startX = 345;
-    int startY = 345;
-    cv::Rect roi(startX, startY, img.cols-startX, img.rows-startY);
-    // cv::Rect roi(50, 50, 50, 50);
-    cv::Mat extracted = img(roi);
-    cv::imshow("extracted", extracted);
-    cv::waitKey(0);
-    cv::imwrite("/home/mike/Pictures/map_365_extracted.png", extracted);
+    // cv::Mat img = cv::imread("/home/mike/Pictures/map_365.png");
+    // int startX = 345;
+    // int startY = 345;
+    // cv::Rect roi(startX, startY, img.cols-startX, img.rows-startY);
+    // // cv::Rect roi(50, 50, 50, 50);
+    // cv::Mat extracted = img(roi);
+    // cv::imshow("extracted", extracted);
+    // cv::waitKey(0);
+    // cv::imwrite("/home/mike/Pictures/map_365_extracted.png", extracted);
+
+
+    vector<int> test{18, 3, 6, 2, 1, 0 ,9, 15, 21, 8};
+    int k = 3;
+
+    for (int i = 0; i < static_cast<int>(test.size()); i++)
+    {
+        printf("%d, ", test[i]);
+    }
+    printf("\n\n");
+
+    partial_sort(test.begin(), test.begin() + k, test.end());
+    for (int i = 0; i < static_cast<int>(test.size()); i++)
+    {
+        printf("%d, ", test[i]);
+    }
+    printf("\n\n");
+
+    vector<int> extracted(test.begin(), test.begin() + k);
+    for (int i = 0; i < static_cast<int>(extracted.size()); i++)
+    {
+        printf("%d, ", extracted[i]);
+    }
+    printf("\n\n");
 
     return 0;
 }
@@ -1994,24 +2018,25 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
             isWFDInvolved = false;
         }
 
-        // printf("\n\nGet into path searching. \n\n");
         // Find the path from the updated grid. 
         if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
         {
             G.findPath(isWFDInvolved);
             m.pathUpdate(G);
         }
-        // printf("\n\nGet out of the path searching. \n\n");
+
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)
 
         // Display the map and trajectory.
         start = clock();
         m.renderingFromInfoMap();
+
         if (isWFDInvolved)
         {
             m.frontierShow();
         }
+
         m.originShow();
         m.locShow();
         m.mapShow();

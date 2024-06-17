@@ -622,7 +622,7 @@ public:
     queue<pair<int, int>> map_queue;
     queue<pair<int, int>> frontier_queue;
     vector<pair<int, int>> new_frontier;
-    vector<pair<int, int>> frontier;
+    vector<pair<int, int>> frontier;  // used to save the centroid of the found frontier. 
     pair<int, int> frontierCentroid;
 
     // Constructor.
@@ -692,6 +692,9 @@ public:
 
     // Find the frontier in the current map.
     void findFrontier();
+
+    // Calculate the centroid (median) of the found frontier. 
+    pair<int, int> getCentroid();
 
     // Show the frontier on the map.
     void frontierShow();
