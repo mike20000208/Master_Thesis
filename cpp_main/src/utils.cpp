@@ -7,7 +7,7 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
-bool isUseWFD = false;
+bool isUseWFD = true;
 
 
 /**
@@ -1420,12 +1420,10 @@ void My_Map::flagReset()
  * 
  * has at least one open-space neighbor. Open-space means a region is explored and obstacle-free.  
  * 
- * Besides, 8-connection method is used to check 
- * 
- * it's surroundings. 
+ * Besides, 8-connection method is used to check it's surroundings. 
  * 
  * @param cell the cell is going to be examinated if it's qualified to be the frontier.
- * @return is this cell can be seen as a frontier cell. 
+ * @return can this cell be seen as a frontier cell. 
 */
 bool My_Map::isFrontierCell(pair<int, int> cell)
 {
@@ -1537,87 +1535,50 @@ bool My_Map::hasLeastOneOpenSpaceNeighbor(pair<int, int> cell)
  * final frontier. 
  * 
 */
-bool My_Map::findFrontier()
-{
-	// // Initialize variables for debug.
-	// fstream f;
-	// f.open(string(DEBUG_FOLDER) + string("frontier.csv"), ios::app | ios::out);
-	
+void My_Map::findFrontier()
+{	
 	// Initialize some general vairables. 
 	pair<int, int> pose, f_cell, frontier, neighbor;
 	vector<double> rows, cols;
 	int centroid_row = 0, centroid_col = 0;
-	// vector<CellType> types;
 	
-	// Initialize the map queue.
-	// Line 1. 
-
-	// // Debug. 
-	// f << "Line 1" << "\n";
-
+	// Line 1. Initialize the map queue.
 	My_Map::map_queue = {};
 	My_Map::Map_Open.clear();
 	My_Map::Map_Close.clear();
+	My_Map::Frontier_Open.clear();
+	My_Map::Frontier_Close.clear();
+	My_Map::frontier.clear();
 
-	// Push the current point into the queue. Also mark it as Map_Open. 
-	// Line 2 - 3. 
+	// Line 2 - 3. Push the current point into the queue. Also mark it as Map_Open. 
 	pose.first = My_Map::currentPoint.y_pixel_img;
 	pose.second = My_Map::currentPoint.x_pixel_img;
 	My_Map::map_queue.push(pose);
 	My_Map::Map_Open.insert(pose);
-	// My_Map::cellTypeList[pose][Map_Open] = true;
 
-	// Perform the first BFS. (the outer one)
-	// Line 4. 
+	// Line 4. Perform the first BFS. (the outer one)
 	while(!My_Map::map_queue.empty())
 	{
-		// // Debug. 
-		// f << "Line 4" << ", " \
-		// << to_string(My_Map::map_queue.size()) << ", " \
-		// << to_string(My_Map::map_queue.front().first) << ", " \
-		// << to_string(My_Map::map_queue.front().second) << "\n";
-
 		// Line 5. 
 		f_cell = My_Map::map_queue.front();
 		My_Map::map_queue.pop();
 
-		// Only the cells that are not marked as Map_Open are enqueued to the frontier queue.
 		// Line 6. 
-		// types = {Map_Close};
-
-		// // Debug. 
-		// f << "Line 6" << ", " \
-		// << to_string(My_Map::checkCellType(f_cell, types)) << ", " \
-		// << to_string(My_Map::map_queue.size()) << "\n";
-
-		// if (My_Map::checkCellType(f_cell, types))
 		if (My_Map::Map_Close.count(f_cell) == 1)
 		{
 			continue;
 		}
 
-		// Check if this cell is a frontier cell. 
-		// Line 8. 
-
-		// // Debug. 
-		// f << "Line 8" << ", " \
-		// << to_string(My_Map::isFrontierCell(f_cell)) << ", " \
-		// << to_string(My_Map::map_queue.size()) << "\n";
-
+		// Line 8. Check if this cell is a frontier cell. 
 		if (My_Map::isFrontierCell(f_cell))
 		{
 			// Line 9 - 12. 
 			My_Map::frontier_queue = {};
 			My_Map::new_frontier.clear();
-			My_Map::Frontier_Open.clear();
-			My_Map::Frontier_Close.clear();
-
 			My_Map::frontier_queue.push(f_cell);
 			My_Map::Frontier_Open.insert(f_cell);
-			// My_Map::cellTypeList[f_cell][Frontier_Open] = true;
 
-			// Perform the second BFS. (the inner one)
-			// Line 13. 
+			// Line 13. Perform the second BFS. (the inner one)
 			while (!My_Map::frontier_queue.empty())
 			{
 				// Line 14. 
@@ -1625,8 +1586,6 @@ bool My_Map::findFrontier()
 				My_Map::frontier_queue.pop();
 
 				// Line 15. 
-				// types = {Map_Close, Frontier_Close};
-				// if (My_Map::checkCellType(frontier, types))
 				if (My_Map::Map_Close.count(frontier) == 1 && 
 				My_Map::Frontier_Close.count(frontier) == 1)
 				{
@@ -1645,102 +1604,67 @@ bool My_Map::findFrontier()
 						neighbor.first = frontier.first + dy[i];
 						neighbor.second = frontier.second + dx[i];
 
-						// Only the cells are not a part of Frontier_Open, Frontier_Close, or Map_Close can be added to the frontier queue. 
-						// Line 20. 
-						// types = {Frontier_Open, Frontier_Close, Map_Close};
-						// if (My_Map::checkCellType(neighbor, types, "is not"))
+						// Line 20. Only the cells are not a part of Frontier_Open, 
+						// Frontier_Close, or Map_Close can be added to the frontier queue. 
 						if (My_Map::Frontier_Open.count(neighbor) == 0 && 
 						My_Map::Frontier_Close.count(neighbor) == 0 && 
 						My_Map::Map_Close.count(neighbor) == 0)
 						{
 							My_Map::frontier_queue.push(neighbor);
 							My_Map::Frontier_Open.insert(neighbor);
-							// My_Map::cellTypeList[neighbor][Frontier_Open] = true;
 						}
 					}
 				}
 
 				// Line 23. 
 				My_Map::Frontier_Close.insert(frontier);
-				// My_Map::cellTypeList[frontier][Frontier_Close] = true;
 			}
 
-			// Line 24. 
-			// This line could be one of the problems. 
+			// Line 24. Save data of new frontier. 
+			// This line could be a problem. 
 			My_Map::frontier = My_Map::new_frontier;
 
 			// line 25. 
-			for (int k = 0; k < My_Map::new_frontier.size(); k++)
+			for (int k = 0; k < static_cast<int>(My_Map::new_frontier.size()); k++)
 			{
 				My_Map::Map_Close.insert(My_Map::new_frontier[k]);
-				// My_Map::cellTypeList[My_Map::new_frontier[k]][Map_Close] = true;
 			}
 		}
 
-		// Line 26. 
-		// Check all the neighbors of this cell. 
+		// Line 26. Check all the neighbors of this cell. 
 		for (int j = 0; j < connectivity; j++)
 		{
 			neighbor.first = f_cell.first + dy[j];
 			neighbor.second = f_cell.second + dx[j];
 
-			// Line 27. 
-			// types = {Map_Open, Map_Close};
-
-			// // Debug. 
-			// f << "Line 26 & 27" << ", " \
-			// << to_string(neighbor.first) << ", " \
-			// << to_string(neighbor.second) << ", " \
-			// << to_string(My_Map::checkCellType(neighbor, types, "is not")) << ", " \
-			// << to_string(My_Map::hasLeastOneOpenSpaceNeighbor(neighbor)) << "\n";
-
-			// if (My_Map::checkCellType(neighbor, types, "is not"))
-			if (My_Map::Map_Close.count(neighbor) == 0 && 
+			// Line 27. at least has one open-space neighbor. 
+			if (My_Map::Map_Open.count(neighbor) == 0 && 
 			My_Map::Map_Close.count(neighbor) == 0)
 			{
-				if (My_Map::isFrontierCell(neighbor))
-				// if (My_Map::hasLeastOneOpenSpaceNeighbor(neighbor))
+				if (My_Map::hasLeastOneOpenSpaceNeighbor(neighbor))
+				// if (My_Map::isFrontierCell(neighbor))
 				{
 					My_Map::map_queue.push(neighbor);
-					My_Map::Map_Close.insert(neighbor);
-					// My_Map::cellTypeList[neighbor][Map_Open] = true;
+					My_Map::Map_Open.insert(neighbor);
 				}
 			}
 		}
 
 		// Line 30. 
 		My_Map::Map_Close.insert(f_cell);
-		// My_Map::cellTypeList[f_cell][Map_Close] = true;
 	}
 
 	// Calculate the centroid of the found frontier. 
-    // printf("\n\nCalculate the centroid of the found frontier. \n\n");
 	for (int i = 0; i < My_Map::frontier.size(); i++)
 	{
 		rows.push_back(double(My_Map::frontier[i].first));
 		cols.push_back(double(My_Map::frontier[i].second));
 	}
 
-	// printf("\n\nCalculate the median. \n\n");
 	centroid_row = int(get_median(rows));
 	centroid_col = int(get_median(cols));
-	// printf("\n\n%f. \n\n", centroid_row);
-	// printf("\n\n%f. \n\n", centroid_col);
-	// printf("\n\nAssign the values. \n\n");
 	My_Map::frontierCentroid.first = centroid_row;
 	My_Map::frontierCentroid.second = centroid_col;
-	// printf("\n\nMedian calculation is done. \n\n");
-
-	// f.close();
-
-	if (static_cast<int>(My_Map::frontier.size()) != 0)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
 }
 
 
@@ -2825,7 +2749,7 @@ void GridAnalysis::findPath(bool isGlobalInvolved)
 	int maxIndex = 0;
 	pair<int, int> index;
 	vector<double> score1, score2, score3, gScore;
-	int len = static_cast<int>(GridAnalysis::cells.size());
+	int len = 0;
 	// double weight1 = .58, weight2 = .42;
 
 	// Find the valid row indices. 
@@ -2862,17 +2786,22 @@ void GridAnalysis::findPath(bool isGlobalInvolved)
 			}
 		}
 
-		// Get the scores based on two criteria. 
+		len = static_cast<int>(GridAnalysis::cells.size());
+
+		// Get the scores based on two or three criteria. 
         // printf("\n\nCalculating the scores. \n\n");
 		score1 = GridAnalysis::firstCriterion();
 		score2 = GridAnalysis::secondCriterion(k);
 
 		if (isGlobalInvolved)
 		{
-			score3 = GridAnalysis::thirdCriterion();
-			GridAnalysis::weight3 = .20;
-			GridAnalysis::weight1 -= GridAnalysis::weight3 / 2;
-			GridAnalysis::weight2 -= GridAnalysis::weight3 / 2;
+			// score3 = GridAnalysis::thirdCriterion();
+			// GridAnalysis::weight3 = .20;
+			// GridAnalysis::weight1 -= GridAnalysis::weight3 / 2;
+			// GridAnalysis::weight2 -= GridAnalysis::weight3 / 2;
+
+			GridAnalysis::weight3 = .00;
+			score3.resize(len, 0.0);
 		}
 		else
 		{

@@ -1986,14 +1986,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // printf("\n\nGet into frontier searching. \n\n");
         if (isUseWFD)
         {
-            if(m.findFrontier())
-            {
-                isWFDInvolved = true;
-            }
-            else
-            {
-                isWFDInvolved = false;
-            }
+            m.findFrontier();
+            isWFDInvolved = true;
         }
         else
         {

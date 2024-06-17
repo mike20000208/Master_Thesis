@@ -609,8 +609,6 @@ public:
      * Especially, the key of this map is the coordinate of the cell (row, col) in info map or map,
      * and the value is its status.
      */
-    // map<pair<int, int>, map<CellType, bool>> cellTypeList;
-    // map<pair<int, int>, CellType> cellTypeList;
     set<pair<int, int>> Map_Open;
     set<pair<int, int>> Map_Close;
     set<pair<int, int>> Frontier_Open;
@@ -693,7 +691,7 @@ public:
     // bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
 
     // Find the frontier in the current map.
-    bool findFrontier();
+    void findFrontier();
 
     // Show the frontier on the map.
     void frontierShow();
