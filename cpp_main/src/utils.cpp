@@ -1271,35 +1271,39 @@ double My_Map::AStar(CellAStar start, CellAStar goal)
 		for (int i = 0; i < connectivity; i++)
 		{
 			CellAStar neighbor(p.x + dx[i], p.y + dy[i]);
-			// neighbor.x = p.x + dx[i];
-			// neighbor.y = p.y + dy[i];
-			
-			// Line 12. 
-			if (Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 1)
-			{
-				continue;
-			}
 
 			// Check if the neighbor is valid. 
 			if (My_Map::boundaryCheck(neighbor))
 			{
 				continue;
 			}
-
-			// Line 14. 
-			gTemp = p.g + My_Map::AStarMap[neighbor.y][neighbor.x];
-
-			// Line 15 - 18. 
-			if ((gTemp < neighbor.g) || 
-			(Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)) 
+			else
 			{
-				neighbor.g = gTemp;
-				neighbor.f = gTemp + getHeuristic(neighbor, goal);
-				neighbor.parent = &p;
+				// Line 14. 
+				gTemp = p.g + My_Map::AStarMap[neighbor.y][neighbor.x];
 
-				// Line 19 - 21. 
-				if (Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)
+				// Line 12. 
+				if ((gTemp < neighbor.g) && 
+				(Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 1))
 				{
+					Close.erase(pair<int, int>(neighbor.x, neighbor.y));
+					continue;
+				}
+
+				// Line 15 - 18. 
+				if ((gTemp < neighbor.g) && 
+				(Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 1)) 
+				{
+					Open.erase(pair<int, int>(neighbor.x, neighbor.y));
+					continue;
+				}
+
+				if ((Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0) && 
+				(Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 0))
+				{
+					neighbor.g = gTemp;
+					neighbor.f = gTemp + getHeuristic(neighbor, goal);
+					neighbor.parent = &p;
 					Open.insert(pair<int, int>(neighbor.x, neighbor.y));
 					qO.push(neighbor);
 				}
