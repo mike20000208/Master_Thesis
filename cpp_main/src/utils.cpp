@@ -7,7 +7,7 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
-bool isUseWFD = false;
+bool isUseWFD = true;
 
 
 /**
@@ -1161,6 +1161,66 @@ void My_Map::pathUpdate(GridAnalysis &G)
 	}
 }
 
+/** 
+ * @brief Reconstruct the path by the end of it. 
+ */
+void My_Map::reconstructPath(CellAStar* end)
+{
+	while(end->parent != nullptr)
+	{
+		My_Map::path.push_back(*end);
+		end = end->parent;
+	}
+
+	// Haven't decided whether to reverse or not. It seem not necessary. 
+}
+
+
+/** 
+ * @brief Calculate the A* distance from the found path. 
+ * 
+ * Especially, the function calculates the sum of the f score 
+ * 
+ * of all the cells in member My_Map::path. 
+ * 
+ */
+double My_Map::getAStarDistance()
+{
+	double dis = .0;
+
+	for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
+	{
+		dis += My_Map::path[i].f;
+	}
+
+	return dis;
+}
+
+
+/**
+ * @brief Check the bounday violation. 
+ * @param cell the cell needs to be evaluated. 
+ * @return is the examinated cell out of bounds. 
+ */
+bool My_Map::boundaryCheck(CellAStar cell)
+{
+	bool isOut = false;
+	int rows = static_cast<int>(My_Map::AStarMap.size());
+	int cols = static_cast<int>(My_Map::AStarMap[0].size());
+
+	if (cell.x < 0 || cell.x > cols)
+	{
+		isOut = true;
+	}
+
+	if (cell.y < 0 || cell.y > rows)
+	{
+		isOut = true;
+	}
+
+	return isOut;
+}
+
 
 /**
  * @brief Perform the A* alrorithm either to filter the foound frontier or find the path.
@@ -1172,38 +1232,87 @@ double My_Map::AStar(CellAStar start, CellAStar goal)
 {
 	// Initialize general variables.
 	double distance = 0.0;
-	set<pair<int, int>> Open_List, Close_List;
+	set<pair<int, int>> Open, Close;
 	priority_queue<CellAStar> qO;
-	vector<CellAStar> path;
-	CellAStar p;
+	My_Map::path.clear();
+	CellAStar p(0, 0);
+	// bool isFound = false;
+	double gTemp = .0;
 
+	// Line 2. 
 	// Initialize the scores fo the start cell.
 	start.g = 0;
 	start.f = getHeuristic(start, goal);
 	qO.push(start);
-	Open_List.insert(pair<int, int>(start.x, start.y));
+	Open.insert(pair<int, int>(start.x, start.y));
+	printf("\n\nlength of queue: %d\n\n", static_cast<int>(qO.size()));
+	printf("\n\nstart (x, y, f) = (%d, %d, %.2f). \n\n", start.x, start.y, start.f);
 
+	// Line 3. 
 	while(!qO.empty())
 	{
+		// Line 4 - 7. 
 		p = qO.top();
 		qO.pop();
+		printf("\n\nlength of queue: %d\n\n", static_cast<int>(qO.size()));
+		printf("\n\np (x, y, f) = (%d, %d, %.2f). \n\n", p.x, p.y, p.f);
+		Open.erase(pair<int, int>(p.x, p.y));
+		Close.insert(pair<int, int>(p.x, p.y));
 
+		// Line 8 - 10. 
 		if (p == goal)
 		{
+			My_Map::reconstructPath(&p);
+			// isFound = true;
 			break;
 		}
 
+		// Line 11. 
 		for (int i = 0; i < connectivity; i++)
 		{
+			CellAStar neighbor(p.x + dx[i], p.y + dy[i]);
+			// neighbor.x = p.x + dx[i];
+			// neighbor.y = p.y + dy[i];
 			
+			// Line 12. 
+			if (Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 1)
+			{
+				continue;
+			}
+
+			// Check if the neighbor is valid. 
+			if (My_Map::boundaryCheck(neighbor))
+			{
+				continue;
+			}
+
+			// Line 14. 
+			gTemp = p.g + My_Map::AStarMap[neighbor.y][neighbor.x];
+
+			// Line 15 - 18. 
+			if ((gTemp < neighbor.g) || 
+			(Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)) 
+			{
+				neighbor.g = gTemp;
+				neighbor.f = gTemp + getHeuristic(neighbor, goal);
+				neighbor.parent = &p;
+
+				// Line 19 - 21. 
+				if (Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)
+				{
+					Open.insert(pair<int, int>(neighbor.x, neighbor.y));
+					qO.push(neighbor);
+				}
+			}
 		}
 	}
 
-
-
-
-
-
+	printf("\n\nCalculating the A* distance. (in the AStar function)\n\n");
+	if (!My_Map::path.empty())  // imply that A* is successful. 
+	{
+		
+		distance = My_Map::getAStarDistance();
+	}
 
 	return distance;
 }
@@ -1657,7 +1766,8 @@ void My_Map::findFrontier()
 			}
 
 			// Line 24. Save data of new frontier. 
-			// Not save the whole frontier. Instead, store the centroid of the frontier. 
+			// Not save the whole frontier. Instead, store the 
+			// centroid of the frontier. 
 			median = My_Map::getCentroid();
 
 			if (!((median.first == 0) && (median.second == 0)))
@@ -1740,7 +1850,10 @@ pair<int, int> My_Map::getCentroid()
 
 
 /**
- * @brief Show the frontier on the map.
+ * @brief Show the frontiers on the map.
+ * 
+ * Especially, only the median of the frontier will be shown. 
+ * 
 */
 void My_Map::frontierShow()
 {
@@ -1749,10 +1862,9 @@ void My_Map::frontierShow()
 	double dis = 0;
 	map<double, pair<int, int>> medians;
 	int length = 3;
-	// int centroid_row = 0, centroid_col = 0;
 
 	// Collect all the medians. 
-	printf("\n\nCollecting all the medians\n\n");
+	// printf("\n\nCollecting all the medians\n\n");
 	if (!My_Map::frontier.empty())
 	{
 		for (int i = 0; i < static_cast<int>(My_Map::frontier.size()); i++)
@@ -1779,13 +1891,24 @@ void My_Map::frontierShow()
 			// 	cv::Scalar(200, 0, 0),
 			// 	-1
 			// );
-			data.clear();
-			data.push_back(My_Map::frontier[i].second);
-			data.push_back(My_Map::frontier[i].first);
-			data.push_back(My_Map::currentPoint.x_pixel_img);
-			data.push_back(My_Map::currentPoint.y_pixel_img);
-			dis = getDistance(data);
 
+			// // Euclidean distance. 
+			// data.clear();
+			// data.push_back(My_Map::frontier[i].second);
+			// data.push_back(My_Map::frontier[i].first);
+			// data.push_back(My_Map::currentPoint.x_pixel_img);
+			// data.push_back(My_Map::currentPoint.y_pixel_img);
+			// dis = getDistance(data);
+
+			// A* distance. 
+			printf("\n\nCalculating the A* distance. \n\n");
+			CellAStar start(My_Map::currentPoint.x_pixel_img, My_Map::currentPoint.y_pixel_img);
+			CellAStar goal(My_Map::frontier[i].second, My_Map::frontier[i].first);
+			printf("\n\nstart (x, y) = (%d, %d). \n\n", start.x, start.y);
+			printf("\n\ngoal (x, y) = (%d, %d). \n\n", goal.x, goal.y);
+			dis = My_Map::AStar(start, goal);
+
+			// save the median and the corresponding distance data. 
 			diss.push_back(dis);
 			medians.insert(pair<double, pair<int, int>>(dis, My_Map::frontier[i]));
 
@@ -1838,10 +1961,10 @@ void My_Map::frontierShow()
 	}
 
 	// Pick three medians with minimum distance. 
-	printf("\n\nSorting. \n\n");
+	// printf("\n\nSorting. \n\n");
 	if (!My_Map::frontier.empty())
 	{
-		printf("\n\nDetermine the length. \n\n");
+		// printf("\n\nDetermine the length. \n\n");
 		if (static_cast<int>(My_Map::frontier.size()) < length)
 		{
 			length = 1;

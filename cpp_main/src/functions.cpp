@@ -1388,25 +1388,37 @@ int simple_test()
 
 
 
-    priority_queue<CellAStar> test;
+    // priority_queue<CellAStar> test;
 
-    CellAStar a, b, c;
-    a.f = 10;
-    a.g = 7;
-    b.f = 30;
-    b.g = 6;
-    c.f = 20;
-    c.g = 8;
+    // CellAStar a, b, c;
+    // a.f = 10;
+    // a.g = 7;
+    // b.f = 30;
+    // b.g = 6;
+    // c.f = 20;
+    // c.g = 8;
 
-    test.push(b);
-    test.push(c);
-    test.push(a);
+    // test.push(b);
+    // test.push(c);
+    // test.push(a);
 
-    while(!test.empty())
-    {
-        cout << test.top().f << ", " << test.top().g << "\n";
-        test.pop();
-    }
+    // while(!test.empty())
+    // {
+    //     cout << test.top().f << ", " << test.top().g << "\n";
+    //     test.pop();
+    // }
+
+    CellAStar a(5, 7), b(45, 68);
+    set<pair<int, int>> Open;
+    Open.insert(pair<int, int>(a.x, a.y));
+    printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(a.x, a.y)));
+    printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(b.x, b.y)));
+
+
+    // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
+    // a = b;
+    // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
+
 
 
 
@@ -1849,12 +1861,12 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
             isWFDInvolved = false;
         }
 
-        // Find the path from the updated grid. 
-        if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
-        {
-            G.findPath(isWFDInvolved);
-            m.pathUpdate(G);
-        }
+        // // Find the path from the updated grid. 
+        // if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
+        // {
+        //     G.findPath(isWFDInvolved);
+        //     m.pathUpdate(G);
+        // }
 
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (6)

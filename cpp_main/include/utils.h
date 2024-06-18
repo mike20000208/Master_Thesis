@@ -213,7 +213,10 @@ struct CellAStar
     double f = numeric_limits<double>::infinity();
     double g = numeric_limits<double>::infinity();  // the cost from the start to the cell. 
     // double f = numeric_limits<double>::infinity();  // the heuristic estimation of the cost from the cell to the goal. 
+    CellAStar* parent;
+    CellAStar(int x, int y) : x(x), y(y), f(numeric_limits<double>::infinity()), g(numeric_limits<double>::infinity()), parent(nullptr) {}
     bool operator<(const CellAStar& other) const { return f > other.f; }
+    bool operator==(const CellAStar& other) const { return x == other.x && y == other.y; }
 };
 
 
@@ -533,6 +536,9 @@ public:
     vector<pair<int, int>> frontier;  // used to save the centroid of the found frontier. 
     pair<int, int> frontierCentroid;
 
+    // Path found by A*.
+    vector<CellAStar> path;
+
     // Constructor.
     My_Map();
     My_Map(int w, int h, int r, bool isMap = false);
@@ -571,10 +577,19 @@ public:
     // Path update method
     void pathUpdate(GridAnalysis &G);
 
+    // Reconstruct the path by the end of it. 
+    void reconstructPath(CellAStar* end);
+
+    // Calculate the A* distance from the found path. 
+    double getAStarDistance();
+
+    // Check the bounday violation. 
+    bool boundaryCheck(CellAStar cell);
+
     // Perform the A* alrorithm either to filter the foound frontier or find the path. 
     double AStar(CellAStar start, CellAStar goal);
 
-    // Find the path with the filtered frontier. 
+    // Find the path with the filtered frontier. (haven't done yet. )
     void findPath();
 
     // Show the heading.
