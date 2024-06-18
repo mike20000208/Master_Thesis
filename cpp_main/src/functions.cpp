@@ -715,229 +715,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     return 0;
 }
 
-// /**
-//  * @brief Create the map with environment information while only take a single frame from camera.
-//  *
-//  * When getting the arguments from the terminal.
-//  *
-//  *  the first one is width,
-//  *
-//  *  the second one is height,
-//  *
-//  *  the thrid one is res.
-//  *
-//  * @param node a node that communicates with the capra robot.
-//  * @param width width of the map in meter.
-//  * @param height height of the map in meter.
-//  * @param res resolution of the map.
-// */
-// int single_frame_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
-// {
-//     // Prepare folders and other paths.
-//     int count = 0;  // serial number of color images, trajectories, maps, depth info.
-//     Logging l(node);
-//     l.createDir("single_frame_map");
-
-//     // Initialize rs2 objects.
-//     rs2::pipeline p;
-//     rs2::frameset frames;
-//     rs2::frame color, depth;
-//     rs2::config cfg;
-//     rs2::pointcloud pointcloud;
-//     rs2::points points;
-//     int stream_color_width = 1280;
-//     int stream_color_height = 720;
-//     // int stream_depth_width = 848;
-//     // int stream_depth_height = 480;
-//     int stream_depth_width = 1280;
-//     int stream_depth_height = 720;
-//     int frame_rate = 30;
-
-//     if (isEnableFromFile)
-//     {
-//         cfg.enable_device_from_file("/home/mike/Documents/20240401_175236.bag");
-//         // cfg.enable_device_from_file("/home/mike/Recording/Room005.bag");
-//     }
-//     else
-//     {
-//         cfg.enable_stream(RS2_STREAM_COLOR, stream_color_width, stream_color_height, RS2_FORMAT_RGB8, frame_rate);
-//         cfg.enable_stream(RS2_STREAM_DEPTH, stream_depth_width, stream_depth_height, RS2_FORMAT_Z16, frame_rate);
-//     }
-
-//     // Initialize pcl objects.
-//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
-//     pcl::PassThrough<pcl::PointXYZRGB> filter;
-
-//     // initialize cv objects.
-//     const string win1 = "Color Image";
-//     const string win2 = "Map";
-//     cv::namedWindow(win1, WINDOW_NORMAL);
-//     cv::namedWindow(win2, WINDOW_NORMAL);
-//     cv::Mat image;
-
-//     // Initialize other objects.
-//     My_Map m(width, height, res, true);
-//     std::mutex mut;
-//     std::fstream f;
-
-//     // Initialize other variables.
-//     Img ImgLog;
-//     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
-
-//     // Start the pipeline, and there will be no infinite loop since we only want a single frame.
-//     p.start(cfg);
-
-//     // Get color and depth frame.
-//     frames = p.wait_for_frames();
-//     color = frames.get_color_frame();
-//     depth = frames.get_depth_frame();
-
-//     // Create color image and save it.
-//     const int w = color.as<rs2::video_frame>().get_width();
-//     const int h = color.as<rs2::video_frame>().get_height();
-//     image = cv::Mat(Size(w, h), CV_8UC3, (void*)color.get_data(), Mat::AUTO_STEP);
-//     cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-
-//     // Image and timestamp logging.
-//     ImgLog.number = count;
-//     ImgLog.timestamp = color.get_timestamp() / 1000;
-//     count ++;
-//     l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
-//     l.img_path = l.img_folder + l.img_suffix;
-//     cv::imwrite(l.img_path, image);
-//     f.open(l.time_path, ios::app | ios::out);
-//     f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
-//     f.close();
-
-//     // Update the pose of the robot.
-//     mut.lock();
-//     Quaternion_ q;
-//     q.w = node->odo_data.ow;
-//     q.x = node->odo_data.ox;
-//     q.y = node->odo_data.oy;
-//     q.z = node->odo_data.oz;
-//     m.poseUpdate(
-//         ImgLog.number,
-//         node->odo_data.px,
-//         node->odo_data.py,
-//         q);
-//     mut.unlock();
-
-//     // Calculate realsense pointcloud and convert it into PCL format.
-//     points = pointcloud.calculate(depth);
-//     cloud = Points2PCL(points);
-
-//     // // debug
-//     // f.open(DEBUG_FILE, ios::out | ios::app);
-//     // f << to_string(cloud->points.size()) << "\n";
-//     // f.close();
-
-//     // Filter the depth map with z-value.
-//     filter.setInputCloud(cloud);
-//     filter.setFilterFieldName("z");
-//     filter.setFilterLimits(0, 4);
-//     filter.filter(*cloud_filtered);
-
-//     // calculate the best path.
-//     cv::Scalar rendering;
-//     Score S(cloud_filtered);
-//     S.setStartZ(0.0);
-//     S.setSearchRange(3.5);
-//     S.setSearchStep(0.40);
-//     S.setSize(0.40);
-//     S.setStride(0.5 * S.size);
-//     // S.setInlierWeight(0.70);
-//     // S.setOutlierWeight(1.80);
-//     // S.setDisWeight(1.80);
-//     // S.setAngleWeight(0.1);
-
-//     S.rendering();
-
-//     // for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-//     // // for (double z = S.start_z; z < S.search_range; z += S.search_step)
-// 	// {
-// 	// 	S.get_boundary(z);
-// 	// 	S.get_slices(z);
-// 	// 	// S.get_score(z, false);
-//     //     S.get_height(z);
-
-//     //     if (m.isMap)
-//     //     {
-//     //         m.mapUpdate(S);
-//     //     }
-
-// 	// 	// S.find_best_path();
-// 	// }
-
-//     for (double z = S.search_range; z >= S.start_z; z -= S.search_step)
-//     {
-//         S.get_boundary(z);
-//         S.get_slices(z);
-//         // S.get_score(z);
-//         S.get_height(z);
-//         if (m.isMap)
-//         {
-//             m.mapUpdate(S);
-//         }
-
-//     }
-
-//     // Show the heading of the robot, also as an indicator of the robot.
-//     // m.headingShow();
-//     m.originShow();
-//     m.renderingFromInfoMap();
-//     m.locShow();
-//     m.mapShow();
-//     m.flagReset();
-
-//     // Depth info logging.
-//     l.depth_suffix = "/depth_" + to_string(ImgLog.number) +".ply";
-//     l.depth_path = l.depth_folder + l.depth_suffix;
-//     PCL2PLY(cloud_filtered, l.depth_path);
-
-//     // Map logging.
-//     l.map_suffix = "/map_" + to_string(ImgLog.number) +".png";
-//     l.map_path = l.map_folder + l.map_suffix;
-//     cv::imwrite(l.map_path, m.tempMap);
-
-//     // Visualization.
-//     pc_layers.push_back(cloud_filtered);
-//     pc_layers.push_back(S.cloud);
-//     cv::Scalar bg_color(0, 0, 0);
-//     pcl::visualization::PCLVisualizer::Ptr viewer = Visualization(
-//         pc_layers,
-//         bg_color);
-
-//     while (!viewer->wasStopped())
-// 	{
-//         cv::resizeWindow(win1, cv::Size(image.cols, image.rows));
-//         cv::resizeWindow(win2, cv::Size(m.map_.cols, m.map_.rows));
-//         cv::moveWindow(win1, 0, 0);
-//         cv::moveWindow(win2, (image.cols + 70), 0);
-//         cv::imshow(win1, image);
-//         cv::imshow(win2, m.tempMap);
-//         int c = cv::waitKey(1000);
-// 		viewer->spinOnce(1000);
-// 		std::this_thread::sleep_for(100ms);
-
-//         // check whether to terminate the programme.
-//         if (c == 32 || c == 13 || TERMINATE == true)
-//         {
-//             printf("\n\nThe programme is terminated by keyboard. \n\n");
-//             TERMINATE = true;
-//             break;
-//         }
-// 	}
-
-//     // reset.
-//     cv::destroyAllWindows();
-//     pc_layers.clear();
-//     viewer->removeAllPointClouds();
-//     p.stop();
-
-//     return 0;
-// }
 
 /**
  * @brief Replay the trajectory and scene based on the save images and log file in csv format. (more robust than "replay")
@@ -1552,27 +1329,87 @@ int simple_test()
     // cv::imwrite("/home/mike/Pictures/map_365_extracted.png", extracted);
 
 
-    vector<int> test{18, 3, 6, 2, 1, 0 ,9, 15, 21, 8};
-    int k = 3;
+    // vector<int> test{18, 3, 6, 2, 1, 0 ,9, 15, 21, 8};
+    // int k = 3;
 
-    for (int i = 0; i < static_cast<int>(test.size()); i++)
-    {
-        printf("%d, ", test[i]);
-    }
-    printf("\n\n");
+    // for (int i = 0; i < static_cast<int>(test.size()); i++)
+    // {
+    //     printf("%d, ", test[i]);
+    // }
+    // printf("\n\n");
 
-    partial_sort(test.begin(), test.begin() + k, test.end());
-    for (int i = 0; i < static_cast<int>(test.size()); i++)
-    {
-        printf("%d, ", test[i]);
-    }
-    printf("\n\n");
+    // partial_sort(test.begin(), test.begin() + k, test.end());
+    // for (int i = 0; i < static_cast<int>(test.size()); i++)
+    // {
+    //     printf("%d, ", test[i]);
+    // }
+    // printf("\n\n");
 
-    vector<int> extracted(test.begin(), test.begin() + k);
-    for (int i = 0; i < static_cast<int>(extracted.size()); i++)
+    // vector<int> extracted(test.begin(), test.begin() + k);
+    // for (int i = 0; i < static_cast<int>(extracted.size()); i++)
+    // {
+    //     printf("%d, ", extracted[i]);
+    // }
+    // printf("\n\n");
+
+
+    // struct Cell {
+    //     int x, y;
+    //     bool operator==(const Cell& other) const { return x == other.x && y == other.y; }
+    // };
+
+    // struct Node {
+    //     Cell cell;
+    //     int fScore, gScore;
+
+    //     bool operator<(const Node& other) const { return fScore > other.fScore; }
+    // };
+
+    // priority_queue<Node> openSet;
+
+    // Cell a, b, c;
+    // // a.fScore = 10;
+    // // b.fScore = 20;
+    // // c.fScore = 30;
+
+    // openSet.push({a, 10, 5});
+    // openSet.push({b, 20, 6});
+    // openSet.push({c, 30, 7});
+
+    // // openSet.push({a, 30, 5});
+    // // openSet.push({b, 20, 6});
+    // // openSet.push({c, 10, 7});
+
+    // while(!openSet.empty())
+    // {
+    //     cout << openSet.top().fScore << ", " << openSet.top().gScore << "\n";
+    //     openSet.pop();
+    // }
+
+
+
+    priority_queue<CellAStar> test;
+
+    CellAStar a, b, c;
+    a.f = 10;
+    a.g = 7;
+    b.f = 30;
+    b.g = 6;
+    c.f = 20;
+    c.g = 8;
+
+    test.push(b);
+    test.push(c);
+    test.push(a);
+
+    while(!test.empty())
     {
-        printf("%d, ", extracted[i]);
+        cout << test.top().f << ", " << test.top().g << "\n";
+        test.pop();
     }
+
+
+
     printf("\n\n");
 
     return 0;
@@ -1947,12 +1784,6 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
                 break;
             }
         }
-
-        // // Debug
-        // f.open(DEBUG_FILE, ios::app | ios::out);
-        // f << to_string(currentTime) << ", " \
-        // << to_string(currentOdo.timestamp) << "\n";
-        // f.close();
 
         // Gather the odometry data to update the pose of the robot on the map.
         start = clock();

@@ -734,6 +734,14 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 		}
 
 		My_Map::infoMap.resize(My_Map::height_pixel, vector<CellKF>(My_Map::width_pixel));
+
+		// Resize the map for A*
+		for (auto& row : My_Map::AStarMap)
+		{
+			row.resize(My_Map::width_pixel);
+		}
+
+		My_Map::AStarMap.resize(My_Map::height_pixel, vector<double>(My_Map::width_pixel));
 	}
 
 	My_Map::isMap = isMap;
@@ -854,52 +862,6 @@ void My_Map::cam2map()
 	// confirm the transformation is done. 
 	My_Map::isTransformed = true;
 }
-
-
-// /**
-//  * @brief Project one the cells in the grid made from class GridAnalysis on the map. 
-//  * @param height the height data of this cell.
-// */
-// void My_Map::cellProject(double height)
-// {
-// 	// Initialize center point in map frame and image frame. 
-// 	Point2D center_map, center_img;
-
-// 	if (My_Map::isTransformed)
-// 	{
-// 		// Make sure the numebers will be integers. but still in the map frame  
-// 		center_map.x = round(My_Map::center_map[0]);
-// 		center_map.y = round(My_Map::center_map[1]);
-
-// 		// Convert the corners from map frame to image frame. 
-// 		center_img = My_Map::map2img(center_map);
-
-// 		// // Mark the center of the slice on the map. (for debug)
-// 		// cv::circle(
-// 		// 	My_Map::map_,
-// 		// 	cv::Point(center_img.x, center_img.y),
-// 		// 	1,
-// 		// 	cv::Scalar(255, 255, 255),
-// 		// 	-1
-// 		// );
-
-// 		// Project the cell on the info map. 
-// 		if (My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] == 0.0)
-// 		{
-// 			My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[0] = 1.0;
-// 		}
-
-// 		My_Map::infoMap.at<cv::Vec4d>(center_img.y, center_img.x)[1] = height;			
-
-// 		// Reset the flag. 
-// 		My_Map::isTransformed = false;
-// 	}
-// 	else
-// 	{
-// 		cerr << "\n\nThe location of area needs to be transformed to map frame first! \n\n";
-// 		exit(-1);
-// 	}
-// }
 
 
 /**
@@ -1152,9 +1114,24 @@ void My_Map::mapUpdate(GridAnalysis &G, double timestamp)
 				My_Map::cam2map();
 
 				// Transformation from map frame to image frame. (the image used to display the map)
-				// My_Map::cellProject(G.grid[i][j].Y);  // the older method, and it's verified working. 
 				newHeight = My_Map::cellProject(G.grid[i][j].Y, G.grid[i][j].Z, timestamp);  // the newer method, but still in test. 
 				G.grid[i][j].Y = newHeight;
+			}
+		}
+	}
+
+	// Also update the map for A*. 
+	for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
+	{
+		for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
+		{
+			if (My_Map::infoMap[i][j].iteration == -1)  //unexplored cell. 
+			{
+				My_Map::AStarMap[i][j] = 0.15;  // the cost for the unexplored area. (gray on the map)
+			}
+			else
+			{
+				My_Map::AStarMap[i][j] = My_Map::infoMap[0][j].est_state;
 			}
 		}
 	}
@@ -1182,6 +1159,65 @@ void My_Map::pathUpdate(GridAnalysis &G)
 		// Transformation from map frame to image frame. (the image used to display the map)
 		My_Map::cellProjectForPath();
 	}
+}
+
+
+/**
+ * @brief Perform the A* alrorithm either to filter the foound frontier or find the path.
+ * 
+ * Especially, this is method is performed after the frontier is found. 
+ * 
+ */
+double My_Map::AStar(CellAStar start, CellAStar goal)
+{
+	// Initialize general variables.
+	double distance = 0.0;
+	set<pair<int, int>> Open_List, Close_List;
+	priority_queue<CellAStar> qO;
+	vector<CellAStar> path;
+	CellAStar p;
+
+	// Initialize the scores fo the start cell.
+	start.g = 0;
+	start.f = getHeuristic(start, goal);
+	qO.push(start);
+	Open_List.insert(pair<int, int>(start.x, start.y));
+
+	while(!qO.empty())
+	{
+		p = qO.top();
+		qO.pop();
+
+		if (p == goal)
+		{
+			break;
+		}
+
+		for (int i = 0; i < connectivity; i++)
+		{
+			
+		}
+	}
+
+
+
+
+
+
+
+	return distance;
+}
+
+
+/**
+ * @brief Find the path with the filtered frontier.
+ * 
+ * Especially, this is method is performed after the frontier is found. 
+ * 
+ */
+void My_Map::findPath()
+{
+	// Initialize general variables.
 }
 
 
@@ -1621,10 +1657,13 @@ void My_Map::findFrontier()
 			}
 
 			// Line 24. Save data of new frontier. 
-			// This line could be a problem. 
 			// Not save the whole frontier. Instead, store the centroid of the frontier. 
 			median = My_Map::getCentroid();
-			My_Map::frontier.push_back(median);
+
+			if (!((median.first == 0) && (median.second == 0)))
+			{
+				My_Map::frontier.push_back(median);
+			}
 
 			// line 25. 
 			for (int k = 0; k < static_cast<int>(My_Map::new_frontier.size()); k++)
@@ -1824,644 +1863,6 @@ void My_Map::frontierShow()
 				cv::Scalar(168, 50, 168),
 				-1);	
 		}
-	}
-}
-
-
-/**
- * @brief Constructor of class Score. 
- * @param incloud a filtered pointcloud which covers the ROI. 
-*/
-Score::Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud)
-{
-	cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::copyPointCloud(*incloud, *cloud);
-	vector<double> height;
-
-	// Calculate the height statistics. 
-	for (auto& p : (*cloud).points)
-	{
-		height.push_back(p.y);
-	}
-
-	// Get the basic statistics of the pointcloud. 
-	sort(height.begin(), height.end());
-	Score::maxHeight = height.back();
-	Score::minHeight = height.front();
-	Score::height_mean = get_mean(height);
-	Score::height_median = get_median(height);
-	Score::height_mode = get_mode(height);
-
-	// Initialize the maximum and minimum score of the whole scanned region. 
-	Score::minScore = 999999;
-	Score::maxScore = -999999;
-
-	// // Debug
-	// fstream f;
-	// f.open(DEBUG_FILE, ios::app | ios::out);
-	// f << to_string(Score::minX) << ", " \
-	// << to_string(Score::maxX) << ", " \
-	// << to_string(Score::minZ) << ", " \
-	// << to_string(Score::maxZ) << "\n";
-	// f.close();
-}
-
-
-/**
- * @brief Set the start value along z-axis for the path planner. 
- * @param z start value. 
-*/
-void Score::setStartZ(double z)
-{
-	Score::start_z = z;
-}
-
-
-/**
- * @brief Set the searching range for the path planner. 
- * @param z searching range. 
-*/
-void Score::setSearchRange(double range)
-{
-	Score::search_range = range;
-}
-
-
-/**
- * @brief Set the searching step for the path planner.
- * @param step searching step.
-*/
-void Score::setSearchStep(double step)
-{
-	Score::search_step = step;
-}
-
-
-/**
- * @brief Set the moving stride for the path planner.
- * @param instride stride for slicing.
-*/
-void Score::setStride(double instride)
-{
-	Score::stride = instride;
-}
-
-
-/**
- * @brief Set the size of slice for the path planner.
- * @param instride size of slice.
-*/
-void Score::setSize(double insize)
-{
-	Score::size = insize;
-}
-
-
-/**
- * @brief Set the height threshold to determine the traversability. 
- * @param ht the height threshold. 
-*/
-void Score::setHeightThreshold(double ht)
-{
-	Score::height_threshold = ht;
-}
-
-
-/**
- * @brief Set the inlier-weight parameter of path planning. 
- * @param iw inlier-weight parameter. 
-*/
-void Score::setInlierWeight(double iw)
-{
-	Score::inlier_weight = iw;
-}
-
-
-/**
- * @brief Set the outlier-weight parameter of path planning.
- * @param ow outlier-weight parameter.
-*/
-void Score::setOutlierWeight(double ow)
-{
-	Score::outlier_weight = ow;
-}
-
-
-/**
- * @brief Set the distance-weight parameter of path planning.
- * @param dw distance-weight parameter.
-*/
-void Score::setDisWeight(double dw)
-{
-	Score::dis_weight = dw;
-}
-
-/**
- * @brief Set the direction of destinaiton. 
- * @param dir direction of destination. 
-*/
-void Score::setDir(cv::Vec3d newDir)
-{
-	Score::dir = newDir;
-}
-
-
-/**
- * @brief Set the angle-weight parameter of path planning.
- * @param aw angle-weight parameter.
-*/
-void Score::setAngleWeight(double aw)
-{
-	Score::angle_weight = aw;
-}
-
-
-/**
- * @brief Get the boundary of roi for both get_slice_1() and get_slice_2(). 
- * @param z lower limit of z value.
-*/
-void Score::get_boundary(double z)
-{
-	// Use the conventional iteration way.
-	vector<double> X;
-
-	for (int i = 0; i < Score::cloud->points.size(); i++)
-	{
-		if ((Score::cloud->points[i].z >= z) && 
-		(Score::cloud->points[i].z < (z + Score::search_step)))
-		{
-			X.push_back(Score::cloud->points[i].x);
-		}
-	}
-	
-	cv::minMaxLoc(X, &(Score::minX), &(Score::maxX));
-	Score::x_len = Score::maxX - Score::minX;
-	Score::num_slices = floor(Score::x_len / Score::stride) - 1;
-
-	// // Debug 
-	// std::fstream f;
-	// f.open(DEBUG_FILE, ios::out | ios::app);
-	// f << to_string(Score::cloud->size()) << "\n";
-	// f << to_string(X.size()) << "\n";
-	// f.close();
-
-	// Set the flag
-	Score::found_boundary = true;
-}
-
-
-/**
- * @brief Get the slice along x direction within specified z range. (by conventional iteration method)
-*/
-void Score::get_slices(double z)
-{
-	// check the flag. 
-	if (!Score::found_boundary)
-	{
-		cerr << "\n\nNeeds to find the boundary first! \n\n";
-		exit(-1);
-	}
-	else
-	{
-		Score::found_boundary = false;
-	}
-
-	// Reset attributes. 
-	Score::slices.clear();
-
-	// Prepare variables for calculating centroid coordinates. 
-	vector<double> X, Y, Z;
-
-	// slicing
-	for (int i = 0; i < num_slices; i++)
-	{
-		// prepare some variables. 
-		Slice slice;
-
-		// set the condition to pick out the points. 
-		for (int k = 0; k < Score::cloud->points.size(); k++)
-		{
-			if ((Score::cloud->points[k].z >= z) && 
-				(Score::cloud->points[k].z < (z + Score::search_step)))
-			{
-				if ((Score::cloud->points[k].x >= (Score::minX + i * Score::stride)) &&
-					(Score::cloud->points[k].x < (Score::minX + i * Score::stride + Score::size)))
-				{
-					slice.indices.push_back(k);
-					X.push_back(Score::cloud->points[k].x);
-					Y.push_back(Score::cloud->points[k].y);
-					Z.push_back(Score::cloud->points[k].z);
-				}
-			}
-		}
-
-		// Check slice is empty or not. 
-		if (slice.indices.size() == 0)
-		{
-			continue;
-		}
-		else
-		{
-			// Save the slice. 
-			slice.score = 0.0;
-			cv::Scalar cx = cv::sum(X);
-			cv::Scalar cy = cv::sum(Y);
-			cv::Scalar cz = cv::sum(Z);
-			double len = X.size();
-			slice.centroid = cv::Vec3d(double(cx[0] / len), double(cy[0] / len), double(cz[0] / len));
-			Score::slices.push_back(slice);
-
-			// Reset. 
-			X.clear();
-			Y.clear();
-			Z.clear();
-		}
-	}
-}
-
-
-/**
- * @brief Calculate the angle between the given angle and desired direction. 
- * @param v the vector pointing the centroid of a slice from the origin. 
- * @return angle the angle between the given angle and desired direction in degree.
-*/
-double Score::get_angle(cv::Vec3d v)
-{
-	double angle = 0;
-	double norm_v = sqrt(v.ddot(v));
-	double norm_dir = sqrt(Score::dir.ddot(Score::dir));
-	angle = acos((v.ddot(Score::dir)) / (norm_v * norm_dir));
-	angle = angle * 180 / M_PI;
-	return angle;
-}
-
-
-/**
- * @brief Calculate the distance between two points. 
- * @param v1 the first point. 
- * @param v2 the second point. 
- * @return distance distance between two points.
-*/
-double Score::get_distance(cv::Vec3d v1, cv::Vec3d v2)
-{
-	double distance = 0;
-	cv::Vec3d v = v1 - v2;
-	distance = sqrt(v.ddot(v));
-	return distance;
-}
-
-
-/**
- * @brief Calculate the score for each slice in second_slices. 
- * @param z lower limit of z value. 
- * @param have_dst whether to take the destination into account. 
-*/
-bool Score::get_score(double z, bool have_dst)
-{
-	bool is_Zero = false;
-	int num_inliers = 0, num_outliers = 0;
-	double percentage = 0.0;
-
-	// // want to log the score data. 
-	// std::fstream f;
-	// f.open(DEBUG_FILE, ios::out | ios::app);
-
-	if (Score::slices.size() != 0)
-	{
-		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
-		{
-			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
-			{
-				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
-				{
-					// Score::slices[i].score += Score::inlier_weight;
-
-					// test new score system. 
-					num_inliers++;
-				}
-				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
-					(*Score::cloud).points[Score::slices[i].indices[j]].b == 0)  // outliers
-				{
-					// // the oldest version. 
-					// Score::slices[i].score -= 0.3;
-
-					// Score::slices[i].score +=
-					// 	((255 - (*Score::cloud).points[Score::slices[i].indices[j]].r) / 255) * Score::outlier_weight;
-					
-					// test new score system. 
-					num_outliers++;
-				}
-				else
-				{
-					// Score::slices[i].score = -100000.0;
-					continue;
-				}
-			}
-
-			// check the percentage of inliers. 
-			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
-			Score::slices[i].score = percentage;
-			num_inliers = 0;
-			num_outliers = 0;
-			percentage = 0.0;
-
-			// // ckeck if it's the first iteration in z range. 
-			// if (z == Score::start_z + Score::search_step)
-			// {
-			// 	if (Score::slices[i].centroid[0] == 0 && Score::slices[i].centroid[1] == 0)
-			// 	{
-			// 		Score::slices[i].score += 0.5;
-			// 	}
-			// }
-
-			// // normalize the score by the number of points. 
-			// Score::slices[i].score = (Score::slices[i].score) / (Score::slices[i].indices.size());
-
-			// // check the distance between currrnt slice and the best slice from the last search. 
-			// if (Score::best_paths.size() != 0)
-			// {
-			// 	double distance = get_distance(Score::best_paths[Score::best_paths.size() - 1].centroid, Score::slices[i].centroid);
-			// 	double maxD = sqrt(pow(Score::search_step, 2) + pow(Score::x_len, 2));
-			// 	double minD = Score::search_step;
-			// 	distance = (distance - minD) / (maxD - minD);
-			// 	Score::slices[i].score -= distance * Score::dis_weight;
-			// }
-
-			// // if have destination to go, then take it into consideration when calculating the score. 
-			// if (have_dst)
-			// {
-			// 	double angle = get_angle(Score::slices[i].centroid);
-			// 	Score::slices[i].score -= (abs(angle) / 180) * Score::angle_weight;
-			// }
-
-			// // update the minScore and maxScore. 
-			// if (Score::slices[i].score > Score::maxScore)
-			// {
-			// 	Score::maxScore = Score::slices[i].score;
-			// }
-
-			// if (Score::slices[i].score < Score::minScore)
-			// {
-			// 	Score::minScore = Score::slices[i].score;
-			// }
-
-			// // logging the score data to debug. 
-			// f << to_string(z) << ", " \
-			// << to_string(Score::minX) << ", " \
-			// << to_string(Score::maxX) << ", " \
-			// << to_string(i) << ", " \
-			// << to_string(Score::slices[i].centroid[0]) << ", " \
-			// << to_string(Score::slices[i].centroid[1]) << ", " \
-			// << to_string(Score::slices[i].centroid[2]) << ", " \
-			// << to_string(Score::slices[i].score) << ", " \
-			// << to_string(Score::slices[i].indices.size()) << "\n";
-		}
-		// f.close();
-		return is_Zero;
-	}
-	else
-	{
-		return !is_Zero;
-	}
-}
-
-
-/**
- * @brief Get the roughness of each slice to provide the info to the map. 
- * @param z the operating range along z-axis. 
- * @return is this range void or not. 
-*/
-bool Score::get_roughness(double z)
-{
-	bool is_Zero = false;
-	int num_inliers = 0, num_outliers = 0;
-	double percentage = 0.0;
-
-	// want to log the score data. 
-	std::fstream f;
-	f.open(DEBUG_FILE, ios::out | ios::app);
-	f << "\n\n";
-
-	if (Score::slices.size() != 0)
-	{
-		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
-		{
-			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
-			{
-				if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 127)  // inliers
-				{
-					num_inliers++;
-				}
-				else if ((*Score::cloud).points[Score::slices[i].indices[j]].g == 0 &&
-					(*Score::cloud).points[Score::slices[i].indices[j]].b == 0)  // outliers
-				{
-					num_outliers++;
-				}
-				else
-				{
-					continue;
-				}
-			}
-
-			// check the percentage of inliers. 
-			percentage = (num_inliers * (1.0)) / ((num_inliers + num_outliers) * (1.0));
-			Score::slices[i].score = percentage;
-
-			// update the minScore and maxScore. 
-			if (Score::slices[i].score > Score::maxScore)
-			{
-				Score::maxScore = Score::slices[i].score;
-			}
-
-			if (Score::slices[i].score < Score::minScore)
-			{
-				Score::minScore = Score::slices[i].score;
-			}
-
-			// logging the score data to debug. 
-			f << to_string(z) << ", " \
-			<< to_string(Score::minX) << ", " \
-			<< to_string(Score::maxX) << ", " \
-			<< to_string(i) << ", " \
-			<< to_string(Score::slices[i].centroid[0]) << ", " \
-			<< to_string(Score::slices[i].centroid[1]) << ", " \
-			<< to_string(Score::slices[i].centroid[2]) << ", " \
-			<< to_string(Score::slices[i].score) << ", " \
-			<< to_string(Score::slices[i].indices.size()) << "\n";
-			num_inliers = 0;
-			num_outliers = 0;
-			percentage = 0.0;
-		}
-		// f.close();
-		return is_Zero;
-	}
-	else
-	{
-		return !is_Zero;
-	}
-}
-
-
-/**
- * @brief Get the height of slices (grid or region). 
- * 
- * Especially, the median value is taken as the height of that region. 
- * 
- * @param z the specified range along the z-axis. (in camera frame)
-*/
-bool Score::get_height(double z)
-{
-	bool is_Zero = false;
-	vector<double> heights;
-	double height = 0.0;
-
-	// // Debug. 
-	// fstream f;
-	// f.open(DEBUG_FILE, ios::app | ios::out);
-
-	if (Score::slices.size() != 0)
-	{
-		for (int i = 0; i < Score::slices.size(); i++)  // for each slice in this z-range. 
-		{
-			for (int j = 0; j < Score::slices[i].indices.size(); j++)  // for each point in this slice. 
-			{
-				// height += (*Score::cloud).points[Score::slices[i].indices[j]].y;
-				heights.push_back((*Score::cloud).points[Score::slices[i].indices[j]].y);
-			}
-
-			// height = get_mean(heights);
-			height = get_median(heights);
-			Score::slices[i].score = height;
-			heights.clear();
-
-			// Update the minScore and maxScore. 
-			if (Score::slices[i].score > Score::maxScore)
-			{
-				Score::maxScore = Score::slices[i].score;
-			}
-
-			if (Score::slices[i].score < Score::minScore)
-			{
-				Score::minScore = Score::slices[i].score;
-			}
-
-			// // logging the score data to debug. 
-			// f << to_string(z) << ", " \
-			// << to_string(Score::minX) << ", " \
-			// << to_string(Score::maxX) << ", " \
-			// << to_string(i) << ", " \
-			// << to_string(Score::slices[i].centroid[0]) << ", " \
-			// << to_string(Score::slices[i].centroid[1]) << ", " \
-			// << to_string(Score::slices[i].centroid[2]) << ", " \
-			// << to_string(Score::slices[i].score) << ", " \
-			// << to_string(Score::slices[i].indices.size()) << "\n";
-		}
-
-		// f.close();
-		return is_Zero;
-	}
-	else
-	{
-		return !is_Zero;
-	}
-}
-
-
-/**
- * @brief Render the pointcloud based on the height. 
-*/
-void Score::rendering()
-{
-	for (auto& p : (*Score::cloud).points)
-	{
-		if (p.y >= -Score::height_threshold && p.y <= Score::height_threshold)
-		{
-			p.r = 0;
-			p.g = 127;
-			p.b = 0;
-		}
-		else
-		{
-			p.r = 127;
-			p.g = 0;
-			p.b = 0;
-		}
-	}
-}
-
-
-/**
- * @brief Find the best path in the second slices. 
-*/
-bool Score::find_best_path()
-{
-	// prepare some vsriables. 
-	bool found = true;
-	double best_score = -9e9;
-	int index = 0;
-	Slice best_path;
-
-	if (Score::slices.size() == 0)
-	{
-		return !found;
-	}
-	else
-	{
-		for (int i = 0; i < Score::slices.size(); i++)
-		{
-			if (Score::slices[i].score >= best_score)
-			{
-				best_score = Score::slices[i].score;
-				index = i;
-			}
-		}
-
-		best_path.score = best_score;
-		best_path.centroid = Score::slices[index].centroid;
-		best_path.indices = Score::slices[index].indices;
-		Score::best_paths.push_back(best_path);
-		return found;
-	}
-}
-
-
-/**
- * @brief Visualize the slice to debug. 
- * @param slice the slice or the roi that we want to see. 
-*/
-void Score::visualization(pcl::visualization::PCLVisualizer::Ptr viewer, 
-	Slice slice)
-{
-	// reset
-	(*viewer).removeAllPointClouds();
-	
-	// create the pointcloud in roi. 
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr
-		roi(new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::copyPointCloud(*cloud, slice.indices, *roi);
-
-	// visualization. 
-	(*viewer).addPointCloud(roi, "debug");
-	(*viewer).setShapeRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "debug");
-
-	while (!(*viewer).wasStopped())
-	{
-		(*viewer).spinOnce(1000);
-		std::this_thread::sleep_for(100ms);
-
-        int c = cv::waitKey(10);
-
-        if (c == 32 || c ==13)
-		{
-			printf("\n\nPress Space or Enter to see next slice. \n\n");
-			break;
-		}
-
-		// if (GetAsyncKeyState(32) || GetAsyncKeyState(13))
-		// {
-		// 	printf("\n\nPress Space or Enter to see next slice. \n\n");
-		// 	break;
-		// }
 	}
 }
 
@@ -3154,6 +2555,34 @@ double getDistance(vector<double> data)
 	double dis = 0.0;
 	dis = sqrt(pow((data[0] - data[2]), 2) + pow((data[1] - data[3]), 2));
 	return dis;
+}
+
+
+/**
+ * @brief Calculate the heuristic cost. Diagonal distance is used. 
+ * @param cell a cell in the grid.  
+ * @return heuristic cost.
+ */
+int getHeuristic(CellAStar cell, CellAStar goal)
+{
+	int h = 0;
+	int deltaX = 0, deltaY = 0; 
+	int D2 = 14;
+	int D = 10;
+
+	deltaX = abs(cell.x - goal.x);
+	deltaY = abs(cell.y - goal.y);
+
+	if (deltaX > deltaY)
+	{
+		h = D * deltaX + (D2-D) * deltaY;
+	}
+	else
+	{
+		h = D * deltaY + (D2-D) * deltaX;
+	}
+
+	return h;
 }
 
 

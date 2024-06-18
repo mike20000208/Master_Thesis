@@ -205,13 +205,16 @@ struct CellKF
     bool isPath = false;
 };
 
-// enum CellType
-// {
-//     Map_Open,
-//     Map_Close,
-//     Frontier_Open,
-//     Frontier_Close
-// };
+
+struct CellAStar
+{
+    int x = 0;  // col. 
+    int y = 0;  // row. 
+    double f = numeric_limits<double>::infinity();
+    double g = numeric_limits<double>::infinity();  // the cost from the start to the cell. 
+    // double f = numeric_limits<double>::infinity();  // the heuristic estimation of the cost from the cell to the goal. 
+    bool operator<(const CellAStar& other) const { return f > other.f; }
+};
 
 
 class TEST
@@ -299,6 +302,7 @@ private:
     rclcpp::TimerBase::SharedPtr vel_timer_;
 };
 
+
 class Logging
 {
 public:
@@ -348,105 +352,6 @@ public:
     void createDir(string mode);
 };
 
-class Score
-{
-public:
-    // Pointcloud to process.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
-
-    // Maximum and minimum score of the whole region.
-    double maxScore = 0.0, minScore = 0.0;
-
-    // X border in the specified depth range. (in meter)
-    double maxX = -1e6, minX = 1e6;
-
-    // Lateral length in the specified depth range.
-    double x_len = 0;
-
-    // Stride along x-direction and window size
-    double stride = 0.3, size = 0.6;
-
-    // The start to divide the pointcloud along z-axis.
-    double start_z = 0.0;
-
-    // Search step along z-direction
-    double search_step = 1.0;
-
-    // Search range within z-direction
-    double search_range = 5.0;
-
-    // Number of slice along x-direction
-    double num_slices = 0;
-
-    // Flag to check whether the prerequisition is fulfilled.
-    bool found_boundary = false;
-
-    // Tunable parameter of the scoring system.
-    double inlier_weight = 0.4, outlier_weight = 1.1, dis_weight = 1.7, angle_weight = 1.1;
-
-    // Threshold of height to determine the traversability.
-    double height_threshold = .10; // in meter.
-
-    // Pointcloud basic statistics.
-    double height_mean = 0.0, height_median = 0.0, height_mode = 0.0;
-    double maxHeight = 0.0, minHeight = 0.0;
-
-    // Slices within specific z range
-    vector<Slice> slices;
-
-    // vector pointing the the destination
-    cv::Vec3d dir = cv::Vec3d(-1.0, 0.0, 1.0);
-
-    // best slice in each z range
-    vector<Slice> best_paths;
-
-    // Constructor.
-    Score(pcl::PointCloud<pcl::PointXYZRGB>::Ptr incloud);
-
-    // Methods to setup scoring parameters.
-    void setStartZ(double z);
-    void setSearchRange(double z);
-    void setSearchStep(double step);
-    void setStride(double instride);
-    void setSize(double insize);
-    void setHeightThreshold(double ht);
-    void setInlierWeight(double iw);
-    void setOutlierWeight(double ow);
-    void setDisWeight(double dw);
-    void setDir(cv::Vec3d newDir);
-    void setAngleWeight(double aw);
-
-    //
-    void get_boundary(double z);
-
-    //
-    void get_slices(double z);
-
-    //
-    double get_angle(cv::Vec3d v);
-
-    //
-    static double get_distance(cv::Vec3d v1, cv::Vec3d v2);
-
-    //
-    bool get_score(double z, bool have_dst = true);
-
-    //
-    bool get_roughness(double z); // for debug. (temporarily)
-
-    //
-    bool get_height(double z);
-
-    // Render the pointcloud based on the height.
-    void rendering();
-
-    //
-    bool find_best_path();
-
-    //
-    void visualization(pcl::visualization::PCLVisualizer::Ptr viewer,
-                       Slice slice);
-};
 
 class GridAnalysis
 {
@@ -506,6 +411,7 @@ public:
     void findPath(bool isGlobalInvolved); 
 };
 
+
 class KF
 {
     // // Measurement error. (in meter)
@@ -539,6 +445,7 @@ public:
     static double updateCov(double gain, double priorCov);
 };
 
+
 class My_Map
 {
 private:
@@ -571,6 +478,7 @@ public:
     // Info map that stores the projection info.
     // cv::Mat infoMap;
     vector<vector<CellKF>> infoMap;
+    vector<vector<double>> AStarMap;
 
     // Poses.
     Pose startPoint;
@@ -645,10 +553,10 @@ public:
     // Coordinate transformation method (camera to map).
     void cam2map();
 
-    // Project the slice area on the map.
-    //  void cellProject(double height); // faster way. (without KF)
-    double cellProject(double height, double depth, double timestamp); // faster way, and with more info.
+    // Project the cell on the map
+    double cellProject(double height, double depth, double timestamp);
 
+    // Project the found path on the map.
     void cellProjectForPath();
 
     // Get the current pose of the robot
@@ -662,6 +570,12 @@ public:
 
     // Path update method
     void pathUpdate(GridAnalysis &G);
+
+    // Perform the A* alrorithm either to filter the foound frontier or find the path. 
+    double AStar(CellAStar start, CellAStar goal);
+
+    // Find the path with the filtered frontier. 
+    void findPath();
 
     // Show the heading.
     void headingShow();
@@ -687,9 +601,6 @@ public:
     // Check if this cell has at least one open-space neighbor.
     bool hasLeastOneOpenSpaceNeighbor(pair<int, int> cell);
 
-    // // Check the type of a cell.
-    // bool checkCellType(pair<int, int> cell, vector<CellType> types, string mode="is");
-
     // Find the frontier in the current map.
     void findFrontier();
 
@@ -700,39 +611,59 @@ public:
     void frontierShow();
 };
 
+
 double rad2deg(double rad);
+
 
 double deg2rad(double deg);
 
+
 void ProcessDone();
+
 
 int Communication(std::shared_ptr<Mike> node);
 
+
 string getTime();
+
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr Points2PCL(const rs2::points &points);
 
+
 void depth_log(string path, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 
+
 void PCL2PLY(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string path);
+
 
 pcl::visualization::PCLVisualizer::Ptr
 Visualization(vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> layers,
               Scalar color,
               string window = "3D viewer");
 
+
 int getFilesNum(string folder);
+
 
 double get_mean(vector<double> data);
 
+
 double get_median(vector<double> data);
+
 
 double get_mode(vector<double> data);
 
+
 double getDistance(vector<double> data);
+
+
+int getHeuristic(CellAStar cell, CellAStar goal);
+
 
 MyTime getDuration(clock_t start, clock_t end, string path, bool isLast = false);
 
+
 double getActualDuration(double duration);
+
 
 void changeTest(TEST &t);
