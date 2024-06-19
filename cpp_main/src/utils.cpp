@@ -1166,10 +1166,26 @@ void My_Map::pathUpdate(GridAnalysis &G)
  */
 void My_Map::reconstructPath(CellAStar* end)
 {
-	while(end->parent != nullptr)
+	// cout << "\n\nend (x, y, f, g, parent) = " << "( " << end->x << ", " << \
+	// end->y <<", " << end->f << ", " << end->g << ", " << \
+	// (end->parent == nullptr) << ") \n\n";
+
+	// while(end->parent)
+	// {
+	// 	My_Map::path.push_back(*end);
+	// 	end = end->parent;
+	// 	// cout << "\n\nend (x, y, f, g, parent) = " << "( " << end->x << ", " << \
+	// 	// end->y <<", " << end->f << ", " << end->g << ", " << \
+	// 	// (end->parent == nullptr) << ") \n\n";
+	// }
+
+	while (My_Map::came_from[*end])
 	{
 		My_Map::path.push_back(*end);
-		end = end->parent;
+		end = My_Map::came_from[*end];
+		// cout << "\n\nend (x, y, f, g, parent) = " << "( " << end->x << ", " << \
+		// end->y <<", " << end->f << ", " << end->g << ", " << \
+		// (end->parent == nullptr) << ") \n\n";
 	}
 
 	// Haven't decided whether to reverse or not. It seem not necessary. 
@@ -1192,6 +1208,8 @@ double My_Map::getAStarDistance()
 	{
 		dis += My_Map::path[i].f;
 	}
+
+	// dis = My_Map::path.back().g;
 
 	return dis;
 }
@@ -1228,15 +1246,14 @@ bool My_Map::boundaryCheck(CellAStar cell)
  * Especially, this is method is performed after the frontier is found. 
  * 
  */
-double My_Map::AStar(CellAStar start, CellAStar goal)
+bool My_Map::AStar(CellAStar start, CellAStar goal)
 {
 	// Initialize general variables.
+	bool isFound = false;
 	double distance = 0.0;
 	set<pair<int, int>> Open, Close;
 	priority_queue<CellAStar> qO;
 	My_Map::path.clear();
-	CellAStar p(0, 0);
-	// bool isFound = false;
 	double gTemp = .0;
 
 	// Line 2. 
@@ -1252,7 +1269,7 @@ double My_Map::AStar(CellAStar start, CellAStar goal)
 	while(!qO.empty())
 	{
 		// Line 4 - 7. 
-		p = qO.top();
+		CellAStar p = qO.top();
 		qO.pop();
 		printf("\n\nlength of queue: %d\n\n", static_cast<int>(qO.size()));
 		printf("\n\np (x, y, f) = (%d, %d, %.2f). \n\n", p.x, p.y, p.f);
@@ -1262,6 +1279,8 @@ double My_Map::AStar(CellAStar start, CellAStar goal)
 		// Line 8 - 10. 
 		if (p == goal)
 		{
+			printf("\n\nReconstructing the path..... \n\n");
+			isFound = true;
 			My_Map::reconstructPath(&p);
 			// isFound = true;
 			break;
@@ -1272,53 +1291,51 @@ double My_Map::AStar(CellAStar start, CellAStar goal)
 		{
 			CellAStar neighbor(p.x + dx[i], p.y + dy[i]);
 
-			// Check if the neighbor is valid. 
+            // Check if the neighbor is valid. 
 			if (My_Map::boundaryCheck(neighbor))
 			{
 				continue;
 			}
-			else
-			{
-				// Line 14. 
-				gTemp = p.g + My_Map::AStarMap[neighbor.y][neighbor.x];
+            else
+            {
+                // Line 12. 
+                if (Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 1)
+                {
+                    continue;
+                }
 
-				// Line 12. 
-				if ((gTemp < neighbor.g) && 
-				(Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 1))
-				{
-					Close.erase(pair<int, int>(neighbor.x, neighbor.y));
-					continue;
-				}
+                // Line 14. 
+                gTemp = p.g + My_Map::AStarMap[neighbor.y][neighbor.x];
 
-				// Line 15 - 18. 
-				if ((gTemp < neighbor.g) && 
-				(Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 1)) 
-				{
-					Open.erase(pair<int, int>(neighbor.x, neighbor.y));
-					continue;
-				}
+                // Line 15 - 18. 
+                if ((gTemp < neighbor.g) || 
+                (Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)) 
+                {
+                    neighbor.g = gTemp;
+                    neighbor.f = gTemp + getHeuristic(neighbor, goal);
+                    neighbor.parent = &p;
+					My_Map::came_from[neighbor] = &p;
 
-				if ((Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0) && 
-				(Close.count(pair<int, int>(neighbor.x, neighbor.y)) == 0))
-				{
-					neighbor.g = gTemp;
-					neighbor.f = gTemp + getHeuristic(neighbor, goal);
-					neighbor.parent = &p;
-					Open.insert(pair<int, int>(neighbor.x, neighbor.y));
-					qO.push(neighbor);
-				}
-			}
+                    // Line 19 - 21. 
+                    if (Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0)
+                    {
+                        Open.insert(pair<int, int>(neighbor.x, neighbor.y));
+                        qO.push(neighbor);
+                    }
+                }
+            }
 		}
 	}
 
-	printf("\n\nCalculating the A* distance. (in the AStar function)\n\n");
-	if (!My_Map::path.empty())  // imply that A* is successful. 
-	{
+	// printf("\n\nCalculating the A* distance. (in the AStar function)\n\n");
+	// if (!My_Map::path.empty())  // imply that A* is successful. 
+	// {
 		
-		distance = My_Map::getAStarDistance();
-	}
+	// 	distance = My_Map::getAStarDistance();
+	// }
 
-	return distance;
+	// return distance;
+	return isFound;
 }
 
 
@@ -1774,7 +1791,7 @@ void My_Map::findFrontier()
 			// centroid of the frontier. 
 			median = My_Map::getCentroid();
 
-			if (!((median.first == 0) && (median.second == 0)))
+			if ((median.first != 0) && (median.second != 0))
 			{
 				My_Map::frontier.push_back(median);
 			}
@@ -1863,7 +1880,7 @@ void My_Map::frontierShow()
 {
 	vector<double> rows, cols, diss;
 	vector<double> data;
-	double dis = 0;
+	double dis = 0.0;
 	map<double, pair<int, int>> medians;
 	int length = 3;
 
@@ -1873,119 +1890,76 @@ void My_Map::frontierShow()
 	{
 		for (int i = 0; i < static_cast<int>(My_Map::frontier.size()); i++)
 		{
-			// rows.push_back(My_Map::frontier[i].first);
-			// cols.push_back(My_Map::frontier[i].second);
 
-			// My_Map::tempMap.at<Vec3b>(
-			// 	My_Map::frontier[i].first, 
-			// 	My_Map::frontier[i].second)[0] = 200;
+			if (My_Map::frontier[i].first == 0 && My_Map::frontier[i].second == 0)
+			{
+				continue;
+			}
+			else
+			{
+				// // Euclidean distance. 
+				// printf("\n\nCalculating the Euclidean distance. \n\n");
+				// data.clear();
+				// data.push_back(My_Map::frontier[i].second);
+				// data.push_back(My_Map::frontier[i].first);
+				// data.push_back(My_Map::currentPoint.x_pixel_img);
+				// data.push_back(My_Map::currentPoint.y_pixel_img);
+				// dis = getDistance(data);
 
-			// My_Map::tempMap.at<Vec3b>(
-			// 	My_Map::frontier[i].first, 
-			// 	My_Map::frontier[i].second)[1] = 0;
+				// A* distance. 
+				printf("\n\nCalculating the A* distance. \n\n");
+				CellAStar start(My_Map::currentPoint.x_pixel_img, My_Map::currentPoint.y_pixel_img);
+				CellAStar goal(My_Map::frontier[i].second, My_Map::frontier[i].first);
+				// printf("\n\nstart (x, y) = (%d, %d). \n\n", start.x, start.y);
+				// printf("\n\ngoal (x, y) = (%d, %d). \n\n", goal.x, goal.y);
+				if (My_Map::AStar(start, goal))
+				{
+					dis = My_Map::getAStarDistance();
+				}
+				else
+				{
+					dis = -999.99;
+				}
 
-			// My_Map::tempMap.at<Vec3b>(
-			// 	My_Map::frontier[i].first, 
-			// 	My_Map::frontier[i].second)[2] = 0;
-
-			// cv::circle(
-			// 	My_Map::tempMap,
-			// 	cv::Point(My_Map::new_frontier[i].second, My_Map::new_frontier[i].first),
-			// 	1,
-			// 	cv::Scalar(200, 0, 0),
-			// 	-1
-			// );
-
-			// // Euclidean distance. 
-			// data.clear();
-			// data.push_back(My_Map::frontier[i].second);
-			// data.push_back(My_Map::frontier[i].first);
-			// data.push_back(My_Map::currentPoint.x_pixel_img);
-			// data.push_back(My_Map::currentPoint.y_pixel_img);
-			// dis = getDistance(data);
-
-			// A* distance. 
-			printf("\n\nCalculating the A* distance. \n\n");
-			CellAStar start(My_Map::currentPoint.x_pixel_img, My_Map::currentPoint.y_pixel_img);
-			CellAStar goal(My_Map::frontier[i].second, My_Map::frontier[i].first);
-			printf("\n\nstart (x, y) = (%d, %d). \n\n", start.x, start.y);
-			printf("\n\ngoal (x, y) = (%d, %d). \n\n", goal.x, goal.y);
-			dis = My_Map::AStar(start, goal);
-
-			// save the median and the corresponding distance data. 
-			diss.push_back(dis);
-			medians.insert(pair<double, pair<int, int>>(dis, My_Map::frontier[i]));
-
-			// if (dis > 15)
-			// {
-			// 	cv::circle(
-			// 		My_Map::tempMap,
-			// 		cv::Point(
-			// 			round(My_Map::frontier[i].second), 
-			// 			round(My_Map::frontier[i].first)),
-			// 		1,
-			// 		cv::Scalar(168, 50, 168),
-			// 		-1);	
-			// }
-		}
-
-		// Mark the centroid of the frontier. 
-		// centroid_row = get_median(rows);
-		// centroid_col = get_median(cols);
-
-		// My_Map::tempMap.at<Vec3b>(
-		// 		centroid_row, 
-		// 		centroid_col)[0] = 150;
-
-		// My_Map::tempMap.at<Vec3b>(
-		// 		centroid_row, 
-		// 		centroid_col)[1] = 0;
-
-		// My_Map::tempMap.at<Vec3b>(
-		// 		centroid_row, 
-		// 		centroid_col)[2] = 0;
-
-		// cv::circle(
-		// 	My_Map::tempMap,
-		// 	cv::Point(centroid_col, centroid_row),
-		// 	1,
-		// 	cv::Scalar(168, 50, 168),
-		// 	-1
-		// );		
-
-		// cv::circle(
-		// 	My_Map::tempMap,
-		// 	cv::Point(
-		// 		round(My_Map::frontierCentroid.second), 
-		// 		round(My_Map::frontierCentroid.first)),
-		// 	1,
-		// 	cv::Scalar(168, 50, 168),
-		// 	-1
-		// );		
+				// save the median and the corresponding distance data. 
+				diss.push_back(dis);
+				medians.insert(pair<double, pair<int, int>>(dis, My_Map::frontier[i]));
+			}
+		}	
 	}
 
 	// Pick three medians with minimum distance. 
 	// printf("\n\nSorting. \n\n");
 	if (!My_Map::frontier.empty())
+	// if (!diss.empty())
 	{
+		printf("\n\nlength of found frontiers: %d\n\n", static_cast<int>(My_Map::frontier.size()));
+		printf("\n\nlength of collected frontiers: %d\n\n", static_cast<int>(diss.size()));
 		// printf("\n\nDetermine the length. \n\n");
-		if (static_cast<int>(My_Map::frontier.size()) < length)
+		if (static_cast<int>(My_Map::frontier.size()) == 2)
+		{
+			length = 2;
+		}
+
+		if (static_cast<int>(My_Map::frontier.size()) == 1)
 		{
 			length = 1;
-			// length = static_cast<int>(My_Map::frontier.size()) - 1;
 		}
 
 		partial_sort(diss.begin(), diss.begin() + length, diss.end());
 		vector<double> extracted(diss.begin(), diss.begin() + length);
+		printf("\n\nlength of filtered frontiers: %d\n\n", static_cast<int>(extracted.size()));
 
 		// Display the filtered medians.
-		for (int i = 0; i < static_cast<int>(diss.size()); i++)
+		// printf("\n\nlenght of \n\n");
+		for (int i = 0; i < static_cast<int>(extracted.size()); i++)
 		{
+			printf("\n\n(x, y, dis) = (%d, %d, %.2f)\n\n", medians[extracted[i]].second, medians[extracted[i]].first, extracted[i]);
 			cv::circle(
 				My_Map::tempMap,
 				cv::Point(
-					round(medians[extracted[i]].second), 
-					round(medians[extracted[i]].first)),
+					medians[extracted[i]].second, 
+					medians[extracted[i]].first),
 				2,
 				cv::Scalar(168, 50, 168),
 				-1);	

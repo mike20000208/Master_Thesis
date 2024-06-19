@@ -539,6 +539,9 @@ public:
     // Path found by A*.
     vector<CellAStar> path;
 
+    // Map to reconstruct the path.
+    map<CellAStar, CellAStar*> came_from;
+
     // Constructor.
     My_Map();
     My_Map(int w, int h, int r, bool isMap = false);
@@ -587,7 +590,7 @@ public:
     bool boundaryCheck(CellAStar cell);
 
     // Perform the A* alrorithm either to filter the foound frontier or find the path. 
-    double AStar(CellAStar start, CellAStar goal);
+    bool AStar(CellAStar start, CellAStar goal);
 
     // Find the path with the filtered frontier. (haven't done yet. )
     void findPath();

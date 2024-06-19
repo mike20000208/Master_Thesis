@@ -1409,17 +1409,19 @@ int simple_test()
     // }
 
     CellAStar a(5, 7), b(45, 68);
-    set<pair<int, int>> Open;
-    Open.insert(pair<int, int>(a.x, a.y));
-    printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(a.x, a.y)));
-    printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(b.x, b.y)));
+    // set<pair<int, int>> Open;
+    // Open.insert(pair<int, int>(a.x, a.y));
+    // printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(a.x, a.y)));
+    // printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(b.x, b.y)));
 
 
     // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
     // a = b;
     // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
 
+    cout << a.parent << endl;
 
+    cout << (a.parent == nullptr) << endl;
 
 
     printf("\n\n");
