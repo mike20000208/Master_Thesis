@@ -454,9 +454,13 @@ class My_Map
 {
 private:
     // The offsets to check the neighbors. (using 8-connection method)
-    int connectivity = 8;
-    int dx[8] = {0, 0, 1, 1, 1, -1, -1, -1};
-    int dy[8] = {1, -1, 0, 1, -1, -1, 0, 1};
+    int connectivity8 = 8;
+    int dx8[8] = {0, 0, 1, 1, 1, -1, -1, -1};
+    int dy8[8] = {1, -1, 0, 1, -1, -1, 0, 1};
+
+    int connectivity4 = 4;
+    int dx4[4] = {0, 1, 0, -1};
+    int dy4[4] = {-1, 0, 1, 0};
 
 public:
     // size of map in pixel.
@@ -539,11 +543,15 @@ public:
     // pair<int, int> frontierCentroids;
 
     // Path found by A*.
+    vector<CellAStar> cellsCollection;
     // vector<CellAStar> path;
     vector<pair<int, int>> path;
 
     // Map to reconstruct the path.
     map<pair<int, int>, pair<int, int>> came_from;
+
+    // Score records. 
+    map<pair<int, int>, double> gScore, fScore;
 
     // Constructor.
     My_Map();
@@ -588,7 +596,8 @@ public:
     // vector<CellAStar> reconstructPath(CellAStar end);
 
     // Calculate the A* distance from the found path. 
-    double getAStarDistance(vector<CellAStar> path);
+    // double getAStarDistance(vector<CellAStar> path);
+    double getAStarDistance();
 
     // Check the bounday violation. 
     bool boundaryCheck(CellAStar cell);

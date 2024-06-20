@@ -715,7 +715,6 @@ int stream_map_test(std::shared_ptr<Mike> node, int width, int height, int res)
     return 0;
 }
 
-
 /**
  * @brief Replay the trajectory and scene based on the save images and log file in csv format. (more robust than "replay")
  * @param folder_name the name of the recording folder.
@@ -1328,7 +1327,6 @@ int simple_test()
     // cv::waitKey(0);
     // cv::imwrite("/home/mike/Pictures/map_365_extracted.png", extracted);
 
-
     // vector<int> test{18, 3, 6, 2, 1, 0 ,9, 15, 21, 8};
     // int k = 3;
 
@@ -1351,7 +1349,6 @@ int simple_test()
     //     printf("%d, ", extracted[i]);
     // }
     // printf("\n\n");
-
 
     // struct Cell {
     //     int x, y;
@@ -1386,8 +1383,6 @@ int simple_test()
     //     openSet.pop();
     // }
 
-
-
     // priority_queue<CellAStar> test;
 
     // CellAStar a, b, c;
@@ -1414,7 +1409,6 @@ int simple_test()
     // printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(a.x, a.y)));
     // printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(b.x, b.y)));
 
-
     // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
     // a = b;
     // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
@@ -1422,7 +1416,6 @@ int simple_test()
     cout << a.parent << endl;
 
     cout << (a.parent == nullptr) << endl;
-
 
     printf("\n\n");
 
@@ -1875,10 +1868,22 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         {
             m.selectFrontier();
             m.findPath();
+
+            // // Debug. Log the found path.
+            // fstream file;
+            // file.open((string(DEBUG_FOLDER) + string("path.csv")), ios::app | ios::out);
+
+            // for (auto& cell : m.path)
+            // {
+            //     file << to_string(cell.first) << ", " << to_string(cell.second) << "\n";
+            // }
+
+            // file << "999, 999\n";
+
+            // file.close();
         }
 
-
-        // // Find the path from the updated grid. 
+        // // Find the path from the updated grid.
         // if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.
         // {
         //     G.findPath(isWFDInvolved);
