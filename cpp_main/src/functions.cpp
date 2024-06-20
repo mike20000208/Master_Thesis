@@ -1856,12 +1856,27 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         if (isUseWFD)
         {
             m.findFrontier();
-            isWFDInvolved = true;
+
+            if (m.frontiers.empty())
+            {
+                isWFDInvolved = false;
+            }
+            else
+            {
+                isWFDInvolved = true;
+            }
         }
         else
         {
             isWFDInvolved = false;
         }
+
+        if (isWFDInvolved)
+        {
+            m.selectFrontier();
+            m.findPath();
+        }
+
 
         // // Find the path from the updated grid. 
         // if (ImgLog.number % 1 == 0)  // adjust the frequency of path updating, make it more stable.

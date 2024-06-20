@@ -214,6 +214,7 @@ struct CellAStar
     double g = numeric_limits<double>::infinity();  // the cost from the start to the cell. 
     // double f = numeric_limits<double>::infinity();  // the heuristic estimation of the cost from the cell to the goal. 
     CellAStar* parent;
+    CellAStar() : x(0), y(0), f(numeric_limits<double>::infinity()), g(numeric_limits<double>::infinity()), parent(nullptr) {}
     CellAStar(int x, int y) : x(x), y(y), f(numeric_limits<double>::infinity()), g(numeric_limits<double>::infinity()), parent(nullptr) {}
     bool operator<(const CellAStar& other) const { return f > other.f; }
     bool operator==(const CellAStar& other) const { return x == other.x && y == other.y; }
@@ -528,19 +529,21 @@ public:
     /**
      * Queues or other containers used in frontier search.
      *
-     * Especially, each element is the coordinate of the cell (row, col) in info map or map.
+     * Especially, each element is the coordinate of the cell (row=first, col=second) in info map or map.
      */
     queue<pair<int, int>> map_queue;
     queue<pair<int, int>> frontier_queue;
     vector<pair<int, int>> new_frontier;
-    vector<pair<int, int>> frontier;  // used to save the centroid of the found frontier. 
-    pair<int, int> frontierCentroid;
+    vector<pair<int, int>> frontiers;  // used to save the centroid of the found frontier. 
+    pair<int, int> frontier;
+    // pair<int, int> frontierCentroids;
 
     // Path found by A*.
-    vector<CellAStar> path;
+    // vector<CellAStar> path;
+    vector<pair<int, int>> path;
 
     // Map to reconstruct the path.
-    map<CellAStar, CellAStar*> came_from;
+    map<pair<int, int>, pair<int, int>> came_from;
 
     // Constructor.
     My_Map();
@@ -581,16 +584,22 @@ public:
     void pathUpdate(GridAnalysis &G);
 
     // Reconstruct the path by the end of it. 
-    void reconstructPath(CellAStar* end);
+    void reconstructPath(pair<int, int> end);
+    // vector<CellAStar> reconstructPath(CellAStar end);
 
     // Calculate the A* distance from the found path. 
-    double getAStarDistance();
+    double getAStarDistance(vector<CellAStar> path);
 
     // Check the bounday violation. 
     bool boundaryCheck(CellAStar cell);
 
+    // Estimate the the heuristic cost from the cell to the goal. 
+    double getHeuristic(CellAStar cell, CellAStar goal);
+
     // Perform the A* alrorithm either to filter the foound frontier or find the path. 
-    bool AStar(CellAStar start, CellAStar goal);
+    // bool AStar(CellAStar start, CellAStar goal);
+    CellAStar AStar(CellAStar start, CellAStar goal);
+    // pair<int, int> AStar(CellAStar start, CellAStar goal);
 
     // Find the path with the filtered frontier. (haven't done yet. )
     void findPath();
@@ -621,6 +630,9 @@ public:
 
     // Find the frontier in the current map.
     void findFrontier();
+
+    // Select the frontier with the minimal A* distance. 
+    void selectFrontier();
 
     // Calculate the centroid (median) of the found frontier. 
     pair<int, int> getCentroid();
@@ -673,9 +685,6 @@ double get_mode(vector<double> data);
 
 
 double getDistance(vector<double> data);
-
-
-int getHeuristic(CellAStar cell, CellAStar goal);
 
 
 MyTime getDuration(clock_t start, clock_t end, string path, bool isLast = false);
