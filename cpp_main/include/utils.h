@@ -542,15 +542,17 @@ public:
     pair<int, int> frontier;
     // pair<int, int> frontierCentroids;
 
-    // Path found by A*.
-    vector<CellAStar> cellsCollection;
-    // vector<CellAStar> path;
+    /**
+     * Containers for A*. 
+     * 
+     * path : vector to store the found path. 
+     * 
+     * came_from ; map to reconstruct the path.
+     * 
+     * fScore, gScore : maps to record g and f score. 
+     */
     vector<pair<int, int>> path;
-
-    // Map to reconstruct the path.
     map<pair<int, int>, pair<int, int>> came_from;
-
-    // Score records. 
     map<pair<int, int>, double> gScore, fScore;
 
     // Constructor.
@@ -606,8 +608,8 @@ public:
     double getHeuristic(CellAStar cell, CellAStar goal);
 
     // Perform the A* alrorithm either to filter the foound frontier or find the path. 
-    // bool AStar(CellAStar start, CellAStar goal);
-    CellAStar AStar(CellAStar start, CellAStar goal);
+    bool AStar(CellAStar start, CellAStar goal);
+    // CellAStar AStar(CellAStar start, CellAStar goal);
     // pair<int, int> AStar(CellAStar start, CellAStar goal);
 
     // Find the path with the filtered frontier. (haven't done yet. )

@@ -1974,6 +1974,12 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         getDuration(start_whole, end_whole, l.detailed_time_path, true); // Get the spent time. (8)
     }
 
+	fstream f_;
+	f_.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
+	f_ << "\n\nThe replay has ended. \n\n";
+    f_.close();
+    // printf("\n\nThe replay has ended. \n\n");
+
     // Document the general info.
     f.open(l.info_path, ios::app | ios::out);
     // f << "Map Information" << "\n\n";

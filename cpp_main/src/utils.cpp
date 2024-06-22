@@ -1172,7 +1172,7 @@ double My_Map::getAStarDistance()
 {
 	double dis = .0;
 
-	printf("\n\nGot into getAStarDistance() function. \n\n");
+	// printf("\n\nGot into getAStarDistance() function. \n\n");
 
 	for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
 	// for (int i = 0; i < static_cast<int>(path.size()); i++)
@@ -1247,24 +1247,28 @@ double My_Map::getHeuristic(CellAStar cell, CellAStar goal)
  * Especially, this is method is performed after the frontier is found.
  *
  */
-CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
+bool My_Map::AStar(CellAStar start, CellAStar goal)
 {
-	printf("\n\nGot into A* algorithm. \n\n");
+	fstream f;
+	f.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
+	f << "Got into A* algorithm. \n";
+	// printf("\n\nGot into A* algorithm. \n\n");
+
 	// Initialize general variables.
-	set<pair<int, int>> Open, Close;
-	// map<pair<int, int>, double> gScore, fScore;
-	My_Map::gScore.clear();
-	My_Map::fScore.clear();
-	priority_queue<CellAStar> qO;
-	// vector<CellAStar> path = {};
-	My_Map::path.clear();
-	// My_Map::cellsCollection.clear();
-	My_Map::came_from.clear();
 	double gTemp = .0;
 	double cost = .0;
+	int searchCount = 0;
 	CellAStar result(-999, -999);
 
-	// Initialize score records. 
+	// Initialize all the necessary containers.
+	priority_queue<CellAStar> qO;
+	set<pair<int, int>> Open, Close;
+	My_Map::gScore.clear();
+	My_Map::fScore.clear();
+	My_Map::path.clear();
+	My_Map::came_from.clear();
+
+	// Initialize score record containers. 
 	for (int i = 0; i < static_cast<int>(My_Map::AStarMap.size()); i++)
 	{
 		for (int j = 0; j < static_cast<int>(My_Map::AStarMap[0].size()); j++)
@@ -1286,10 +1290,13 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 	// printf("\n\nstart (x, y, f) = (%d, %d, %.2f). \n\n", start.x, start.y, start.f);
 
 	// Line 3.
-	printf("\n\nStart searching..... \n\n");
+	f << "Start searching.....  \n";
+	// printf("\n\nStart searching..... \n\n");
 	while (!qO.empty())
 	{
 		// Line 4 - 7.
+		searchCount++;
+		// printf("\n\nStill searching.......\n\n");
 		CellAStar p = qO.top();
 		qO.pop();
 		// printf("\n\nlength of queue: %d\n\n", static_cast<int>(qO.size()));
@@ -1300,16 +1307,14 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 		// Line 8 - 10.
 		if (p == goal)
 		{
-			// printf("\n\nReconstructing the path..... \n\n");
+			f << "Search " << to_string(searchCount) << " times. \n";
+			f << "A* succeed. Reconstructing the path..... \n";
+			f.close();
+			// printf("\n\nPath is found. Reconstructing the path..... \n\n");
 			// path = My_Map::reconstructPath(&p);
 			// path = My_Map::reconstructPath(pair<int, int>(p.x, p.y));
 			My_Map::reconstructPath(pair<int, int>(p.y, p.x));
-			My_Map::cellsCollection.push_back(p);
-			result.x = p.x;
-			result.y = p.y;
-			result.g = p.g;
-			result.f = p.f;
-			break;
+			return true;
 		}
 
 		// Line 11.
@@ -1334,7 +1339,7 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 				// Line 14.
 				if (My_Map::infoMap[neighbor.y][neighbor.x].iteration == -1)
 				{
-					cost = .15;
+					cost = .35;
 				}
 				else
 				{
@@ -1355,8 +1360,6 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 				// Line 15 - 18.
 				if ((gTemp < gScore[pair<int, int>(neighbor.y, neighbor.x)]) ||
 					(Open.count(pair<int, int>(neighbor.y, neighbor.x)) == 0))
-				// if ((gTemp < neighbor.g) ||
-				// (Open.count(pair<int, int>(neighbor.x, neighbor.y)) == 0))
 				{
 					neighbor.g = gTemp;
 					neighbor.f = gTemp + getHeuristic(neighbor, goal);
@@ -1364,9 +1367,7 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 					// Update the score records.
 					gScore[pair<int, int>(neighbor.y, neighbor.x)] = neighbor.f;
 					fScore[pair<int, int>(neighbor.y, neighbor.x)] = neighbor.f;
-					// neighbor.parent = &p;
 					My_Map::came_from[pair<int, int>(neighbor.y, neighbor.x)] = pair<int, int>(p.y, p.x);
-					// My_Map::cellsCollection.push_back(neighbor);
 
 					// Line 19 - 21.
 					if (Open.count(pair<int, int>(neighbor.y, neighbor.x)) == 0)
@@ -1379,16 +1380,11 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
 		}
 	}
 
-	// printf("\n\nCalculating the A* distance. (in the AStar function)\n\n");
-	// if (!My_Map::path.empty())  // imply that A* is successful.
-	// {
+	f << "Search " << to_string(searchCount) << " times. \n";
+	f << "A* fails. \n";
+	f.close();
 
-	// 	distance = My_Map::getAStarDistance();
-	// }
-
-	// return distance;
-	// return path;
-	return result;
+	return false;
 }
 
 /**
@@ -1399,6 +1395,9 @@ CellAStar My_Map::AStar(CellAStar start, CellAStar goal)
  */
 void My_Map::findPath()
 {
+	fstream f;
+	f.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
+	f << "Start finding the path based on the selected frontier. \n";
 	// Initialize general variables.
 	// fstream f;
 	// f.open((string(DEBUG_FOLDER) + string("cellsCollection.csv")), ios::out | ios::app);
@@ -1409,7 +1408,7 @@ void My_Map::findPath()
 
 	// Perform A* algorithm to find the path.
 	// vector<CellAStar> path = My_Map::AStar(start, goal);
-	CellAStar result = My_Map::AStar(start, goal);
+	bool isFound = My_Map::AStar(start, goal);
 
 	// Mark the corresponding cells on the info map.
 	// // for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
@@ -1421,10 +1420,17 @@ void My_Map::findPath()
 	// 	// My_Map::infoMap[My_Map::path[i].first][My_Map::path[i].second].isPath = true;
 	// }
 
-	for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
+	// Mark the corresponding cells on the info map.
+	if (isFound)
 	{
-		My_Map::infoMap[My_Map::path[i].first][My_Map::path[i].second].isPath = true;
+		for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
+		{
+			My_Map::infoMap[My_Map::path[i].first][My_Map::path[i].second].isPath = true;
+		}
 	}
+
+	f << "The found path is marked on the info map. \n";
+	f.close();
 
 	// f.close();
 }
@@ -1922,6 +1928,10 @@ void My_Map::selectFrontier()
 	if (!My_Map::frontiers.empty())
 	{
 		// Collect all the medians and the corresponding distance data. 
+		fstream f;
+		f.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
+		f << "\nCalculating the Euclidean distance. \n";
+		// printf("\n\nCalculating the Euclidean distance. \n\n");
 		for (int i = 0; i < static_cast<int>(My_Map::frontiers.size()); i++)
 		{
 			if (My_Map::frontiers[i].first == 0 && My_Map::frontiers[i].second == 0)
@@ -1931,7 +1941,6 @@ void My_Map::selectFrontier()
 			else
 			{
 				// Euclidean distance.
-				printf("\n\nCalculating the Euclidean distance. \n\n");
 				data.clear();
 				data.push_back(My_Map::frontiers[i].second);
 				data.push_back(My_Map::frontiers[i].first);
@@ -1944,6 +1953,8 @@ void My_Map::selectFrontier()
 				medians.insert(pair<double, pair<int, int>>(dis, My_Map::frontiers[i]));
 			}
 		}
+
+		f << to_string(static_cast<int>(diss.size())) << " frontiers and their Euclidean distances are collected. \n";
 
 		// Pick three medians with minimum distance.
 		if (static_cast<int>(My_Map::frontiers.size()) == 2)
@@ -1958,17 +1969,22 @@ void My_Map::selectFrontier()
 
 		partial_sort(diss.begin(), diss.begin() + length, diss.end());
 		extracted.assign(diss.begin(), diss.begin() + length);
+		f << to_string(static_cast<int>(extracted.size())) << " frontier(s) are extracted. \n";
 
 		// Second frontier fitlering, based on A* distance. 
-		printf("\n\nCalculating the total A* cost. \n\n");
+		f << "Calculating the total A* cost. \n";
+		f.close();
+		// printf("\n\nCalculating the total A* cost. \n\n");
 		for(int i = 0; i < static_cast<int>(extracted.size()); i++)
 		{
-			printf("\n\ngoal (x, y) = (%d, %d)\n\n", medians[extracted[i]].second, medians[extracted[i]].first);
+			// printf("\n\ngoal (x, y) = (%d, %d)\n\n", medians[extracted[i]].second, medians[extracted[i]].first);
 			CellAStar start(My_Map::currentPoint.x_pixel_img, My_Map::currentPoint.y_pixel_img);
 			CellAStar goal(medians[extracted[i]].second, medians[extracted[i]].first);
-			CellAStar result = My_Map::AStar(start, goal);
+			// CellAStar result = My_Map::AStar(start, goal);
+			bool isFound = My_Map::AStar(start, goal);
 
-			if (result.x != -999 && result.y != -999) // A* succeeds.
+			// if (result.x != -999 && result.y != -999) // A* succeeds.
+			if (isFound) // A* succeeds.
 			{
 				dis = My_Map::getAStarDistance();
 			}
