@@ -1219,11 +1219,11 @@ double My_Map::getHeuristic(CellAStar cell, CellAStar goal)
 {
 	double h = 0;
 	double deltaX = 0, deltaY = 0;
-	double D2 = sqrt(2) * pow(My_Map::res, -1); // in meter
-	double D = 1 * pow(My_Map::res, -1);		// in meter
+	double D2 = sqrt(2) * pow(My_Map::res, -1); // in meter / pixel
+	double D = 1 * pow(My_Map::res, -1);		// in meter / pixel
 
-	deltaX = abs(cell.x - goal.x);
-	deltaY = abs(cell.y - goal.y);
+	deltaX = abs(cell.x - goal.x) * D;  // in meter
+	deltaY = abs(cell.y - goal.y) * D;  // in meter
 
 	// // Diagonal distance.
 	// if (deltaX > deltaY)
