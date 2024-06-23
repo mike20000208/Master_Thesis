@@ -1021,6 +1021,28 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 		startPoint.heading = h;
 		previousPoint = startPoint;
 		currentPoint = startPoint;
+
+		if (!My_Map::isMap)
+		{
+			My_Map::map_ = cv::Mat(
+				My_Map::height_pixel,
+				My_Map::width_pixel,
+				CV_8UC3,
+				cv::Scalar(150, 150, 150)
+			);
+		}
+		else
+		{
+			CellKF cell;
+
+			for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
+			{
+				for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
+				{
+					My_Map::infoMap[i][j] = cell;
+				}
+			}
+		}
 	}
 	else
 	{

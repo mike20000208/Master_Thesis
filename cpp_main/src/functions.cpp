@@ -1609,6 +1609,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 {
     // Prepare folders and other paths.
     int count = 0; // serial number of color images, trajectories, maps, depth info.
+    int count_split = 0;
     Logging l;
     l.createDir("stream_map");
 
@@ -1676,6 +1677,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
     clock_t start, end;
     clock_t start_whole, end_whole;
+    clock_t start_split, end_split;
+    double duration = .0;
     bool isWFDInvolved = false;
 
     // Clear the debug folder.
@@ -1733,6 +1736,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
     // Start the pipeline.
     p.start(cfg);
+    start_split = clock();
 
     // Start streaming.
     while (1)
@@ -1794,21 +1798,43 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         // Gather the odometry data to update the pose of the robot on the map.
         start = clock();
+        end_split = clock();
+        duration = double(end_split - start_split) / double(CLOCKS_PER_SEC);
         Quaternion_ q;
         q.w = currentOdo.ow;
         q.x = currentOdo.ox;
         q.y = currentOdo.oy;
         q.z = currentOdo.oz;
+        
+        if (duration > 3.0)  // in second. 
+        {
+            start_split = end_split;
+            count_split = 0;
+            printf("\n\nAlready 3 seconds! \n\n");
+        }
+
+        // m.poseUpdate(
+        //     ImgLog.number,
+        //     currentOdo.px,
+        //     currentOdo.py,
+        //     q);
+        // t.poseUpdate(
+        //     ImgLog.number,
+        //     currentOdo.px,
+        //     currentOdo.py,
+        //     q);
+
         m.poseUpdate(
-            ImgLog.number,
+            count_split,
             currentOdo.px,
             currentOdo.py,
             q);
         t.poseUpdate(
-            ImgLog.number,
+            count_split,
             currentOdo.px,
             currentOdo.py,
             q);
+        count_split++;
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (2)
 
