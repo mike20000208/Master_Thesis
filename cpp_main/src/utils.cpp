@@ -2186,6 +2186,22 @@ void My_Map::frontierShow()
 	// 			-1);
 	// 	}
 	// }
+
+
+	// // Display all the frontiers. 
+	// for (int i = 0; i < static_cast<int>(My_Map::frontiers.size()); i++)
+	// {
+	// 	cv::circle(
+	// 		My_Map::tempMap,
+	// 		cv::Point(
+	// 			My_Map::frontiers[i].second,
+	// 			My_Map::frontiers[i].first),
+	// 		2,
+	// 		cv::Scalar(168, 50, 168),
+	// 		-1);
+	// }
+
+	// Only display the most optimal frontier. 
 	cv::circle(
 		My_Map::tempMap,
 		cv::Point(

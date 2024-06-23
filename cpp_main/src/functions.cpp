@@ -1867,20 +1867,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         if (isWFDInvolved)
         {
             m.selectFrontier();
-            m.findPath();
-
-            // // Debug. Log the found path.
-            // fstream file;
-            // file.open((string(DEBUG_FOLDER) + string("path.csv")), ios::app | ios::out);
-
-            // for (auto& cell : m.path)
-            // {
-            //     file << to_string(cell.first) << ", " << to_string(cell.second) << "\n";
-            // }
-
-            // file << "999, 999\n";
-
-            // file.close();
+            // m.findPath();
         }
 
         // // Find the path from the updated grid.
@@ -1996,5 +1983,28 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     f << "All the data is from the folder: [ " << folder << " ]. \n";
     f.close();
 
+    return 0;
+}
+
+
+/**
+ * @brief Extract the image from the desired ROI. 
+ */
+int image_extraction(int number, int ROISize, int offset)
+{
+    string imgPath = "/home/mike/Pictures/map_" + to_string(number) + ".png";
+    cv::Mat img = cv::imread(imgPath);
+    int rows = img.rows;
+    int cols = img.cols;
+    // int ROISize = rows / 2;
+    
+    int startX = (rows - ROISize) / 2 + offset;
+    int startY = (rows - ROISize) / 2 + offset;
+    cv::Rect roi(startX, startY, ROISize, ROISize);
+    cv::Mat extracted = img(roi);
+    cv::imshow("extracted", extracted);
+    cv::waitKey(0);
+    imgPath = "/home/mike/Pictures/map_" + to_string(number) + "_extracted.png";
+    cv::imwrite(imgPath, extracted);
     return 0;
 }

@@ -19,7 +19,8 @@ int main(int argc, char * argv[])
         {"delay_test", 10}, 
         {"field_trip", 11},
         {"recording", 12},
-        {"stream_map_from_recording", 13}
+        {"stream_map_from_recording", 13},
+        {"image_extraction", 14}
         };
     vector<string> temp_commands{
         "replay_from_images", 
@@ -34,7 +35,8 @@ int main(int argc, char * argv[])
         "delay_test", 
         "field_trip",
         "recording",
-        "stream_map_from_recording"
+        "stream_map_from_recording",
+        "image_extraction"
         };
     
     // Get into the command selection menu. 
@@ -517,6 +519,17 @@ int main(int argc, char * argv[])
             int map_width_meter, map_height_meter, map_res;
             cin >> map_width_meter >> map_height_meter >> map_res; 
             stream_map_test_from_recording(temp, map_width_meter, map_height_meter, map_res);
+            break;
+        }
+
+        case 14:
+        {
+            printf("\n\nPlease enter the serial number of map you want to extract: \n\n");
+            int number, ROISize, offset;
+            cin >> number;
+            printf("\n\nPlease enter the size of ROI and the center offset : \n\n");
+            cin >> ROISize >> offset;
+            image_extraction(number, ROISize, offset);
             break;
         }
 
