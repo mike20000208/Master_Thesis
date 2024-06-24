@@ -486,7 +486,7 @@ public:
     // Info map that stores the projection info.
     // cv::Mat infoMap;
     vector<vector<CellKF>> infoMap;
-    vector<vector<double>> AStarMap;
+    // vector<vector<double>> AStarMap;
 
     // Poses.
     Pose startPoint;
@@ -554,6 +554,7 @@ public:
     vector<pair<int, int>> path;
     map<pair<int, int>, pair<int, int>> came_from;
     map<pair<int, int>, double> gScore, fScore;
+    // vector<vector<double>> gScore, fScore;
 
     // Constructor.
     My_Map();

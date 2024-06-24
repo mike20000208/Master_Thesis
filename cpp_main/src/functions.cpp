@@ -1806,35 +1806,39 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         q.y = currentOdo.oy;
         q.z = currentOdo.oz;
         
-        if (duration > 3.0)  // in second. 
-        {
-            start_split = end_split;
-            count_split = 0;
-            printf("\n\nAlready 3 seconds! \n\n");
-        }
+        // // Regular reset. 
+        // if (duration >= 7.0)  // in second. 
+        // {
+        //     start_split = end_split;
+        //     count_split = 0;
+        //     // printf("\n\nAlready %.2f seconds! \n\n", duration);
+        // }
 
         // m.poseUpdate(
-        //     ImgLog.number,
+        //     count_split,
         //     currentOdo.px,
         //     currentOdo.py,
         //     q);
         // t.poseUpdate(
-        //     ImgLog.number,
+        //     count_split,
         //     currentOdo.px,
         //     currentOdo.py,
         //     q);
+        // count_split++;
 
+        // Normal update. 
         m.poseUpdate(
-            count_split,
+            ImgLog.number,
             currentOdo.px,
             currentOdo.py,
             q);
         t.poseUpdate(
-            count_split,
+            ImgLog.number,
             currentOdo.px,
             currentOdo.py,
             q);
-        count_split++;
+
+
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (2)
 
@@ -1859,8 +1863,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         GridAnalysis G(cloud_filtered);
         G.setCellSize(pow(res, -1));
         G.setHeightThreshold(.10);
-        G.setWeight1(.56);
-        G.setWeight2(.44);
+        // G.setWeight1(.56);
+        // G.setWeight2(.44);
         G.rendering();
         G.divide();
         end = clock();
@@ -1893,7 +1897,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         if (isWFDInvolved)
         {
             m.selectFrontier();
-            // m.findPath();
+            m.findPath();
         }
 
         // // Find the path from the updated grid.

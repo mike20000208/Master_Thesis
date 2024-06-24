@@ -708,13 +708,20 @@ My_Map::My_Map(int w, int h, int r, bool isMap)
 
 		My_Map::infoMap.resize(My_Map::height_pixel, vector<CellKF>(My_Map::width_pixel));
 
-		// Resize the map for A*
-		for (auto &row : My_Map::AStarMap)
-		{
-			row.resize(My_Map::width_pixel);
-		}
+		// // Resize the score records for A*. 
+		// for (auto &row : My_Map::gScore)
+		// {
+		// 	row.resize(My_Map::width_pixel);
+		// }
 
-		My_Map::AStarMap.resize(My_Map::height_pixel, vector<double>(My_Map::width_pixel));
+		// My_Map::My_Map::gScore.resize(My_Map::height_pixel, vector<double>(My_Map::width_pixel));
+
+		// for (auto &row : My_Map::fScore)
+		// {
+		// 	row.resize(My_Map::width_pixel);
+		// }
+
+		// My_Map::My_Map::fScore.resize(My_Map::height_pixel, vector<double>(My_Map::width_pixel));
 	}
 
 	My_Map::isMap = isMap;
@@ -1150,7 +1157,8 @@ void My_Map::pathUpdate(GridAnalysis &G)
 void My_Map::reconstructPath(pair<int, int> end)
 {
 	// vector<CellAStar> path = {};
-
+	My_Map::path.clear();
+	My_Map::path.push_back(end);
 	// cout << "\n\nend (x, y, f, g, parent) = " << "( " << end->x << ", " << \
 	// end->y <<", " << end->f << ", " << end->g << ", " << \
 	// (end->parent == nullptr) << ") \n\n";
@@ -1170,8 +1178,8 @@ void My_Map::reconstructPath(pair<int, int> end)
 
 	while (My_Map::came_from.find(end) != My_Map::came_from.end())
 	{
-		My_Map::path.push_back(end);
 		end = My_Map::came_from[end];
+		My_Map::path.push_back(end);
 		// cout << "\n\nend (x, y, f, g, parent) = " << "( " << end.x << ", " << \
 		// end.y <<", " << end.f << ", " << end.g << ", " << \
 		// (end.parent == nullptr) << ") \n\n";
@@ -1185,7 +1193,7 @@ void My_Map::reconstructPath(pair<int, int> end)
 /**
  * @brief Calculate the A* distance from the found path.
  *
- * Especially, the function calculates the sum of the f score
+ * Especially, the function calculates the sum of the g score
  *
  * of all the cells in member My_Map::path.
  *
@@ -1193,14 +1201,31 @@ void My_Map::reconstructPath(pair<int, int> end)
 double My_Map::getAStarDistance()
 {
 	double dis = .0;
-
+	fstream f;
+	f.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
+	f << "Got into getAStarDistance() function. \n";
+	f.close();
 	// printf("\n\nGot into getAStarDistance() function. \n\n");
 
-	for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
-	// for (int i = 0; i < static_cast<int>(path.size()); i++)
+	if (!My_Map::path.empty())
 	{
-		// dis += My_Map::fScore[My_Map::path[i]];
-		dis += My_Map::gScore[My_Map::path[i]];
+		for (int i = 0; i < static_cast<int>(My_Map::path.size()); i++)
+		// for (int i = 0; i < static_cast<int>(path.size()); i++)
+		{
+			// dis += My_Map::fScore[My_Map::path[i]];
+			// dis += My_Map::gScore[My_Map::path[i]];
+
+			if (My_Map::gScore.find(My_Map::path[i]) != My_Map::gScore.end())
+			{
+				dis += My_Map::gScore[My_Map::path[i]];
+			}
+			else
+			{
+				dis += 0;
+			}
+
+			// dis += My_Map::gScore[My_Map::path[i].first][My_Map::path[i].second];
+		}
 	}
 
 	// dis = path.back().f;
@@ -1216,8 +1241,8 @@ double My_Map::getAStarDistance()
 bool My_Map::boundaryCheck(CellAStar cell)
 {
 	bool isOut = false;
-	int rows = static_cast<int>(My_Map::AStarMap.size());
-	int cols = static_cast<int>(My_Map::AStarMap[0].size());
+	int rows = static_cast<int>(My_Map::infoMap.size());
+	int cols = static_cast<int>(My_Map::infoMap[0].size());
 
 	if (cell.x < 0 || cell.x > cols)
 	{
@@ -1287,16 +1312,21 @@ bool My_Map::AStar(CellAStar start, CellAStar goal)
 	set<pair<int, int>> Open, Close;
 	My_Map::gScore.clear();
 	My_Map::fScore.clear();
-	My_Map::path.clear();
+	// My_Map::path.clear();
 	My_Map::came_from.clear();
 
 	// Initialize score record containers. 
-	for (int i = 0; i < static_cast<int>(My_Map::AStarMap.size()); i++)
+	// for (int i = 0; i < static_cast<int>(My_Map::gScore.size()); i++)
+	// {
+	// 	for (int j = 0; j < static_cast<int>(My_Map::gScore[0].size()); j++)
+	for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
 	{
-		for (int j = 0; j < static_cast<int>(My_Map::AStarMap[0].size()); j++)
+		for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
 		{
 			gScore[pair<int, int>(i, j)] = numeric_limits<double>::infinity();
 			fScore[pair<int, int>(i, j)] = numeric_limits<double>::infinity();
+			// gScore[i][j] = numeric_limits<double>::infinity();
+			// fScore[i][j] = numeric_limits<double>::infinity();
 		}
 	}
 
@@ -1306,6 +1336,8 @@ bool My_Map::AStar(CellAStar start, CellAStar goal)
 	start.f = getHeuristic(start, goal);
 	gScore[pair<int, int>(start.y, start.x)] = 0;
 	fScore[pair<int, int>(start.y, start.x)] = getHeuristic(start, goal);
+	// gScore[start.y][start.x] = 0;
+	// fScore[start.y][start.x] = getHeuristic(start, goal);
 	qO.push(start);
 	Open.insert(pair<int, int>(start.y, start.x));
 	// printf("\n\nlength of queue: %d\n\n", static_cast<int>(qO.size()));
@@ -1365,6 +1397,7 @@ bool My_Map::AStar(CellAStar start, CellAStar goal)
 				}
 				else
 				{
+					// Out of the threshold. 
 					if (My_Map::infoMap[neighbor.y][neighbor.x].est_state > My_Map::height_threshold ||
 					My_Map::infoMap[neighbor.y][neighbor.x].est_state < -My_Map::height_threshold)
 					{
@@ -1378,17 +1411,22 @@ bool My_Map::AStar(CellAStar start, CellAStar goal)
 				}
 
 				gTemp = gScore[pair<int, int>(p.y, p.x)] + cost;
+				// gTemp = gScore[p.y][p.x] + cost;
 
 				// Line 15 - 18.
 				if ((gTemp < gScore[pair<int, int>(neighbor.y, neighbor.x)]) ||
 					(Open.count(pair<int, int>(neighbor.y, neighbor.x)) == 0))
+				// if ((gTemp < gScore[neighbor.y][neighbor.x]) ||
+				// 	(Open.count(pair<int, int>(neighbor.y, neighbor.x)) == 0))
 				{
 					neighbor.g = gTemp;
 					neighbor.f = gTemp + getHeuristic(neighbor, goal);
 
 					// Update the score records.
-					gScore[pair<int, int>(neighbor.y, neighbor.x)] = neighbor.f;
+					gScore[pair<int, int>(neighbor.y, neighbor.x)] = neighbor.g;
 					fScore[pair<int, int>(neighbor.y, neighbor.x)] = neighbor.f;
+					// gScore[neighbor.y][neighbor.x] = neighbor.g;
+					// fScore[neighbor.y][neighbor.x] = neighbor.f;
 					My_Map::came_from[pair<int, int>(neighbor.y, neighbor.x)] = pair<int, int>(p.y, p.x);
 
 					// Line 19 - 21.
