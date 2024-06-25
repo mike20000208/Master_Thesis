@@ -1204,7 +1204,6 @@ double My_Map::getAStarDistance()
 	fstream f;
 	f.open((string(DEBUG_FOLDER) + string("AStar_execution.txt")), ios::app | ios::out);
 	f << "Got into getAStarDistance() function. \n";
-	f.close();
 	// printf("\n\nGot into getAStarDistance() function. \n\n");
 
 	if (!My_Map::path.empty())
@@ -1214,6 +1213,7 @@ double My_Map::getAStarDistance()
 		{
 			// dis += My_Map::fScore[My_Map::path[i]];
 			// dis += My_Map::gScore[My_Map::path[i]];
+			// printf("\n\n(row, col) = (%d, %d)\n\n", My_Map::path[i].first, My_Map::path[i].second);
 
 			if (My_Map::gScore.find(My_Map::path[i]) != My_Map::gScore.end())
 			{
@@ -1227,8 +1227,9 @@ double My_Map::getAStarDistance()
 			// dis += My_Map::gScore[My_Map::path[i].first][My_Map::path[i].second];
 		}
 	}
-
-	// dis = path.back().f;
+	
+	f << "Got out of getAStarDistance() function. \n";
+	f.close();
 
 	return dis;
 }
@@ -1982,7 +1983,7 @@ void My_Map::selectFrontier()
 	double dis = 0.0;
 	vector<double> diss, data, extracted, dissAStar;
 	map<double, pair<int, int>> medians, mediansAStar;
-	int length = 3;
+	int length = 2;
 
 	// First frontiers filtering, based on pixel Euclidean distance.
 	if (!My_Map::frontiers.empty())

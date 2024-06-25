@@ -1652,9 +1652,18 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     cv::resizeWindow(win3, 500, 500);
     cv::Mat image;
 
-    // Initialize general objects.
-    My_Map m(width, height, res, true);
+    // Initialize objects for mapping system.
     My_Map t(width, height, res);
+
+    // the biggest size of map that the path-planning system can handle. 
+    if (width >= 100 && height >= 100)
+    {
+        width = 80;
+        height = 80;
+    }
+
+    My_Map m(width, height, res, true);
+    
 
     // Initialize object and variables for file reading and transferring.
     fstream f;
@@ -1807,19 +1816,14 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         q.z = currentOdo.oz;
         
         // // Regular reset. 
-        // if (duration >= 7.0)  // in second. 
+        // if (duration >= 20.0)  // in second. 
         // {
         //     start_split = end_split;
         //     count_split = 0;
-        //     // printf("\n\nAlready %.2f seconds! \n\n", duration);
+        //     printf("\n\nAlready %.2f seconds! \n\n", duration);
         // }
 
         // m.poseUpdate(
-        //     count_split,
-        //     currentOdo.px,
-        //     currentOdo.py,
-        //     q);
-        // t.poseUpdate(
         //     count_split,
         //     currentOdo.px,
         //     currentOdo.py,
@@ -1832,6 +1836,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
             currentOdo.px,
             currentOdo.py,
             q);
+
         t.poseUpdate(
             ImgLog.number,
             currentOdo.px,
@@ -2032,6 +2037,8 @@ int image_extraction(int number, int ROISize, int offset)
     int startY = (rows - ROISize) / 2 + offset;
     cv::Rect roi(startX, startY, ROISize, ROISize);
     cv::Mat extracted = img(roi);
+    cv::namedWindow("extracted", WINDOW_NORMAL);
+    cv::resizeWindow("extracted", 100, 100);
     cv::imshow("extracted", extracted);
     cv::waitKey(0);
     imgPath = "/home/mike/Pictures/map_" + to_string(number) + "_extracted.png";
