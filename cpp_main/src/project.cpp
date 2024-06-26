@@ -17,7 +17,7 @@ int main(int argc, char * argv[])
         // {"communication", 8}, 
         // {"map_demo", 9},
         {"delay_test", 10}, 
-        {"field_trip", 11},
+        // {"field_trip", 11},
         {"recording", 12},
         {"stream_map_from_recording", 13},
         {"image_extraction", 14}
@@ -33,7 +33,7 @@ int main(int argc, char * argv[])
         // "communication", 
         // "map_demo", 
         "delay_test", 
-        "field_trip",
+        // "field_trip",
         "recording",
         "stream_map_from_recording",
         "image_extraction"
@@ -525,11 +525,11 @@ int main(int argc, char * argv[])
         case 14:
         {
             printf("\n\nPlease enter the serial number of map you want to extract: \n\n");
-            int number, ROISize, offset;
+            int number, ROISize, offsetX, offsetY;
             cin >> number;
             printf("\n\nPlease enter the size of ROI and the center offset : \n\n");
-            cin >> ROISize >> offset;
-            image_extraction(number, ROISize, offset);
+            cin >> ROISize >> offsetX >> offsetY;
+            image_extraction(number, ROISize, offsetX, offsetY);
             break;
         }
 

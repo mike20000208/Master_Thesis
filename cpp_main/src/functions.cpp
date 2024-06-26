@@ -1403,7 +1403,7 @@ int simple_test()
     //     test.pop();
     // }
 
-    CellAStar a(5, 7), b(45, 68);
+    // CellAStar a(5, 7), b(45, 68);
     // set<pair<int, int>> Open;
     // Open.insert(pair<int, int>(a.x, a.y));
     // printf("\n\nis existed: %d. \n\n", Open.count(pair<int, int>(a.x, a.y)));
@@ -1413,11 +1413,31 @@ int simple_test()
     // a = b;
     // printf("\n\n(x, y) = (%d, %d)\n\n", a.x, a.y);
 
-    cout << a.parent << endl;
+    // cout << a.parent << endl;
 
-    cout << (a.parent == nullptr) << endl;
+    // cout << (a.parent == nullptr) << endl;
 
-    printf("\n\n");
+    // printf("\n\n");
+
+	std::ostringstream out;
+	string text;
+    double value1 = 0.93112;
+    double value2 = 1.7324;
+    double value3 = 2.8621111;
+
+    out << std::fixed <<std::setprecision(2) << value1;
+    text = out.str();
+    cout << text << "\n\n";
+
+    out << std::fixed <<std::setprecision(2) << value2;
+    text = out.str();
+    cout << text << "\n\n";
+
+    out << std::fixed <<std::setprecision(2) << value3;
+    text = out.str();
+    cout << text << "\n\n";
+
+
 
     return 0;
 }
@@ -1611,7 +1631,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     int count = 0; // serial number of color images, trajectories, maps, depth info.
     int count_split = 0;
     Logging l;
-    l.createDir("stream_map");
+    l.createDir("stream_map_from_recording");
 
     // Initialize rs2 objects.
     rs2::pipeline p;
@@ -1644,12 +1664,15 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     const string win1 = "Color Image";
     const string win2 = "Map";
     const string win3 = "Trajectory";
+    const string win4 = "Heat map";
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
+    cv::namedWindow(win4, WINDOW_NORMAL);
     cv::resizeWindow(win1, stream_color_width / 2, stream_color_height / 2);
     cv::resizeWindow(win2, 500, 500);
     cv::resizeWindow(win3, 500, 500);
+    cv::resizeWindow(win4, 800, 800);
     cv::Mat image;
 
     // Initialize objects for mapping system.
@@ -1880,23 +1903,15 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
 
         // Find the frontier to explore as much as it can.
-        // printf("\n\nGet into frontier searching. \n\n");
-        if (isUseWFD)
-        {
-            m.findFrontier();
+        // m.findFrontier();
 
-            if (m.frontiers.empty())
-            {
-                isWFDInvolved = false;
-            }
-            else
-            {
-                isWFDInvolved = true;
-            }
+        if (m.frontiers.empty())
+        {
+            isWFDInvolved = false;
         }
         else
         {
-            isWFDInvolved = false;
+            isWFDInvolved = true;
         }
 
         if (isWFDInvolved)
@@ -1927,6 +1942,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         m.originShow();
         m.locShow();
         m.mapShow();
+        m.heatMapShow();
         m.flagReset();
         t.headingShow();
         t.mapShow();
@@ -1943,6 +1959,11 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         l.map_suffix = "/map_" + to_string(ImgLog.number) + ".png";
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
+
+        // Heat map logging. 
+        l.heatMap_suffix = "/heatMap_" + to_string(ImgLog.number) + ".png";
+        l.heatMap_path = l.heatMap_folder + l.heatMap_suffix;
+        cv::imwrite(l.heatMap_path, m.heatMap);
 
         // Pointcloud visualization.
         // pc_layers.push_back(cloud_filtered);
@@ -1963,6 +1984,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         cv::moveWindow(win1, 0, 0);
         cv::moveWindow(win2, (1280 / 2 + 75), 0);
         cv::moveWindow(win3, (1280 / 2 + 580), 0);
+	    // cv::moveWindow(win4, (1280 / 2 + 580), (720 / 2 + 80));
+	    cv::moveWindow(win4, 0, (720 / 2 + 180));
         cv::putText(
             image,
             to_string(ImgLog.timestamp),
@@ -1975,6 +1998,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // cv::imshow(win2, m.map_);
         cv::imshow(win2, m.tempMap);
         cv::imshow(win3, t.tempMap);
+        cv::imshow(win4, m.heatMap);
         char c = cv::waitKey(1);
 
         viewer->spinOnce(1);
@@ -2025,23 +2049,25 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 /**
  * @brief Extract the image from the desired ROI. 
  */
-int image_extraction(int number, int ROISize, int offset)
+int image_extraction(int number, int ROISize, int offsetX, int offsetY)
 {
-    string imgPath = "/home/mike/Pictures/map_" + to_string(number) + ".png";
+    // string folder = "/home/mike/Pictures/map_";
+    string folder = "/home/mike/Pictures/heatMap_";
+    string imgPath = folder + to_string(number) + ".png";
     cv::Mat img = cv::imread(imgPath);
     int rows = img.rows;
     int cols = img.cols;
     // int ROISize = rows / 2;
     
-    int startX = (rows - ROISize) / 2 + offset;
-    int startY = (rows - ROISize) / 2 + offset;
+    int startX = (rows - ROISize) / 2 + offsetX;
+    int startY = (rows - ROISize) / 2 + offsetY;
     cv::Rect roi(startX, startY, ROISize, ROISize);
     cv::Mat extracted = img(roi);
     cv::namedWindow("extracted", WINDOW_NORMAL);
     cv::resizeWindow("extracted", 100, 100);
     cv::imshow("extracted", extracted);
     cv::waitKey(0);
-    imgPath = "/home/mike/Pictures/map_" + to_string(number) + "_extracted.png";
+    imgPath = folder + to_string(number) + "_extracted.png";
     cv::imwrite(imgPath, extracted);
     return 0;
 }

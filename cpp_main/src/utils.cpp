@@ -6,7 +6,6 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
-bool isUseWFD = true;
 
 /**
  * @brief Shows that the whole program is done.
@@ -193,6 +192,7 @@ Logging::Logging()
 	traj_folder = main_folder + "/Trajectories";
 	depth_folder = main_folder + "/Depth";
 	map_folder = main_folder + "/Maps";
+	heatMap_folder = main_folder + "/heatMaps";
 
 	info_path = main_folder + "/Info.txt";
 	mode_path = main_folder + "/Mode.txt";
@@ -389,7 +389,8 @@ void Logging::createDir(string mode)
 		if (create_directories(img_folder) &&
 			create_directories(traj_folder) &&
 			create_directories(depth_folder) &&
-			create_directories(map_folder))
+			create_directories(map_folder) &&
+			create_directories(heatMap_folder))
 		{
 			printf("\n\nDirectories are created. \n\n");
 		}
@@ -2272,6 +2273,154 @@ void My_Map::frontierShow()
 		cv::Scalar(168, 50, 168),
 		-1);
 }
+
+
+/**
+ * @brief Find the neighbor cells depending on the scale parameter. 
+ * @param scale the parameter to magnify the map. 
+ * @param center the center in the info map coordinate.
+ * @return (scale * scale - 1) neighbor cells. (in the heat map coordinate)
+ */
+vector<pair<int, int>> My_Map::findNeighbor(int scale, pair<int, int> center)
+{
+	// Initialize general variables. 
+	vector<pair<int, int>> neighbors;
+	pair<int, int> neighbor;
+	int offset = (scale - 1) / 2;
+	int row = scale * center.first + offset;
+	int col = scale * center.second + offset;
+
+	// Search and collect all the neighbors. 
+	for (int i = (row - offset); i <= (row + offset); i++)
+	{
+		for (int j = (col - offset); j <= (col + offset); j++)
+		{
+			neighbor.first = i;
+			neighbor.second = j;
+			neighbors.push_back(neighbor);
+		}
+	}
+
+	return neighbors;
+}
+
+
+/**
+ * @brief Create the heat map for thesis writing, 
+ */
+void My_Map::heatMapShow()
+{
+	// Initialize general variables.
+	string text;
+	cv::Scalar color;
+	int newCol = 0, newRow = 0;
+	pair<int, int> center;
+	int precision = 1;
+
+	// // Initialize OpenCV variables for visualization.
+	// cv::namedWindow("heat map", WINDOW_NORMAL);
+	// cv::resizeWindow("heat map", 500, 500);
+	// cv::moveWindow("heat map", (1280 / 2 + 580), (720 / 2 + 80));
+	
+	// Initialize the heat map. 
+	int scale = 15;  // expected to be odd. 
+	int offset = (scale - 1) / 2;
+	int rows = height_pixel * scale;
+	int cols = width_pixel * scale;
+	My_Map::heatMap = cv::Mat(
+		rows,
+		cols,
+		CV_8UC3,
+		cv::Scalar(150, 150, 150));
+
+	// Rendering from the info map.
+	for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
+	{
+		for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
+		{
+			if (My_Map::infoMap[i][j].iteration == -1) // this cell hasn't been explored.
+			{
+				continue;
+			}
+			else
+			{
+				// Assgin the color first. 
+				if (My_Map::infoMap[i][j].est_state >= -My_Map::height_threshold &&
+					My_Map::infoMap[i][j].est_state <= My_Map::height_threshold)
+				{
+					color = cv::Scalar(0, 127, 0);
+				}
+				else
+				{
+					color = cv::Scalar(0, 0, 127);
+				}
+
+				// Check all the neighbor cells. 
+				center.first = i;
+				center.second = j;
+				vector<pair<int, int>> neighbors = My_Map::findNeighbor(scale, center);
+				
+				for (int k = 0; k < static_cast<int>(neighbors.size()); k++)
+				{
+					My_Map::heatMap.at<cv::Vec3b>(neighbors[k].first, neighbors[k].second)[0] = color[0];
+					My_Map::heatMap.at<cv::Vec3b>(neighbors[k].first, neighbors[k].second)[1] = color[1];
+					My_Map::heatMap.at<cv::Vec3b>(neighbors[k].first, neighbors[k].second)[2] = color[2];
+				}
+
+				// // Assgin the text then. 
+				// if ((i % 2 == 0 && j % 2 == 0) || (i % 2 != 0 && j % 2 != 0))
+				// {
+				// 	std::ostringstream out; 
+				// 	out << std::fixed <<std::setprecision(precision) << My_Map::infoMap[i][j].est_state;
+				// 	text = out.str();
+				// 	newCol = scale * j;
+				// 	newRow = scale * i + 2 * offset;
+				// 	cv::putText(
+				// 		My_Map::heatMap,
+				// 		text,
+				// 		cv::Point(newCol, newRow),
+				// 		cv::FONT_HERSHEY_COMPLEX_SMALL , 
+				// 		.5,
+				// 		cv::Scalar(0.0, 0.0, 0.0),
+				// 		1);
+				// }
+			}
+		}
+	}
+
+	// 
+	for (int i = 0; i < static_cast<int>(My_Map::infoMap.size()); i++)
+	{
+		for (int j = 0; j < static_cast<int>(My_Map::infoMap[0].size()); j++)
+		{
+			if (My_Map::infoMap[i][j].iteration == -1) // this cell hasn't been explored.
+			{
+				continue;
+			}
+			else
+			{
+				// Assgin the text then. 
+				if ((i % 2 == 0 && j % 2 == 0) || (i % 2 != 0 && j % 2 != 0))
+				{
+					std::ostringstream out; 
+					out << std::fixed <<std::setprecision(precision) << My_Map::infoMap[i][j].est_state;
+					text = out.str();
+					newCol = scale * j;
+					newRow = scale * i + 2 * offset;
+					cv::putText(
+						My_Map::heatMap,
+						text,
+						cv::Point(newCol, newRow),
+						cv::FONT_HERSHEY_COMPLEX_SMALL , 
+						.6,
+						cv::Scalar(0.0, 0.0, 0.0),
+						1);
+				}
+			}
+		}
+	}
+}
+
 
 /**
  * @brief Constructor of class GridAnalysis.

@@ -15,6 +15,8 @@
 #include <cmath>
 #include <ctime>
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
 
 #include <GeographicLib/LambertConformalConic.hpp>
 #include "time.h"
@@ -78,7 +80,6 @@ namespace fs = std::filesystem;
 extern bool TERMINATE;
 extern bool isRecording;
 extern bool isUseKF;
-extern bool isUseWFD;
 
 struct GPS
 {
@@ -315,6 +316,7 @@ public:
     string traj_folder;
     string depth_folder;
     string map_folder;
+    string heatMap_folder;
 
     string info_path;
     string mode_path;
@@ -328,11 +330,13 @@ public:
     string img_suffix;
     string depth_suffix;
     string map_suffix;
+    string heatMap_suffix;
 
     string img_path;
     string traj_path;
     string depth_path;
     string map_path;
+    string heatMap_path;
     string debug_path;
 
     map<string, int> commands = {
@@ -482,6 +486,9 @@ public:
 
     // Temporary map for drawing an arrow indicating the heading.
     cv::Mat tempMap;
+
+    // For thesis visualization. 
+    cv::Mat heatMap;
 
     // Info map that stores the projection info.
     // cv::Mat infoMap;
@@ -651,6 +658,12 @@ public:
 
     // Show the frontier on the map.
     void frontierShow();
+
+    // Find the neighbor cells depending on the scale parameter. 
+    vector<pair<int, int>> findNeighbor(int scale, pair<int, int> center);
+
+    // Create the heat map for thesis writing, 
+    void heatMapShow();
 };
 
 
