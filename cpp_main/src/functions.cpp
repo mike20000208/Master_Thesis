@@ -2053,6 +2053,7 @@ int image_extraction(int number, int ROISize, int offsetX, int offsetY)
 {
     // string folder = "/home/mike/Pictures/map_";
     string folder = "/home/mike/Pictures/heatMap_";
+    // string folder = "/home/mike/Pictures/trajectory_";
     string imgPath = folder + to_string(number) + ".png";
     cv::Mat img = cv::imread(imgPath);
     int rows = img.rows;
