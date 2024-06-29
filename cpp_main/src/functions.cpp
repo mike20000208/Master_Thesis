@@ -1668,22 +1668,22 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     cv::namedWindow(win1, WINDOW_NORMAL);
     cv::namedWindow(win2, WINDOW_NORMAL);
     cv::namedWindow(win3, WINDOW_NORMAL);
-    cv::namedWindow(win4, WINDOW_NORMAL);
+    // cv::namedWindow(win4, WINDOW_NORMAL);
     cv::resizeWindow(win1, stream_color_width / 2, stream_color_height / 2);
     cv::resizeWindow(win2, 500, 500);
     cv::resizeWindow(win3, 500, 500);
-    cv::resizeWindow(win4, 800, 800);
+    // cv::resizeWindow(win4, 800, 800);
     cv::Mat image;
 
     // Initialize objects for mapping system.
     My_Map t(width, height, res);
 
-    // the biggest size of map that the path-planning system can handle. 
-    if (width >= 100 && height >= 100)
-    {
-        width = 80;
-        height = 80;
-    }
+    // // The biggest size of map that the path-planning system can handle. 
+    // if (width >= 100 && height >= 100)
+    // {
+    //     width = 80;
+    //     height = 80;
+    // }
 
     My_Map m(width, height, res, true);
     
@@ -1890,7 +1890,8 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         start = clock();
         GridAnalysis G(cloud_filtered);
         G.setCellSize(pow(res, -1));
-        G.setHeightThreshold(.10);
+        // G.setHeightThreshold(.10);
+        G.setHeightThreshold(.20);
         // G.setWeight1(.56);
         // G.setWeight2(.44);
         G.rendering();
@@ -1942,7 +1943,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         m.originShow();
         m.locShow();
         m.mapShow();
-        m.heatMapShow();
+        // m.heatMapShow();
         m.flagReset();
         t.headingShow();
         t.mapShow();
@@ -1960,10 +1961,10 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         l.map_path = l.map_folder + l.map_suffix;
         cv::imwrite(l.map_path, m.tempMap);
 
-        // Heat map logging. 
-        l.heatMap_suffix = "/heatMap_" + to_string(ImgLog.number) + ".png";
-        l.heatMap_path = l.heatMap_folder + l.heatMap_suffix;
-        cv::imwrite(l.heatMap_path, m.heatMap);
+        // // Heat map logging. 
+        // l.heatMap_suffix = "/heatMap_" + to_string(ImgLog.number) + ".png";
+        // l.heatMap_path = l.heatMap_folder + l.heatMap_suffix;
+        // cv::imwrite(l.heatMap_path, m.heatMap);
 
         // Pointcloud visualization.
         // pc_layers.push_back(cloud_filtered);
@@ -1985,7 +1986,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         cv::moveWindow(win2, (1280 / 2 + 75), 0);
         cv::moveWindow(win3, (1280 / 2 + 580), 0);
 	    // cv::moveWindow(win4, (1280 / 2 + 580), (720 / 2 + 80));
-	    cv::moveWindow(win4, 0, (720 / 2 + 180));
+	    // cv::moveWindow(win4, 0, (720 / 2 + 180));
         cv::putText(
             image,
             to_string(ImgLog.timestamp),
@@ -1998,7 +1999,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // cv::imshow(win2, m.map_);
         cv::imshow(win2, m.tempMap);
         cv::imshow(win3, t.tempMap);
-        cv::imshow(win4, m.heatMap);
+        // cv::imshow(win4, m.heatMap);
         char c = cv::waitKey(1);
 
         viewer->spinOnce(1);
@@ -2006,6 +2007,17 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // Check whether to terminate the programme.
         if (c == 32 || c == 13 || TERMINATE == true)
         {
+            fstream f_;
+            f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
+            for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
+            {
+                for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
+                {
+                    f_ << to_string(i) << ", " << to_string(j) << ", " \
+                    << to_string(m.infoMap[i][j].est_state) << "\n";
+                }
+            }
+            f_.close();
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
             break;
@@ -2025,6 +2037,17 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 	f_ << "\n\nThe replay has ended. \n\n";
     f_.close();
     // printf("\n\nThe replay has ended. \n\n");
+
+    f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
+    for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
+    {
+        for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
+        {
+            f_ << to_string(i) << ", " << to_string(j) << ", " \
+            << to_string(m.infoMap[i][j].est_state) << "\n";
+        }
+    }
+    f_.close();
 
     // Document the general info.
     f.open(l.info_path, ios::app | ios::out);
@@ -2051,13 +2074,17 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
  */
 int image_extraction(int number, int ROISize, int offsetX, int offsetY)
 {
-    // string folder = "/home/mike/Pictures/map_";
-    string folder = "/home/mike/Pictures/heatMap_";
+    string folder = "/home/mike/Pictures/map_";
+    // string folder = "/home/mike/Pictures/heatMap_";
     // string folder = "/home/mike/Pictures/trajectory_";
     string imgPath = folder + to_string(number) + ".png";
     cv::Mat img = cv::imread(imgPath);
     int rows = img.rows;
     int cols = img.cols;
+    // cv::namedWindow("original", WINDOW_NORMAL);
+    // cv::resizeWindow("original", 500, 500);
+    // cv::imshow("original", img);
+    // cv::waitKey(0);
     // int ROISize = rows / 2;
     
     int startX = (rows - ROISize) / 2 + offsetX;
@@ -2065,7 +2092,7 @@ int image_extraction(int number, int ROISize, int offsetX, int offsetY)
     cv::Rect roi(startX, startY, ROISize, ROISize);
     cv::Mat extracted = img(roi);
     cv::namedWindow("extracted", WINDOW_NORMAL);
-    cv::resizeWindow("extracted", 100, 100);
+    cv::resizeWindow("extracted", 500, 500);
     cv::imshow("extracted", extracted);
     cv::waitKey(0);
     imgPath = folder + to_string(number) + "_extracted.png";

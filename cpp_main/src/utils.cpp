@@ -838,6 +838,7 @@ void My_Map::cam2map()
 	My_Map::isTransformed = true;
 }
 
+
 /**
  * @brief Project one of the cells in the grid made from class GridAnalysis on the info map.
  *
@@ -942,6 +943,7 @@ double My_Map::cellProject(double height, double depth, double timestamp)
 
 	return My_Map::infoMap[center_img.y][center_img.x].est_state;
 }
+
 
 /**
  * @brief Project the cells in best path on the map.
@@ -1070,6 +1072,7 @@ void My_Map::poseUpdate(int number, double x, double y, Quaternion_ q)
 	}
 }
 
+
 /**
  * @brief Update the map with the info from camera.
  * @param G an instance of the class GridAnalysis that contains the information to update the map.
@@ -1128,6 +1131,7 @@ void My_Map::mapUpdate(GridAnalysis &G, double timestamp)
 	// 	}
 	// }
 }
+
 
 /**
  * Update the path found in class GridAnalysis.
@@ -1567,6 +1571,7 @@ void My_Map::originShow()
 	// 	FILLED);
 }
 
+
 /**
  * @brief Render the image with the info map to display the map.
  */
@@ -1663,6 +1668,7 @@ void My_Map::renderingFromInfoMap()
 
 	// f.close();
 }
+
 
 /**
  * @brief Show the current location of the robot.
