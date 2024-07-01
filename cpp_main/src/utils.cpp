@@ -401,6 +401,22 @@ void Logging::createDir(string mode)
 		break;
 	}
 
+	case 14:
+	{
+		// Image export. Used for thesis writing. 
+		if (create_directories(img_folder))
+		{
+			printf("\n\nDirectories are created. \n\n");
+		}
+		else
+		{
+			printf("\n\nDirectory creation is failed. \n\n");
+		}
+		break;
+
+		break;
+	}
+
 	default:
 	{
 		break;

@@ -20,7 +20,8 @@ int main(int argc, char * argv[])
         // {"field_trip", 11},
         {"recording", 12},
         {"stream_map_from_recording", 13},
-        {"image_extraction", 14}
+        {"image_extraction", 14},
+        {"image_export", 15}
         };
     vector<string> temp_commands{
         "replay_from_images", 
@@ -36,7 +37,8 @@ int main(int argc, char * argv[])
         // "field_trip",
         "recording",
         "stream_map_from_recording",
-        "image_extraction"
+        "image_extraction",
+        "image_export"
         };
     
     // Get into the command selection menu. 
@@ -541,6 +543,32 @@ int main(int argc, char * argv[])
             printf("\n\nPlease enter the size of ROI and the center offset : \n\n");
             cin >> ROISize >> offsetX >> offsetY;
             image_extraction(number, ROISize, offsetX, offsetY, modes[index]);
+            break;
+        }
+
+        case 15:
+        {
+            vector<string> files;
+
+            std::filesystem::path P {REALFARMRECORDIN_FOLDER};
+            for (auto& p : std::filesystem::directory_iterator(P))
+            {
+                files.push_back(p.path().filename());
+            }
+
+            sort(files.begin(), files.end());
+
+            // Choose file to use. 
+            printf("\n\nPlease select which file you want to use. The availbale options are shown below: \n\n");
+            for (int i = 0; i < files.size(); i++)
+            {
+                printf("%d  ->  %s \n\n", i, files[i].c_str());
+            }
+
+            int file;
+            cin >> file;
+            string temp = string(REALFARMRECORDIN_FOLDER) + files[file];
+            image_export(temp);
             break;
         }
 

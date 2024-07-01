@@ -66,6 +66,8 @@ namespace fs = std::filesystem;
 #define DEBUG_FOLDER "/home/mike/Debug/"
 // #define RECORDING_PATH "/home/mike/Recording/Room005.bag"
 #define RECORDING_FOLDER "/home/mike/Recording/"
+// #define REALFARMRECORDIN_FOLDER "/media/mike/Mike/Recording/"
+#define REALFARMRECORDIN_FOLDER "/home/mike/Recording/"
 #define _USE_MATH_DEFINES
 #define NANO 1e-9
 #define MICRO 1e-6
@@ -352,7 +354,9 @@ public:
         {"delay_test", 10},
         {"field_trip", 11},
         {"recording", 12},
-        {"stream_map_from_recording", 13}};
+        {"stream_map_from_recording", 13},
+        {"image_export", 14}
+        };
 
     Logging(std::shared_ptr<Mike> node);
     Logging();

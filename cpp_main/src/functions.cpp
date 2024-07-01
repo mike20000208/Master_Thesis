@@ -2116,3 +2116,95 @@ int image_extraction(int number, int ROISize, int offsetX, int offsetY, string m
     cv::imwrite(imgPath, extracted);
     return 0;
 }
+
+
+int image_export(string file)
+{
+    // Prepare folders and other paths.
+    int count = 0; // serial number of color images, trajectories, maps, depth info.
+    Logging l;
+    l.createDir("image_export");
+    
+    // Initialize rs2 objects.
+    rs2::pipeline p;
+    rs2::frameset *frames = new rs2::frameset;
+    // rs2::frameset frames;
+    rs2::frame color;
+    rs2::config cfg;;
+    cfg.enable_device_from_file(file, false);
+    int stream_color_width = 1280;
+    int stream_color_height = 720;
+    int stream_depth_width = 1280;
+    int stream_depth_height = 720;
+    bool flag;
+
+    // Initialize cv objects.
+    const string win1 = "Color Image";
+    cv::namedWindow(win1, WINDOW_NORMAL);
+    cv::resizeWindow(win1, stream_color_width / 2, stream_color_height / 2);
+    cv::Mat image;
+
+    // Initialize general variables.
+    Img ImgLog;
+    fstream f;
+
+    // Start the pipeline.
+    p.start(cfg);
+
+    // Start streaming.
+    while (1)
+    {
+        // Get frame.
+        flag = p.try_wait_for_frames(frames, 2000);
+
+        if (!flag)
+        {
+            TERMINATE = true;
+            break;
+        }
+
+        color = frames->get_color_frame();
+
+        // Create color image and save it.
+        const int w = color.as<rs2::video_frame>().get_width();
+        const int h = color.as<rs2::video_frame>().get_height();
+        stream_color_height = h;
+        stream_color_width = w;
+        image = cv::Mat(Size(w, h), CV_8UC3, (void *)color.get_data(), Mat::AUTO_STEP);
+        cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+
+        // Image and timestamp logging.
+        ImgLog.number = count;
+        ImgLog.timestamp = color.get_timestamp() / 1000;
+        count++;
+        l.img_suffix = "/img_" + to_string(ImgLog.number) + ".png";
+        l.img_path = l.img_folder + l.img_suffix;
+        cv::imwrite(l.img_path, image);
+        f.open(l.time_path, ios::app | ios::out);
+        f << to_string(ImgLog.timestamp) << ", " << to_string(ImgLog.number) << "\n";
+        f.close();
+
+        // Current scene visualization.
+        cv::moveWindow(win1, 0, 0);
+        cv::putText(
+            image,
+            to_string(ImgLog.timestamp),
+            cv::Point(50, 50),
+            FONT_HERSHEY_DUPLEX,
+            1.0,
+            cv::Scalar(0, 0, 255),
+            1);
+        cv::imshow(win1, image);
+        char c = cv::waitKey(1);
+
+        // Check whether to terminate the programme.
+        if (c == 32 || c == 13 || TERMINATE == true)
+        {
+            printf("\n\nThe programme is terminated by keyboard. \n\n");
+            TERMINATE = true;
+            break;
+        }
+    }
+    
+    return 0;
+}

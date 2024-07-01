@@ -24,3 +24,6 @@ int recording(std::shared_ptr<Mike> node, double duration, int width, int height
 int stream_map_test_from_recording(string folder, int width = 30, int height = 30, int res = 10);
 
 int image_extraction(int number, int ROISize, int offsetX = 0, int offsetY = 0, string mode = "map");
+
+int image_export(string file);
+
