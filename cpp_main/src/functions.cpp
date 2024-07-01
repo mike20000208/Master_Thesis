@@ -1678,12 +1678,12 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     // Initialize objects for mapping system.
     My_Map t(width, height, res);
 
-    // // The biggest size of map that the path-planning system can handle. 
-    // if (width >= 100 && height >= 100)
-    // {
-    //     width = 80;
-    //     height = 80;
-    // }
+    // The biggest size of map that the path-planning system can handle. 
+    if (width >= 100 && height >= 100)
+    {
+        width = 50;
+        height = 50;
+    }
 
     My_Map m(width, height, res, true);
     
@@ -1697,15 +1697,12 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     string vel_path = folder + string("VelLog.csv");
     vector<Odo> odoLog;
     Odo tempOdo, currentOdo;
-    ;
 
     // Initialize general variables.
     Img ImgLog;
     int i = 0;
     int mark = 0;
     double currentTime = 0.0; // sec
-    // double timeRange = 200 * MILLI; // sec
-    // double timeRange = 0.3; // sec
     vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pc_layers;
     clock_t start, end;
     clock_t start_whole, end_whole;
@@ -1838,27 +1835,27 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         q.y = currentOdo.oy;
         q.z = currentOdo.oz;
         
-        // // Regular reset. 
-        // if (duration >= 20.0)  // in second. 
-        // {
-        //     start_split = end_split;
-        //     count_split = 0;
-        //     printf("\n\nAlready %.2f seconds! \n\n", duration);
-        // }
+        // Regular reset. 
+        if (duration >= 20.0)  // in second. 
+        {
+            start_split = end_split;
+            count_split = 0;
+            // printf("\n\nAlready %.2f seconds! \n\n", duration);
+        }
 
-        // m.poseUpdate(
-        //     count_split,
-        //     currentOdo.px,
-        //     currentOdo.py,
-        //     q);
-        // count_split++;
-
-        // Normal update. 
         m.poseUpdate(
-            ImgLog.number,
+            count_split,
             currentOdo.px,
             currentOdo.py,
             q);
+        count_split++;
+
+        // // Normal update. 
+        // m.poseUpdate(
+        //     ImgLog.number,
+        //     currentOdo.px,
+        //     currentOdo.py,
+        //     q);
 
         t.poseUpdate(
             ImgLog.number,
@@ -1904,7 +1901,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
 
         // Find the frontier to explore as much as it can.
-        // m.findFrontier();
+        m.findFrontier();
 
         if (m.frontiers.empty())
         {
@@ -2007,17 +2004,17 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // Check whether to terminate the programme.
         if (c == 32 || c == 13 || TERMINATE == true)
         {
-            fstream f_;
-            f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
-            for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
-            {
-                for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
-                {
-                    f_ << to_string(i) << ", " << to_string(j) << ", " \
-                    << to_string(m.infoMap[i][j].est_state) << "\n";
-                }
-            }
-            f_.close();
+            // fstream f_;
+            // f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
+            // for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
+            // {
+            //     for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
+            //     {
+            //         f_ << to_string(i) << ", " << to_string(j) << ", " \
+            //         << to_string(m.infoMap[i][j].est_state) << "\n";
+            //     }
+            // }
+            // f_.close();
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
             break;
@@ -2038,16 +2035,16 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     f_.close();
     // printf("\n\nThe replay has ended. \n\n");
 
-    f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
-    for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
-    {
-        for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
-        {
-            f_ << to_string(i) << ", " << to_string(j) << ", " \
-            << to_string(m.infoMap[i][j].est_state) << "\n";
-        }
-    }
-    f_.close();
+    // f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
+    // for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
+    // {
+    //     for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
+    //     {
+    //         f_ << to_string(i) << ", " << to_string(j) << ", " \
+    //         << to_string(m.infoMap[i][j].est_state) << "\n";
+    //     }
+    // }
+    // f_.close();
 
     // Document the general info.
     f.open(l.info_path, ios::app | ios::out);
@@ -2072,11 +2069,31 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 /**
  * @brief Extract the image from the desired ROI. 
  */
-int image_extraction(int number, int ROISize, int offsetX, int offsetY)
+int image_extraction(int number, int ROISize, int offsetX, int offsetY, string mode)
 {
-    string folder = "/home/mike/Pictures/map_";
+    // string folder = "/home/mike/Pictures/map_";
     // string folder = "/home/mike/Pictures/heatMap_";
     // string folder = "/home/mike/Pictures/trajectory_";
+    string folder;
+
+    if (mode == "map")
+    {
+        folder = "/home/mike/Pictures/map_";
+    }
+    else if(mode == "trajectory")
+    {
+        folder = "/home/mike/Pictures/trajectory_";
+    }
+    else if(mode == "heatMap")
+    {
+        folder = "/home/mike/Pictures/heatMap_";
+    }
+    else
+    {
+        return -1;
+    }
+
+
     string imgPath = folder + to_string(number) + ".png";
     cv::Mat img = cv::imread(imgPath);
     int rows = img.rows;

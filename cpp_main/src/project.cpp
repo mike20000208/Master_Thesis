@@ -524,12 +524,23 @@ int main(int argc, char * argv[])
 
         case 14:
         {
-            printf("\n\nPlease enter the serial number of map you want to extract: \n\n");
-            int number, ROISize, offsetX, offsetY;
+            printf("\n\nPlease enter the serial number of the image you want to extract: \n\n");
+            int number, ROISize, offsetX, offsetY, index;
+            vector<string> modes = {
+                "map",
+                "trajectory",
+                "heatMap"
+            };
             cin >> number;
+            printf("\n\nPlease select one the types of image you want to extract: \n\n");
+            for (int i = 0 ; i < static_cast<int>(modes.size()); i++)
+            {
+                printf("%d  ->  %s \n\n", i, modes[i].c_str());
+            }
+            cin >> index;
             printf("\n\nPlease enter the size of ROI and the center offset : \n\n");
             cin >> ROISize >> offsetX >> offsetY;
-            image_extraction(number, ROISize, offsetX, offsetY);
+            image_extraction(number, ROISize, offsetX, offsetY, modes[index]);
             break;
         }
 
