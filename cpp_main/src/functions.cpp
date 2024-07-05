@@ -228,6 +228,7 @@ int replay_from_images(string folder_name, string mode)
 
     // Initialize counter.
     int num_files = 0;
+    int num_maps = 0, num_imgs = 0, num_trajs = 0;
     int count = 0;
 
     // Initialize log containers.
@@ -284,13 +285,30 @@ int replay_from_images(string folder_name, string mode)
 
     f.close();
 
-    // count the number of files.
+    // Count the number of frames to replay.
     std::filesystem::path P{img_folder};
 
     for (auto &p : std::filesystem::directory_iterator(P))
     {
-        num_files++;
+        num_imgs++;
     }
+
+    std::filesystem::path P_{map_folder};
+
+    for (auto &p : std::filesystem::directory_iterator(P_))
+    {
+        num_maps++;
+    }
+
+    std::filesystem::path P__{traj_folder};
+
+    for (auto &p : std::filesystem::directory_iterator(P__))
+    {
+        num_trajs++;
+    }
+
+    vector<int> numbers = {num_maps, num_trajs, num_imgs};
+    num_files = *min_element(numbers.begin(), numbers.end());
 
     // Main loop. Start replaying
     count = 0;
@@ -1654,11 +1672,11 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PassThrough<pcl::PointXYZRGB> filter;
-    pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
-    viewer->setBackgroundColor(0, 0, 0);
-    viewer->setPosition(0, 450);
-    viewer->addCoordinateSystem(5, "global");
-    viewer->initCameraParameters();
+    // pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    // viewer->setBackgroundColor(0, 0, 0);
+    // viewer->setPosition(0, 450);
+    // viewer->addCoordinateSystem(5, "global");
+    // viewer->initCameraParameters();
 
     // Initialize cv objects.
     const string win1 = "Color Image";
@@ -1679,14 +1697,16 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
     My_Map t(width, height, res);
 
     // The biggest size of map that the path-planning system can handle. 
-    if (width >= 100 && height >= 100)
+    if (isReset)
     {
-        width = 50;
-        height = 50;
+        if (width >= 100 && height >= 100)
+        {
+            width = 50;
+            height = 50;
+        }
     }
 
     My_Map m(width, height, res, true);
-    
 
     // Initialize object and variables for file reading and transferring.
     fstream f;
@@ -1835,34 +1855,38 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         q.y = currentOdo.oy;
         q.z = currentOdo.oz;
         
-        // Regular reset. 
-        if (duration >= 20.0)  // in second. 
+        if (isReset)
         {
-            start_split = end_split;
-            count_split = 0;
-            // printf("\n\nAlready %.2f seconds! \n\n", duration);
+            // Regular reset. 
+            if (duration >= 20.0)  // in second. 
+            {
+                start_split = end_split;
+                count_split = 0;
+                // printf("\n\nAlready %.2f seconds! \n\n", duration);
+            }
+
+            m.poseUpdate(
+                count_split,
+                currentOdo.px,
+                currentOdo.py,
+                q);
+            count_split++;
         }
-
-        m.poseUpdate(
-            count_split,
-            currentOdo.px,
-            currentOdo.py,
-            q);
-        count_split++;
-
-        // // Normal update. 
-        // m.poseUpdate(
-        //     ImgLog.number,
-        //     currentOdo.px,
-        //     currentOdo.py,
-        //     q);
+        else
+        {
+            // Normal update. 
+            m.poseUpdate(
+                ImgLog.number,
+                currentOdo.px,
+                currentOdo.py,
+                q);
+        }
 
         t.poseUpdate(
             ImgLog.number,
             currentOdo.px,
             currentOdo.py,
             q);
-
 
         end = clock();
         getDuration(start, end, l.detailed_time_path); // Get the spent time. (2)
@@ -1900,7 +1924,7 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         start = clock();
         m.mapUpdate(G, ImgLog.timestamp); // at this point, the info map is being updated.
 
-        // Find the frontier to explore as much as it can.
+        // Frontier search. 
         m.findFrontier();
 
         if (m.frontiers.empty())
@@ -1914,8 +1938,11 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         if (isWFDInvolved)
         {
+            // Frontier filter. 
             m.selectFrontier();
-            m.findPath();
+
+            // // Path planner. 
+            // m.findPath();
         }
 
         // // Find the path from the updated grid.
@@ -1965,18 +1992,18 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
 
         // Pointcloud visualization.
         // pc_layers.push_back(cloud_filtered);
-        pc_layers.push_back(G.cloud);
+        // pc_layers.push_back(G.cloud);
 
-        for (int i = 0; i < pc_layers.size(); i++)
-        {
-            viewer->addPointCloud(
-                pc_layers[i],
-                to_string(i));
-            viewer->setPointCloudRenderingProperties(
-                pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
-                4,
-                to_string(i));
-        }
+        // for (int i = 0; i < pc_layers.size(); i++)
+        // {
+        //     viewer->addPointCloud(
+        //         pc_layers[i],
+        //         to_string(i));
+        //     viewer->setPointCloudRenderingProperties(
+        //         pcl::visualization::PCL_VISUALIZER_POINT_SIZE,
+        //         4,
+        //         to_string(i));
+        // }
 
         // Current scene, map, and trajectory visualization.
         cv::moveWindow(win1, 0, 0);
@@ -1999,30 +2026,19 @@ int stream_map_test_from_recording(string folder, int width, int height, int res
         // cv::imshow(win4, m.heatMap);
         char c = cv::waitKey(1);
 
-        viewer->spinOnce(1);
+        // viewer->spinOnce(1);
 
         // Check whether to terminate the programme.
         if (c == 32 || c == 13 || TERMINATE == true)
         {
-            // fstream f_;
-            // f_.open(string(DEBUG_FOLDER) + string("elvationMap.csv"), ios::app | ios::out);
-            // for (int i = 0; i < static_cast<int>(m.infoMap.size()); i++)
-            // {
-            //     for (int j = 0; j < static_cast<int>(m.infoMap[0].size()); j++)
-            //     {
-            //         f_ << to_string(i) << ", " << to_string(j) << ", " \
-            //         << to_string(m.infoMap[i][j].est_state) << "\n";
-            //     }
-            // }
-            // f_.close();
             printf("\n\nThe programme is terminated by keyboard. \n\n");
             TERMINATE = true;
             break;
         }
 
         // Reset.
-        pc_layers.clear();
-        viewer->removeAllPointClouds();
+        // pc_layers.clear();
+        // viewer->removeAllPointClouds();
         isWFDInvolved = false;
 
         end_whole = clock();

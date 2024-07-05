@@ -6,6 +6,8 @@ bool isRecording = false;
 
 bool isUseKF = true;
 
+bool isReset = false;
+
 
 /**
  * @brief Shows that the whole program is done.

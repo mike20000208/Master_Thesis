@@ -110,7 +110,7 @@ int main(int argc, char * argv[])
             sort(folders.begin(), folders.end());
 
             // Choose subfolder to get in. 
-            printf("Please select which folder you want to get in. The availbale options are shown below: \n\n");
+            printf("\n\nPlease select which folder you want to get in. The availbale options are shown below: \n\n");
             
             for (i = 0; i < folders.size(); i++)
             {

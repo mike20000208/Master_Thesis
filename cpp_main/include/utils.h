@@ -82,6 +82,7 @@ namespace fs = std::filesystem;
 extern bool TERMINATE;
 extern bool isRecording;
 extern bool isUseKF;
+extern bool isReset;
 
 struct GPS
 {
